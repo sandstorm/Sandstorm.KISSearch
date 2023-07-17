@@ -1,0 +1,69 @@
+{
+    "name": "neos/neos-base-distribution",
+    "type": "project",
+    "description": "Neos Base Distribution",
+    "license": "GPL-3.0-or-later",
+    "support": {
+        "email": "hello@neos.io",
+        "slack": "http://slack.neos.io/",
+        "forum": "https://discuss.neos.io/",
+        "wiki": "https://discuss.neos.io/c/the-neos-project/project-documentation",
+        "issues": "https://github.com/neos/neos-development-collection/issues",
+        "docs": "http://neos.readthedocs.org/",
+        "source": "https://github.com/neos/neos-base-distribution"
+    },
+    "config": {
+        "vendor-dir": "Packages/Libraries",
+        "bin-dir": "bin",
+        "allow-plugins": {
+            "neos/composer-plugin": true
+        }
+    },
+    "require": {
+        "neos/neos": "~8.3.0",
+        "neos/site-kickstarter": "~8.3.0",
+
+        "sandstorm/kissearch": "@dev",
+
+        "neos/demo": "~8.3.0",
+        "neos/neos-ui": "@dev",
+        "neos/seo": "~3.0",
+        "neos/redirecthandler-neosadapter": "~4.2",
+        "neos/redirecthandler-databasestorage": "~5.0",
+        "neos/redirecthandler-ui": "~2.4",
+
+        "neos/cli-setup": "~8.3.0",
+        "neos/setup": "@dev",
+        "neos/neos-setup": "@dev"
+    },
+    "require-dev": {
+        "neos/buildessentials": "~8.3.0",
+        "mikey179/vfsstream": "^1.6",
+        "phpunit/phpunit": "^9.0",
+        "symfony/css-selector": "~2.0",
+        "neos/behat": "~8.3.0"
+    },
+    "repositories": {
+        "distributionPackages": {
+            "type": "path",
+            "url": "./DistributionPackages/*"
+        }
+    },
+    "replace": {
+        "typo3/neos-base-distribution": "8.3.3"
+    },
+    "suggest": {
+        "ext-pdo_sqlite": "For running functional tests out-of-the-box this is required"
+    },
+    "allow-plugins": {
+        "neos/composer-plugin": true,
+        "composer/package-versions-deprecated": true
+    },
+    "scripts": {
+        "post-create-project-cmd": "./flow welcome",
+        "post-update-cmd": "Neos\\Flow\\Composer\\InstallerScripts::postUpdateAndInstall",
+        "post-install-cmd": "Neos\\Flow\\Composer\\InstallerScripts::postUpdateAndInstall",
+        "post-package-update": "Neos\\Flow\\Composer\\InstallerScripts::postPackageUpdateAndInstall",
+        "post-package-install": "Neos\\Flow\\Composer\\InstallerScripts::postPackageUpdateAndInstall"
+    }
+}

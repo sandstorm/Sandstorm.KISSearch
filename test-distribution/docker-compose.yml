@@ -1,0 +1,90 @@
+##################################################
+##### TEST / DEVELOPMENT ENVIRONMENT    ##########
+##################################################
+
+# Public ports:
+#  - 8081 -> Neos
+#  - 13306 -> maria db (used for Neos)
+#  - 15432 -> postgres db (used for Neos)
+
+version: '3.5'
+services:
+  #####
+  # Neos CMS (php-fpm)
+  neos:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      FLOW_CONTEXT: 'Development/Docker'
+      COMPOSER_CACHE_DIR: '/composer_cache'
+      # DB connection
+      MARIA_DB_NEOS_HOST: 'maria-db'
+      MARIA_DB_NEOS_PORT: 3306
+      MARIA_DB_NEOS_PASSWORD: 'neos'
+      MARIA_DB_NEOS_USER: 'neos'
+      MARIA_DB_NEOS_DATABASE: 'neos'
+      POSTGRES_DB_NEOS_HOST: 'postgres-db'
+      POSTGRES_DB_NEOS_PORT: 5432
+      POSTGRES_DB_NEOS_PASSWORD: 'neos'
+      POSTGRES_DB_NEOS_USER: 'neos'
+      POSTGRES_DB_NEOS_DATABASE: 'neos'
+    volumes:
+      # mount sources from root directory as if they were put into "DistributionPackages/Sandstorm.KISSearch/..."
+      - ../Classes/:/app/DistributionPackages/Sandstorm.KISSearch/Classes/:cached
+      - ../Tests/:/app/DistributionPackages/Sandstorm.KISSearch/Tests/:cached
+      - ../composer.json:/app/DistributionPackages/Sandstorm.KISSearch/composer.json:cached
+
+      # mount test-distribution
+      - ./composer.json:/app/composer.json:cached
+      - ./composer.lock:/app/composer.lock:cached
+      - ./Build/Behat/:/app/Build/Behat/:cached
+      - ./Packages/:/app/Packages/:cached
+      - ./Configuration/:/app/Configuration/:cached
+      # Explcitly set up Composer cache for faster fetching of packages
+      - ./tmp/composer_cache:/composer_cache:cached
+    networks:
+      - kissearch-test-distribution
+    ports:
+      - 8081:8081
+    depends_on:
+      - maria-db
+      - postgres-db
+
+  #####
+  # Maria DB
+  maria-db:
+    image: mariadb:10.11
+    ports:
+      - 13306:3306
+    networks:
+      - kissearch-test-distribution
+    environment:
+      MYSQL_ROOT_PASSWORD: neos
+      MYSQL_DATABASE: neos
+      MYSQL_USER: neos
+      MYSQL_PASSWORD: neos
+    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+
+  #####
+  # Postgres DB
+  postgres-db:
+    image: postgres:14.8-alpine
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: neos
+      POSTGRES_DB: neos
+      POSTGRES_USER: neos
+    ports:
+      - 15432:5432
+
+    #volumes:
+      #  - db-data:/var/lib/postgresql/data:rw
+      #- ./sql/:/docker-entrypoint-initdb.d/
+
+networks:
+  # we need to use a custom network here to ensure that all services see each other; and that during prerendering, we can connect to this network (to reach the service facade)
+  kissearch-test-distribution:
+    name: kissearch-test-distribution
