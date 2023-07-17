@@ -1,8 +1,6 @@
 <?php
 
-namespace Sandstorm\KISSearch\Tests\Behavior\Bootstrap;
-
-use Behat\Behat\Context\ContextInterface;
+use Behat\Behat\Context\Context;
 use Neos\Behat\Tests\Behat\FlowContextTrait;
 use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
@@ -21,16 +19,16 @@ use Neos\Neos\Tests\Functional\Command\BehatTestHelper;
 use Neos\Utility\Files;
 use Neos\Utility\ObjectAccess;
 
-require_once(__DIR__ . '/../../../../../Packages/Application/Neos.Behat/Tests/Behat/FlowContextTrait.php');
-require_once(__DIR__ . '/../../../../../Packages/Framework/Neos.Flow/Tests/Behavior/Features/Bootstrap/IsolatedBehatStepsTrait.php');
-require_once(__DIR__ . '/../../../../../Packages/Framework/Neos.Flow/Tests/Behavior/Features/Bootstrap/SecurityOperationsTrait.php');
-require_once(__DIR__ . '/../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php');
-require_once(__DIR__ . '/../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeAuthorizationTrait.php');
+require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.Behat/Tests/Behat/FlowContextTrait.php');
+require_once(__DIR__ . '/../../../../../../Packages/Framework/Neos.Flow/Tests/Behavior/Features/Bootstrap/IsolatedBehatStepsTrait.php');
+require_once(__DIR__ . '/../../../../../../Packages/Framework/Neos.Flow/Tests/Behavior/Features/Bootstrap/SecurityOperationsTrait.php');
+require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php');
+require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeAuthorizationTrait.php');
 
 /**
  * Features context
  */
-class FeatureContext implements ContextInterface
+class FeatureContext implements Context
 {
     use FlowContextTrait;
     use NodeOperationsTrait;
@@ -47,11 +45,6 @@ class FeatureContext implements ContextInterface
      * @var ObjectManagerInterface
      */
     protected $objectManager;
-
-    /**
-     * @var string
-     */
-    protected $lastExportedSiteXmlPathAndFilename = '';
 
     /**
      * @var Environment
@@ -76,6 +69,13 @@ class FeatureContext implements ContextInterface
     private function getPublishingService()
     {
         return $this->getObjectManager()->get(PublishingService::class);
+    }
+
+    /**
+     * @Given /^foo$/
+     */
+    public function foo() {
+        echo "fooooo";
     }
 
     /**

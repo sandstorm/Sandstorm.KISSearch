@@ -7490,11 +7490,11 @@
         },
         {
             "name": "sandstorm/kissearch",
-            "version": "dev-master",
+            "version": "dev-main",
             "dist": {
                 "type": "path",
                 "url": "./DistributionPackages/Sandstorm.KISSearch",
-                "reference": "b6ae89ccf9c313cff5fa4302fd2f0285ef3f273c"
+                "reference": "fdb3c9fc088a33093b96f04a04ebf4bcf563870d"
             },
             "require": {
                 "neos/flow": "*",
@@ -7508,7 +7508,6 @@
             },
             "autoload": {
                 "psr-4": {
-                    "Sandstorm\\KISSearch\\Tests\\Behavior\\": "Tests/Behavior/",
                     "Sandstorm\\KISSearch\\": "Classes/"
                 }
             },
@@ -11235,5 +11234,5 @@
     "prefer-lowest": false,
     "platform": [],
     "platform-dev": [],
-    "plugin-api-version": "2.1.0"
+    "plugin-api-version": "2.3.0"
 }
