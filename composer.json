@@ -1,20 +1,25 @@
 {
-  "description": "Extensible, low impact, self-contained, SQL-pure stupidly simple search integration for Neos",
-  "type": "neos-package",
-  "require": {
-    "neos/flow": "*",
-    "neos/neos": "*"
-  },
-  "license": "MIT",
-  "name": "sandstorm/kissearch",
-  "autoload": {
-    "psr-4": {
-      "Sandstorm\\KISSearch\\": "Classes/"
+    "description": "Extensible, low impact, self-contained, SQL-pure stupidly simple search integration for Neos",
+    "type": "neos-package",
+    "require": {
+        "neos/flow": "*",
+        "neos/neos": "*"
+    },
+    "license": "MIT",
+    "name": "sandstorm/kissearch",
+    "autoload": {
+        "psr-4": {
+            "Sandstorm\\KISSearch\\": "Classes/"
+        }
+    },
+    "archive": {
+        "exclude": [
+            "/test-distribution"
+        ]
+    },
+    "extra": {
+        "neos": {
+            "package-key": "Sandstorm.KISSearch"
+        }
     }
-  },
-  "extra": {
-    "neos": {
-      "package-key": "Sandstorm.KISSearch"
-    }
-  }
 }

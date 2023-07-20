@@ -1,0 +1,7 @@
+'SitePackage.Example:ExampleText':
+  superTypes:
+    'Neos.NodeTypes.BaseMixins:TextMixin': true
+  properties:
+    text:
+      search:
+        extractHtmlInto: 'all'

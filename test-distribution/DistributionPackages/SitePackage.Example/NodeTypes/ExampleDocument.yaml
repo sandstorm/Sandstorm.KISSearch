@@ -1,0 +1,8 @@
+'SitePackage.Example:ExampleDocument':
+  superTypes:
+    'Neos.Neos:Document': true
+  properties:
+    title:
+      search:
+        bucket: 'critical'
+

@@ -1,0 +1,21 @@
+{
+  "description": "Example Package for KISSearch",
+  "type": "neos-site",
+  "require": {
+    "neos/flow": "*",
+    "neos/neos": "*",
+    "sandstorm/kissearch": "*"
+  },
+  "license": "MIT",
+  "name": "sitepackage/example",
+  "autoload": {
+    "psr-4": {
+      "SitePackage\\Example\\": "Classes/"
+    }
+  },
+  "extra": {
+    "neos": {
+      "package-key": "SitePackage.Example"
+    }
+  }
+}

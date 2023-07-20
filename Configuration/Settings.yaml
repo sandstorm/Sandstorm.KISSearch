@@ -1,0 +1,4 @@
+Sandstorm:
+  KISSearch:
+    excludedNodeTypes:
+      - 'Neos.Neos:Shortcut'

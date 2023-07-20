@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "512414931f7ce9abb8a56926111fdca0",
+    "content-hash": "5b2cb4e2fd2cac7b137bd882842225a7",
     "packages": [
         {
             "name": "behat/transliterator",
@@ -2308,6 +2308,67 @@
                 "source": "https://github.com/php-imagine/Imagine/tree/1.3.5"
             },
             "time": "2023-06-07T14:49:52+00:00"
+        },
+        {
+            "name": "jcupitt/vips",
+            "version": "v2.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/libvips/php-vips.git",
+                "reference": "ff7cb36fde54887ca61647b3ff76598caa69bd25"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/libvips/php-vips/zipball/ff7cb36fde54887ca61647b3ff76598caa69bd25",
+                "reference": "ff7cb36fde54887ca61647b3ff76598caa69bd25",
+                "shasum": ""
+            },
+            "require": {
+                "ext-ffi": "*",
+                "php": ">=7.4",
+                "psr/log": "^1.1.3|^2.0|^3.0"
+            },
+            "require-dev": {
+                "php-parallel-lint/php-parallel-lint": "^1.3",
+                "phpdocumentor/shim": "^3.3",
+                "phpunit/phpunit": "^9.5",
+                "squizlabs/php_codesniffer": "^3.7"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Jcupitt\\Vips\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "John Cupitt",
+                    "email": "jcupitt@gmail.com",
+                    "homepage": "https://github.com/jcupitt",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A high-level interface to the libvips image processing library.",
+            "homepage": "https://github.com/libvips/php-vips",
+            "keywords": [
+                "image",
+                "libvips",
+                "processing"
+            ],
+            "support": {
+                "issues": "https://github.com/libvips/php-vips/issues",
+                "source": "https://github.com/libvips/php-vips/tree/v2.1.1"
+            },
+            "time": "2022-11-13T16:59:57+00:00"
         },
         {
             "name": "justinrainbow/json-schema",
@@ -6721,6 +6782,50 @@
             "time": "2023-04-01T10:18:36+00:00"
         },
         {
+            "name": "phenx/php-font-lib",
+            "version": "0.5.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dompdf/php-font-lib.git",
+                "reference": "dd448ad1ce34c63d09baccd05415e361300c35b4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dompdf/php-font-lib/zipball/dd448ad1ce34c63d09baccd05415e361300c35b4",
+                "reference": "dd448ad1ce34c63d09baccd05415e361300c35b4",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*"
+            },
+            "require-dev": {
+                "symfony/phpunit-bridge": "^3 || ^4 || ^5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "FontLib\\": "src/FontLib"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "LGPL-3.0"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Ménager",
+                    "email": "fabien.menager@gmail.com"
+                }
+            ],
+            "description": "A library to read, parse, export and make subsets of different types of font files.",
+            "homepage": "https://github.com/PhenX/php-font-lib",
+            "support": {
+                "issues": "https://github.com/dompdf/php-font-lib/issues",
+                "source": "https://github.com/dompdf/php-font-lib/tree/0.5.4"
+            },
+            "time": "2021-12-17T19:44:54+00:00"
+        },
+        {
             "name": "psr/cache",
             "version": "3.0.0",
             "source": {
@@ -7489,12 +7594,75 @@
             "time": "2023-05-02T15:15:43+00:00"
         },
         {
+            "name": "rokka/imagine-vips",
+            "version": "0.31.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/rokka-io/imagine-vips.git",
+                "reference": "6c86dc4a988fbd51081973abd29cbc38989e2e94"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/rokka-io/imagine-vips/zipball/6c86dc4a988fbd51081973abd29cbc38989e2e94",
+                "reference": "6c86dc4a988fbd51081973abd29cbc38989e2e94",
+                "shasum": ""
+            },
+            "require": {
+                "imagine/imagine": "^1.0",
+                "jcupitt/vips": "^2.1.0 || ^1.0.3",
+                "phenx/php-font-lib": "^0.5.2",
+                "php": "^7.2 || ^8.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^2.8",
+                "phpstan/phpstan": "^1.8",
+                "phpunit/phpunit": "^8 || ^9"
+            },
+            "suggest": {
+                "ext-gd": "to use the GD implementation fallback for saving unsupported file formats",
+                "ext-imagick": "to use the Imagick implementation fallback for saving unsupported file formats"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Imagine": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "rokka",
+                    "email": "rokka@rokka.io",
+                    "homepage": "https://rokka.io"
+                }
+            ],
+            "description": "libvips adapter for imagine",
+            "homepage": "https://github.com/rokka-io/imagine-vips",
+            "keywords": [
+                "drawing",
+                "graphics",
+                "image manipulation",
+                "image processing",
+                "libvips",
+                "php-vips",
+                "vips"
+            ],
+            "support": {
+                "issues": "https://github.com/rokka-io/imagine-vips/issues",
+                "source": "https://github.com/rokka-io/imagine-vips/tree/0.31.0"
+            },
+            "time": "2022-10-12T16:32:32+00:00"
+        },
+        {
             "name": "sandstorm/kissearch",
             "version": "dev-main",
             "dist": {
                 "type": "path",
                 "url": "./DistributionPackages/Sandstorm.KISSearch",
-                "reference": "fdb3c9fc088a33093b96f04a04ebf4bcf563870d"
+                "reference": "9183a46a1802e021cc9380e476117ea0fc9ab2f1"
             },
             "require": {
                 "neos/flow": "*",
@@ -7510,6 +7678,11 @@
                 "psr-4": {
                     "Sandstorm\\KISSearch\\": "Classes/"
                 }
+            },
+            "archive": {
+                "exclude": [
+                    "/test-distribution"
+                ]
             },
             "license": [
                 "MIT"
@@ -7691,6 +7864,38 @@
                 "source": "https://github.com/Seldaek/signal-handler/tree/2.0.1"
             },
             "time": "2022-07-20T18:31:45+00:00"
+        },
+        {
+            "name": "sitepackage/example",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "./DistributionPackages/SitePackage.Example",
+                "reference": "84f1ca2e4cb6a46c7a806b61a41725cac87eae16"
+            },
+            "require": {
+                "neos/flow": "*",
+                "neos/neos": "*",
+                "sandstorm/kissearch": "*"
+            },
+            "type": "neos-site",
+            "extra": {
+                "neos": {
+                    "package-key": "SitePackage.Example"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "SitePackage\\Example\\": "Classes/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Example Package for KISSearch",
+            "transport-options": {
+                "relative": true
+            }
         },
         {
             "name": "symfony/cache",
@@ -11226,6 +11431,7 @@
     "minimum-stability": "stable",
     "stability-flags": {
         "sandstorm/kissearch": 20,
+        "sitepackage/example": 20,
         "neos/neos-ui": 20,
         "neos/setup": 20,
         "neos/neos-setup": 20

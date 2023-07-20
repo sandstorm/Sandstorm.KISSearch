@@ -34,10 +34,12 @@ services:
     volumes:
       # mount sources from root directory as if they were put into "DistributionPackages/Sandstorm.KISSearch/..."
       - ../Classes/:/app/DistributionPackages/Sandstorm.KISSearch/Classes/:cached
+      - ../Configuration/:/app/DistributionPackages/Sandstorm.KISSearch/Configuration/:cached
       - ../Tests/:/app/DistributionPackages/Sandstorm.KISSearch/Tests/:cached
       - ../composer.json:/app/DistributionPackages/Sandstorm.KISSearch/composer.json:cached
 
       # mount test-distribution
+      - ./DistributionPackages/SitePackage.Example/:/app/DistributionPackages/SitePackage.Example/:cached
       - ./composer.json:/app/composer.json:cached
       - ./composer.lock:/app/composer.lock:cached
       - ./Build/Behat/:/app/Build/Behat/:cached
