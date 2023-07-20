@@ -46,6 +46,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         $fulltextExtractorsByNodeTypeForMinor = self::buildFulltextExtractionForBucket(
             $this->nodeTypeSearchConfiguration->getExtractorsForMinor(), SearchBucket::MINOR);
 
+        // generated fulltext extraction bucket columns
         $sqlQueries = [
             <<<SQL
                 alter table neos_contentrepository_domain_model_nodedata
@@ -64,6 +65,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             SQL
         ];
 
+        // fulltext index on generated columns
         $sqlQueries[] = MySQLSearchQueryBuilder::createFulltextIndex(
             SearchResultTypeName::create(NeosContentSearchResultType::$TYPE_NAME),
             'neos_contentrepository_domain_model_nodedata',
@@ -74,10 +76,52 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                 minor: [$columnNameBucketMinor]
             )
         );
+
+        // view for content node to closest parent document
+        $documentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypeSearchConfiguration->getDocumentNodeTypeNames());
+        $contentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypeSearchConfiguration->getContentNodeTypeNames());
+        $sqlQueries[] = <<<SQL
+            create view sandstorm_kissearch_nodes_and_their_documents as
+            with recursive nodes_and_their_documents as (select n.identifier,
+                                                    n.pathhash,
+                                                    n.path,
+                                                    n.parentpathhash,
+                                                    n.pathhash                          as document_path,
+                                                    n.identifier                        as document_id,
+                                                    json_value(n.properties, '$.title') as document_title
+                                             from neos_contentrepository_domain_model_nodedata n
+                                             where n.nodetype in ($documentNodeTypesCommaSeparated)
+                                             union
+                                             select n.identifier,
+                                                    n.pathhash,
+                                                    n.path,
+                                                    n.parentpathhash,
+                                                    r.pathhash       as document_path,
+                                                    r.document_id    as document_id,
+                                                    r.document_title as document_title
+                                             from neos_contentrepository_domain_model_nodedata n,
+                                                  nodes_and_their_documents r
+                                             where (
+                                                         n.nodetype in ($documentNodeTypesCommaSeparated)
+                                                     or n.nodetype in ($contentNodeTypesCommaSeparated)
+                                                 )
+                                               and r.pathhash = n.parentpathhash)
+            select identifier, document_id, document_title
+            from nodes_and_their_documents
+        SQL;
         return implode("\n", $sqlQueries);
     }
 
-    private static function buildFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket) {
+    private static function toCommaSeparatedStringList(array $values): string
+    {
+        return implode(',',
+            array_map(function ($value) {
+                return sprintf("'%s'", $value);
+            }, $values));
+    }
+
+    private static function buildFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket)
+    {
         $sqlCases = [];
 
         /** @var array $propertyExtractions */
@@ -87,9 +131,9 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             /** @var NodePropertyFulltextExtraction $propertyExtraction */
             foreach ($propertyExtractions as $propertyExtraction) {
                 $jsonExtractor = MySQLSearchQueryBuilder::extractNormalizedFulltextFromJson('properties', $propertyExtraction->getPropertyName());
-                $thenSql[] = match($propertyExtraction->getMode()) {
+                $thenSql[] = match ($propertyExtraction->getMode()) {
                     FulltextExtractionMode::EXTRACT_INTO_SINGLE_BUCKET => MySQLSearchQueryBuilder::extractAllText($jsonExtractor),
-                    FulltextExtractionMode::EXTRACT_HTML_TAGS => match($targetBucket) {
+                    FulltextExtractionMode::EXTRACT_HTML_TAGS => match ($targetBucket) {
                         SearchBucket::CRITICAL => MySQLSearchQueryBuilder::fulltextExtractHtmlTagContents($jsonExtractor, 'h1', 'h2'),
                         SearchBucket::MAJOR => MySQLSearchQueryBuilder::fulltextExtractHtmlTagContents($jsonExtractor, 'h3', 'h4', 'h5', 'h6'),
                         SearchBucket::NORMAL, SearchBucket::MINOR => MySQLSearchQueryBuilder::fulltextExtractHtmlTextContent($jsonExtractor, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'),
@@ -138,6 +182,9 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             'neos_contentrepository_domain_model_nodedata'
         );
 
+        $sqlQueries[] = <<<SQL
+            drop view if exists sandstorm_kissearch_nodes_and_their_documents;
+        SQL;
         return implode("\n", $sqlQueries);
     }
 }

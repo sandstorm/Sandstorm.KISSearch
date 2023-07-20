@@ -171,6 +171,9 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
             array_map(function (NodeType $documentNodeType) {
                 return $documentNodeType->getName();
             }, $documentNodeTypes),
+            array_map(function (NodeType $contentNodeType) {
+                return $contentNodeType->getName();
+            }, $contentNodeTypes),
             $extractorsForCritical,
             $extractorsForMajor,
             $extractorsForNormal,
