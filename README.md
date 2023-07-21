@@ -1,8 +1,9 @@
 # Sandstorm.KISSearch - pure SQL search for Neos +X
 
 Extensible, low impact, self-contained, SQL-pure stupidly simple search integration for Neos.
-
 Search with the power of SQL fulltext queries. No need for additional infrastructure, works purely with your existing DB.
+
+Search configuration is more or less downwards compatible to Neos.SearchPlugin / SimpleSearch / ElasticSearch.
 
 Supports:
  - MariaDB/MySQL -> first working draft
@@ -13,6 +14,17 @@ Next Steps:
  - PostgreSQL support
 
 still early WIP phase, TODO documentation!
+
+## Why KISSearch?
+
+ - no additional infrastructure required (like ElasticSearch or MySQLite)
+ - no explicit index building after changing nodes required, run the SQL migration... that's it :)
+ - still performant due to fulltext indexing on database level
+ - easy to extend with additional SearchResultTypes (f.e. tables from your database and/or custom flow entities like products, etc.)
+   - high level and low level extension API
+ - comes with Neos Content as default SearchResultType
+ - designed to be database agnostic
+ - search multiple sources with a single, performant SQL query
 
 ## how to install
 
