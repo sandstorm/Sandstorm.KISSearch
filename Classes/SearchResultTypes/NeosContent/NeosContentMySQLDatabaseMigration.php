@@ -81,33 +81,43 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         $documentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypeSearchConfiguration->getDocumentNodeTypeNames());
         $contentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypeSearchConfiguration->getContentNodeTypeNames());
         $sqlQueries[] = <<<SQL
-            create view sandstorm_kissearch_nodes_and_their_documents as
-            with recursive nodes_and_their_documents as (select n.identifier,
-                                                    n.pathhash,
-                                                    n.path,
-                                                    n.parentpathhash,
-                                                    n.pathhash                          as document_path,
-                                                    n.identifier                        as document_id,
-                                                    json_value(n.properties, '$.title') as document_title
-                                             from neos_contentrepository_domain_model_nodedata n
-                                             where n.nodetype in ($documentNodeTypesCommaSeparated)
-                                             union
-                                             select n.identifier,
-                                                    n.pathhash,
-                                                    n.path,
-                                                    n.parentpathhash,
-                                                    r.pathhash       as document_path,
-                                                    r.document_id    as document_id,
-                                                    r.document_title as document_title
-                                             from neos_contentrepository_domain_model_nodedata n,
-                                                  nodes_and_their_documents r
-                                             where (
-                                                         n.nodetype in ($documentNodeTypesCommaSeparated)
-                                                     or n.nodetype in ($contentNodeTypesCommaSeparated)
-                                                 )
-                                               and r.pathhash = n.parentpathhash)
-            select identifier, document_id, document_title
-            from nodes_and_their_documents
+            create or replace view sandstorm_kissearch_nodes_and_their_documents as
+            with recursive nodes_and_their_documents as
+                   (select n.identifier,
+                           n.pathhash,
+                           n.parentpathhash,
+                           n.nodetype,
+                           n.identifier                        as document_id,
+                           json_value(n.properties, '$.title') as document_title,
+                           n.hidden = 0                        as not_hidden,
+                           n.removed = 0                       as not_removed
+                    from neos_contentrepository_domain_model_nodedata n
+                    where n.nodetype in ($documentNodeTypesCommaSeparated)
+                      and n.hidden = 0
+                      and n.removed = 0
+                    union
+                    select n.identifier,
+                           n.pathhash,
+                           n.parentpathhash,
+                           n.nodetype,
+                           r.document_id                   as document_id,
+                           r.document_title                as document_title,
+                           n.hidden = 0 and r.not_hidden   as not_hidden,
+                           n.removed = 0 and r.not_removed as not_removed
+                    from neos_contentrepository_domain_model_nodedata n,
+                         nodes_and_their_documents r
+                    where json_value(n.properties, '$.uriPathSegment') is null
+                      and r.pathhash = n.parentpathhash)
+            select nd.identifier     as identifier,
+                   nd.document_id    as document_id,
+                   nd.document_title as document_title
+            from nodes_and_their_documents nd
+            where nd.not_hidden
+              and nd.not_removed
+              and (
+                        nd.nodetype in ($documentNodeTypesCommaSeparated)
+                    or nd.nodetype in ($contentNodeTypesCommaSeparated)
+                );
         SQL;
         return implode("\n", $sqlQueries);
     }
