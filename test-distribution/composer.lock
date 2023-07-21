@@ -7871,9 +7871,10 @@
             "dist": {
                 "type": "path",
                 "url": "./DistributionPackages/SitePackage.Example",
-                "reference": "84f1ca2e4cb6a46c7a806b61a41725cac87eae16"
+                "reference": "4853baa1bd86836b5038a0fb77599258c4076fee"
             },
             "require": {
+                "neos/demo": "*",
                 "neos/flow": "*",
                 "neos/neos": "*",
                 "sandstorm/kissearch": "*"

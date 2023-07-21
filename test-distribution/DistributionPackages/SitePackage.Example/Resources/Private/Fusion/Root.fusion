@@ -1,0 +1,23 @@
+include: **/*.fusion
+
+// Example Code intentionally left in here commented out.
+
+/*
+root = Sandstorm.KISSearch:Search {
+  query = ${request.arguments.q}
+  @process.json = ${Json.stringify(value)}
+}
+
+root = Sandstorm.KISSearch:SearchFrontend {
+  query = ${request.arguments.q}
+  @process.json = ${Json.stringify(value)}
+}
+
+// includes URLs of the document nodes
+root = ${KISSearch.searchFrontend(request.arguments.q, 100)}
+root.@process.json = ${Json.stringify(value)}
+
+// includes only IDs to the document nodes
+root = ${KISSearch.search(request.arguments.q, 100)}
+root.@process.json = ${Json.stringify(value)}
+*/

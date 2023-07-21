@@ -35,6 +35,7 @@ services:
       # mount sources from root directory as if they were put into "DistributionPackages/Sandstorm.KISSearch/..."
       - ../Classes/:/app/DistributionPackages/Sandstorm.KISSearch/Classes/:cached
       - ../Configuration/:/app/DistributionPackages/Sandstorm.KISSearch/Configuration/:cached
+      - ../Resources/:/app/DistributionPackages/Sandstorm.KISSearch/Resources/:cached
       - ../Tests/:/app/DistributionPackages/Sandstorm.KISSearch/Tests/:cached
       - ../composer.json:/app/DistributionPackages/Sandstorm.KISSearch/composer.json:cached
 

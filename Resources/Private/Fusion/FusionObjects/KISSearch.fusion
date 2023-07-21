@@ -1,0 +1,17 @@
+prototype(Sandstorm.KISSearch:Search) {
+  @class = 'Sandstorm\\KISSearch\\FusionObjects\\SearchImplementation'
+
+  query = ''
+  limit = 50
+
+  @cache.mode = 'uncached'
+}
+
+prototype(Sandstorm.KISSearch:SearchFrontend) {
+  @class = 'Sandstorm\\KISSearch\\FusionObjects\\SearchFrontendImplementation'
+
+  query = ''
+  limit = 50
+
+  @cache.mode = 'uncached'
+}

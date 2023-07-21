@@ -1,0 +1,8 @@
+Neos:
+  Neos:
+    fusion:
+      autoInclude:
+        "Sandstorm.KISSearch": true
+  Fusion:
+    defaultContext:
+      "KISSearch": Sandstorm\KISSearch\Eel\SearchHelper
