@@ -87,18 +87,20 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            n.pathhash,
                            n.parentpathhash,
                            n.nodetype,
-                           n.identifier                        as document_id,
-                           json_value(n.properties, '$.title') as document_title,
-                           n.hidden = 0                        as not_hidden,
-                           n.removed = 0                       as not_removed,
-                           cast(if (n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
-                               json_array(json_object(
-                                   'before', n.hiddenbeforedatetime,
-                                   'after', n.hiddenafterdatetime
-                               )),
-                               json_array()) as varchar(10000000)) as timed_hidden
+                           n.dimensionshash,
+                           cast(null as varchar(255))                  as site_nodename,
+                           n.identifier                                as document_id,
+                           json_value(n.properties, '$.title')         as document_title,
+                           n.hidden = 0                                as not_hidden,
+                           n.removed = 0                               as not_removed,
+                           cast(if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
+                                   json_array(json_object(
+                                           'before', n.hiddenbeforedatetime,
+                                           'after', n.hiddenafterdatetime
+                                       )),
+                                   json_array()) as varchar(10000000)) as timed_hidden
                     from neos_contentrepository_domain_model_nodedata n
-                    where n.nodetype in ($documentNodeTypesCommaSeparated)
+                    where n.path = '/sites'
                       and n.hidden = 0
                       and n.removed = 0
                       and n.workspace = 'live'
@@ -107,30 +109,41 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            n.pathhash,
                            n.parentpathhash,
                            n.nodetype,
-                           r.document_id                   as document_id,
-                           r.document_title                as document_title,
+                           n.dimensionshash,
+                           if((length(n.path) - length(replace(n.path, '/', ''))) = 2,
+                              substring_index(n.path, '/', -1),
+                              r.site_nodename)             as site_nodename,
+                           if(n.nodetype in ($documentNodeTypesCommaSeparated),
+                              n.identifier,
+                              r.document_id)               as document_id,
+                           if(n.nodetype in ($documentNodeTypesCommaSeparated),
+                              json_value(n.properties, '$.title'),
+                              r.document_title)            as document_title,
                            n.hidden = 0 and r.not_hidden   as not_hidden,
                            n.removed = 0 and r.not_removed as not_removed,
-                           if (n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
-                               json_array_append(r.timed_hidden, '$', json_object(
-                                   'before', n.hiddenbeforedatetime,
-                                   'after', n.hiddenafterdatetime
-                               )),
-                               r.timed_hidden) as timed_hidden
+                           if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
+                              json_array_append(r.timed_hidden, '$', json_object(
+                                      'before', n.hiddenbeforedatetime,
+                                      'after', n.hiddenafterdatetime
+                                  )),
+                              r.timed_hidden)              as timed_hidden
                     from neos_contentrepository_domain_model_nodedata n,
                          nodes_and_their_documents r
-                    where json_value(n.properties, '$.uriPathSegment') is null
-                          and n.workspace = 'live'
-                          and r.pathhash = n.parentpathhash
-                    )
-            select nd.identifier            as identifier,
-                   nd.document_id           as document_id,
-                   nd.document_title        as document_title,
+                    where r.pathhash = n.parentpathhash
+                      and n.workspace = 'live'
+                      and n.dimensionshash = r.dimensionshash)
+            select nd.identifier     as identifier,
+                   nd.document_id    as document_id,
+                   nd.document_title as document_title,
+                   nd.nodetype       as nodetype,
+                   nd.dimensionshash as dimensionshash,
+                   nd.site_nodename  as site_nodename,
                    if(json_length(nd.timed_hidden) > 0,
                       nd.timed_hidden,
-                      null) as timed_hidden
+                      null)          as timed_hidden
             from nodes_and_their_documents nd
-            where nd.not_hidden
+            where nd.site_nodename is not null
+              and nd.not_hidden
               and nd.not_removed
               and (
                         nd.nodetype in ($documentNodeTypesCommaSeparated)
