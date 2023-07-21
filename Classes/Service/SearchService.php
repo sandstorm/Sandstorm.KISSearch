@@ -4,11 +4,9 @@ namespace Sandstorm\KISSearch\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
-use Gedmo\Exception\UnsupportedObjectManagerException;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
-use Sandstorm\KISSearch\SearchResultTypes\NeosContent\NeosContentMySQLDatabaseMigration;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
@@ -28,17 +26,20 @@ class SearchService
 
     private readonly EntityManagerInterface $entityManager;
 
+    private readonly CurrentDateTimeProvider $currentDateTimeProvider;
 
     /**
      * @param SearchResultTypesRegistry $searchResultTypesRegistry
      * @param ConfigurationManager $configurationManager
      * @param EntityManagerInterface $entityManager
+     * @param CurrentDateTimeProvider $currentDateTimeProvider
      */
-    public function __construct(SearchResultTypesRegistry $searchResultTypesRegistry, ConfigurationManager $configurationManager, \Doctrine\ORM\EntityManagerInterface $entityManager)
+    public function __construct(SearchResultTypesRegistry $searchResultTypesRegistry, ConfigurationManager $configurationManager, \Doctrine\ORM\EntityManagerInterface $entityManager, CurrentDateTimeProvider $currentDateTimeProvider)
     {
         $this->searchResultTypesRegistry = $searchResultTypesRegistry;
         $this->configurationManager = $configurationManager;
         $this->entityManager = $entityManager;
+        $this->currentDateTimeProvider = $currentDateTimeProvider;
     }
 
     /**
@@ -69,7 +70,7 @@ class SearchService
 
         $results = $this->internalSearch($databaseType, $searchQuery, $searchResultTypes);
 
-        return array_map(function(SearchResult $searchResult) use ($searchResultTypes) {
+        return array_map(function (SearchResult $searchResult) use ($searchResultTypes) {
             $responsibleSearchResultType = $searchResultTypes[$searchResult->getResultTypeName()->getName()];
             $resultPageUrl = $responsibleSearchResultType->buildUrlToResultPage($searchResult->getIdentifier());
             return $searchResult->withDocumentUrl($resultPageUrl);
@@ -95,7 +96,8 @@ class SearchService
         $doctrineQuery = $this->entityManager->createNativeQuery($searchQuerySql, $resultSetMapping);
         $doctrineQuery->setParameters([
             SearchResult::SQL_QUERY_PARAM_QUERY => $searchTermParameterValue,
-            SearchResult::SQL_QUERY_PARAM_LIMIT => $searchQuery->getLimit()
+            SearchResult::SQL_QUERY_PARAM_LIMIT => $searchQuery->getLimit(),
+            SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp()
         ]);
 
         // fire query
@@ -109,15 +111,15 @@ class SearchService
      */
     private function buildSearchQuerySql(DatabaseType $databaseType, array $searchResultTypes): string
     {
-        $searchQueryProviders = array_map(function(SearchResultTypeInterface $searchResultType) use ($databaseType) {
+        $searchQueryProviders = array_map(function (SearchResultTypeInterface $searchResultType) use ($databaseType) {
             return $searchResultType->getSearchQueryProvider($databaseType);
         }, $searchResultTypes);
 
-        $searchingQueryParts = array_map(function(SearchQueryProviderInterface $provider) {
+        $searchingQueryParts = array_map(function (SearchQueryProviderInterface $provider) {
             return $provider->getResultSearchingQueryPart();
         }, $searchQueryProviders);
 
-        $mergingQueryParts = array_map(function(SearchQueryProviderInterface $provider) {
+        $mergingQueryParts = array_map(function (SearchQueryProviderInterface $provider) {
             return $provider->getResultMergingQueryPart();
         }, $searchQueryProviders);
 

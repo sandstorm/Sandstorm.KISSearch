@@ -47,9 +47,9 @@ class FulltextExtractionInstruction
      *
      * @return FulltextExtractionInstruction
      */
-    public static function extractHtmlTagsIntoAllBuckets(): FulltextExtractionInstruction
+    public static function extractHtmlTagsIntoAllBucketsNoMinor(): FulltextExtractionInstruction
     {
-        return new FulltextExtractionInstruction(SearchBucket::allBuckets(), FulltextExtractionMode::EXTRACT_HTML_TAGS);
+        return new FulltextExtractionInstruction([SearchBucket::CRITICAL, SearchBucket::MAJOR, SearchBucket::NORMAL], FulltextExtractionMode::EXTRACT_HTML_TAGS);
     }
 
     /**

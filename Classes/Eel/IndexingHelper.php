@@ -22,7 +22,7 @@ class IndexingHelper implements ProtectedContextAwareInterface
 
     public static function extractHtmlTags(?string $value): FulltextExtractionInstruction
     {
-        return FulltextExtractionInstruction::extractHtmlTagsIntoAllBuckets();
+        return FulltextExtractionInstruction::extractHtmlTagsIntoAllBucketsNoMinor();
     }
 
     public function allowsCallOfMethod($methodName): bool

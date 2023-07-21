@@ -34,20 +34,23 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     function getResultMergingQueryPart(): string
     {
         $resultTypeName = NeosContentSearchResultType::$TYPE_NAME;
+        $queryParamNowTime = SearchResult::SQL_QUERY_PARAM_NOW_TIME;
 
         return <<<SQL
-
-            # add neos_page results to our result union
+             -- add neos_page results to our result union
              select nd.document_id as result_id,
                     nd.document_title as result_title,
                     '$resultTypeName' as result_type,
                     (20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor) as score
 
-             # for all nodes matching search terms, we have to find the corresponding document node
-             # to link to the content in the search result rendering
+             -- for all nodes matching search terms, we have to find the corresponding document node
+             -- to link to the content in the search result rendering
              from neos_content_results n
+                 -- inner join filters hidden and deleted nodes
                  inner join sandstorm_kissearch_nodes_and_their_documents nd
                     on nd.identifier = n.identifier
+             -- filter timed hidden nodes
+             where not sandstorm_kissearch_any_timed_hidden(nd.timed_hidden, from_unixtime(:$queryParamNowTime))
         SQL;
     }
 

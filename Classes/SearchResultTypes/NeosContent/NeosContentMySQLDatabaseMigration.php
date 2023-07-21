@@ -90,11 +90,18 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            n.identifier                        as document_id,
                            json_value(n.properties, '$.title') as document_title,
                            n.hidden = 0                        as not_hidden,
-                           n.removed = 0                       as not_removed
+                           n.removed = 0                       as not_removed,
+                           cast(if (n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
+                               json_array(json_object(
+                                   'before', n.hiddenbeforedatetime,
+                                   'after', n.hiddenafterdatetime
+                               )),
+                               json_array()) as varchar(10000000)) as timed_hidden
                     from neos_contentrepository_domain_model_nodedata n
                     where n.nodetype in ($documentNodeTypesCommaSeparated)
                       and n.hidden = 0
                       and n.removed = 0
+                      and n.workspace = 'live'
                     union
                     select n.identifier,
                            n.pathhash,
@@ -103,14 +110,25 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            r.document_id                   as document_id,
                            r.document_title                as document_title,
                            n.hidden = 0 and r.not_hidden   as not_hidden,
-                           n.removed = 0 and r.not_removed as not_removed
+                           n.removed = 0 and r.not_removed as not_removed,
+                           if (n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
+                               json_array_append(r.timed_hidden, '$', json_object(
+                                   'before', n.hiddenbeforedatetime,
+                                   'after', n.hiddenafterdatetime
+                               )),
+                               r.timed_hidden) as timed_hidden
                     from neos_contentrepository_domain_model_nodedata n,
                          nodes_and_their_documents r
                     where json_value(n.properties, '$.uriPathSegment') is null
-                      and r.pathhash = n.parentpathhash)
-            select nd.identifier     as identifier,
-                   nd.document_id    as document_id,
-                   nd.document_title as document_title
+                          and n.workspace = 'live'
+                          and r.pathhash = n.parentpathhash
+                    )
+            select nd.identifier            as identifier,
+                   nd.document_id           as document_id,
+                   nd.document_title        as document_title,
+                   if(json_length(nd.timed_hidden) > 0,
+                      nd.timed_hidden,
+                      null) as timed_hidden
             from nodes_and_their_documents nd
             where nd.not_hidden
               and nd.not_removed
@@ -118,6 +136,32 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                         nd.nodetype in ($documentNodeTypesCommaSeparated)
                     or nd.nodetype in ($contentNodeTypesCommaSeparated)
                 );
+        SQL;
+
+        // function for checking hidden before and after datetime for a set of parent nodes, given by array
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_any_timed_hidden(
+                timed_hidden json,
+                now_time datetime
+            ) returns boolean
+            begin
+                return (
+                    select timed_hidden is not null
+                        and exists(
+                            select 1
+                            from json_table (timed_hidden, '$[*]'
+                                columns(
+                                    hiddenbeforedatetime datetime path '$.before',
+                                    hiddenafterdatetime datetime path '$.after'
+                                )) as th
+                            where
+                                case
+                                    when th.hiddenbeforedatetime is null then th.hiddenafterdatetime < now_time
+                                    when th.hiddenafterdatetime is null then th.hiddenbeforedatetime > now_time
+                                    else now_time not between th.hiddenbeforedatetime and th.hiddenafterdatetime
+                                end)
+                    );
+            end;
         SQL;
         return implode("\n", $sqlQueries);
     }
@@ -195,6 +239,11 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         $sqlQueries[] = <<<SQL
             drop view if exists sandstorm_kissearch_nodes_and_their_documents;
         SQL;
+
+        $sqlQueries[] = <<<SQL
+            drop function if exists sandstorm_kissearch_any_timed_hidden;
+        SQL;
+
         return implode("\n", $sqlQueries);
     }
 
