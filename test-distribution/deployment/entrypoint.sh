@@ -23,6 +23,8 @@ composer install
 ./flow behat:setup
 rm bin/selenium-server.jar # we do not need this
 
+./flow user:create --roles Administrator admin password LocalDev Admin || true
+
 # start nginx in background
 nginx &
 
