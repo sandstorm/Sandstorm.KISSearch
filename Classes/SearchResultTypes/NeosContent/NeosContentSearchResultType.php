@@ -12,6 +12,7 @@ use Sandstorm\KISSearch\Eel\IndexingHelper;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseMigrationInterface;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\SearchBucket;
+use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultIdentifier;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
@@ -28,16 +29,20 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
 
     private readonly ConfigurationManager $configurationManager;
 
+    private readonly NeosDocumentUrlGenerator $documentUrlGenerator;
+
     /**
      * @param NodeTypeManager $nodeTypeManager
      * @param EelEvaluatorInterface $eelEvaluator
      * @param ConfigurationManager $configurationManager
+     * @param NeosDocumentUrlGenerator $documentUrlGenerator
      */
-    public function __construct(NodeTypeManager $nodeTypeManager, EelEvaluatorInterface $eelEvaluator, ConfigurationManager $configurationManager)
+    public function __construct(NodeTypeManager $nodeTypeManager, EelEvaluatorInterface $eelEvaluator, ConfigurationManager $configurationManager, NeosDocumentUrlGenerator $documentUrlGenerator)
     {
         $this->nodeTypeManager = $nodeTypeManager;
         $this->eelEvaluator = $eelEvaluator;
         $this->configurationManager = $configurationManager;
+        $this->documentUrlGenerator = $documentUrlGenerator;
     }
 
     function getName(): SearchResultTypeName
@@ -47,8 +52,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
 
     function buildUrlToResultPage(SearchResultIdentifier $searchResultIdentifier): string
     {
-        // TODO: Implement buildUrlToResultPage() method.
-        return "https://google.de";
+        return $this->documentUrlGenerator->forNodeByIdentifier($searchResultIdentifier->getIdentifier());
     }
 
     function getDatabaseMigration(DatabaseType $databaseType): DatabaseMigrationInterface
@@ -56,7 +60,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
         $nodeTypeSearchConfiguration = $this->getFulltextSearchConfiguration();
         return match ($databaseType) {
             DatabaseType::MYSQL => new NeosContentMySQLDatabaseMigration($nodeTypeSearchConfiguration),
-            DatabaseType::POSTGRES => throw new \Exception('To be implemented'),
+            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934286),
             default => throw new UnsupportedDatabaseException(
                 "Neos Content search does not support database of type '$databaseType->name'",
                 1689634320
@@ -203,17 +207,16 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
         return EelUtility::evaluateEelExpression($expression, $this->eelEvaluator, $contextVariables);
     }
 
-    function getResultSearchingQueryPart(DatabaseType $databaseType): string
+    function getSearchQueryProvider(DatabaseType $databaseType): SearchQueryProviderInterface
     {
-        // TODO: Implement getResultSearchingQueryPart() method.
-        return "";
+        return match ($databaseType) {
+            DatabaseType::MYSQL => new NeosContentMySQLSearchQueryProvider(),
+            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934266),
+            default => throw new UnsupportedDatabaseException(
+                "Neos Content search does not support database of type '$databaseType->name'",
+                1689934246
+            )
+        };
     }
-
-    function getResultMergingQueryPart(DatabaseType $databaseType): string
-    {
-        // TODO: Implement getResultMergingQueryPart() method.
-        return "";
-    }
-
 
 }

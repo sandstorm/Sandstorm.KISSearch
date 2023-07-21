@@ -2,6 +2,7 @@
 
 namespace Sandstorm\KISSearch\SearchResultTypes\QueryBuilder;
 
+use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 
 class MySQLSearchQueryBuilder
@@ -117,6 +118,51 @@ class MySQLSearchQueryBuilder
                 '[^\\\.a-zA-Z0-9]', ' '),
             '\\\s+', ' ')
         SQL;
+    }
+
+    public static function searchQuery(array $searchingQueryParts, array $mergingQueryParts): string
+    {
+        $searchingQueryPartsSql = implode(",\n", $searchingQueryParts);
+        $mergingQueryPartsSql = implode(" union \n", $mergingQueryParts);
+        $limitParamName = SearchResult::SQL_QUERY_PARAM_LIMIT;
+
+        return <<<SQL
+            -- searching query part
+            with $searchingQueryPartsSql,
+                 all_results as (
+                    -- union of all search types
+                    $mergingQueryPartsSql
+                 )
+            select
+                -- select all search results
+                a.result_id as result_id,
+                a.result_type as result_type,
+                a.result_title as result_title,
+                -- sum the score
+                sum(score) as sum_score
+            from all_results a
+            -- group by result id and type in case multiple merging query parts return the same result
+            group by result_id, result_type
+            order by sum_score desc
+            limit :$limitParamName;
+        SQL;
+    }
+
+    public static function prepareSearchTermQueryParameter(string $userInput): string
+    {
+        $sanitized = trim($userInput);
+        $sanitized = strtolower($sanitized);
+
+        $searchWords = explode(
+            ' ',
+            $sanitized
+        );
+
+        $searchWordsFuzzy = array_map(function(string $searchWord) {
+            return $searchWord . '*';
+        }, $searchWords);
+
+        return implode(' ', $searchWordsFuzzy);
     }
 
 }

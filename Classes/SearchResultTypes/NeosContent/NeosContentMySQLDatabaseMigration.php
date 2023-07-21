@@ -32,10 +32,10 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 
     function up(): string
     {
-        $columnNameBucketCritical = sprintf('search_bucket_%s', SearchBucket::CRITICAL->value);
-        $columnNameBucketMajor = sprintf('search_bucket_%s', SearchBucket::MAJOR->value);
-        $columnNameBucketNormal = sprintf('search_bucket_%s', SearchBucket::NORMAL->value);
-        $columnNameBucketMinor = sprintf('search_bucket_%s', SearchBucket::MINOR->value);
+        $columnNameBucketCritical = self::columnNameBucketCritical();
+        $columnNameBucketMajor = self::columnNameBucketMajor();
+        $columnNameBucketNormal = self::columnNameBucketNormal();
+        $columnNameBucketMinor = self::columnNameBucketMinor();
 
         $fulltextExtractorsByNodeTypeForCritical = self::buildFulltextExtractionForBucket(
             $this->nodeTypeSearchConfiguration->getExtractorsForCritical(), SearchBucket::CRITICAL);
@@ -162,10 +162,10 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 
     function down(): string
     {
-        $columnNameBucketCritical = sprintf('search_bucket_%s', SearchBucket::CRITICAL->value);
-        $columnNameBucketMajor = sprintf('search_bucket_%s', SearchBucket::MAJOR->value);
-        $columnNameBucketNormal = sprintf('search_bucket_%s', SearchBucket::NORMAL->value);
-        $columnNameBucketMinor = sprintf('search_bucket_%s', SearchBucket::MINOR->value);
+        $columnNameBucketCritical = self::columnNameBucketCritical();
+        $columnNameBucketMajor = self::columnNameBucketMajor();
+        $columnNameBucketNormal = self::columnNameBucketNormal();
+        $columnNameBucketMinor = self::columnNameBucketMinor();
 
         $sqlQueries = [
             <<<SQL
@@ -186,5 +186,37 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             drop view if exists sandstorm_kissearch_nodes_and_their_documents;
         SQL;
         return implode("\n", $sqlQueries);
+    }
+
+    /**
+     * @return string
+     */
+    static function columnNameBucketCritical(): string
+    {
+        return sprintf('search_bucket_%s', SearchBucket::CRITICAL->value);
+    }
+
+    /**
+     * @return string
+     */
+    static function columnNameBucketMajor(): string
+    {
+        return sprintf('search_bucket_%s', SearchBucket::MAJOR->value);
+    }
+
+    /**
+     * @return string
+     */
+    static function columnNameBucketNormal(): string
+    {
+        return sprintf('search_bucket_%s', SearchBucket::NORMAL->value);
+    }
+
+    /**
+     * @return string
+     */
+    static function columnNameBucketMinor(): string
+    {
+        return sprintf('search_bucket_%s', SearchBucket::MINOR->value);
     }
 }

@@ -1,13 +1,8 @@
--- Interface für SearchResultType ->
---    - CTE Anteil
---    - Scoring query Anteil
---    - Index Builder
---    - URL Builder
---    - type name
+# Sandstorm.KISSearch - pure SQL search for Neos +X
 
--- Interface für SearchQueryBuilder ->
---    - Zusammenbauen der Unions
---    - Zusammenbauen der CTE
+Extensible, low impact, self-contained, SQL-pure stupidly simple search integration for Neos.
+
+still early WIP phase, TODO documentation!
 
 ## run tests
 

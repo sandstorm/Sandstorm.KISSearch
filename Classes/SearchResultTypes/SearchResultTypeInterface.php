@@ -14,8 +14,6 @@ interface SearchResultTypeInterface
 
     function getDatabaseMigration(DatabaseType $databaseType): DatabaseMigrationInterface;
 
-    function getResultSearchingQueryPart(DatabaseType $databaseType): string;
-
-    function getResultMergingQueryPart(DatabaseType $databaseType): string;
+    function getSearchQueryProvider(DatabaseType $databaseType): SearchQueryProviderInterface;
 
 }

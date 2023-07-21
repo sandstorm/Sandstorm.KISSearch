@@ -1,4 +1,6 @@
 Sandstorm:
   KISSearch:
+    searchResultTypes:
+      neos_content: 'Sandstorm\KISSearch\SearchResultTypes\NeosContent\NeosContentSearchResultType'
     excludedNodeTypes:
       - 'Neos.Neos:Shortcut'

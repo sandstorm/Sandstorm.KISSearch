@@ -2,35 +2,62 @@
 
 namespace Sandstorm\KISSearch\Command;
 
-use Doctrine\DBAL\Exception;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Query\ResultSetMapping;
-use Neos\Flow\Annotations\Inject;
 use Neos\Flow\Cli\CommandController;
 use Neos\Flow\Configuration\ConfigurationManager;
-use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
-use Sandstorm\KISSearch\SearchResultTypes\NeosContent\NeosContentSearchResultType;
+use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
+use Sandstorm\KISSearch\SearchResultTypes\SearchResultFrontend;
+use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypesRegistry;
+use Sandstorm\KISSearch\Service\SearchQuery;
+use Sandstorm\KISSearch\Service\SearchService;
 use Throwable;
 
 class KISSearchCommandController extends CommandController
 {
 
-    #[Inject]
-    protected NeosContentSearchResultType $neos;
+    private readonly SearchResultTypesRegistry $searchResultTypesRegistry;
 
-    #[Inject]
-    protected ConfigurationManager $configurationManager;
+    private readonly ConfigurationManager $configurationManager;
 
-    #[Inject]
-    protected EntityManagerInterface $entityManager;
+    private readonly EntityManagerInterface $entityManager;
+
+    private readonly SearchService $searchService;
+
+    /**
+     * @param SearchResultTypesRegistry $searchResultTypesRegistry
+     * @param ConfigurationManager $configurationManager
+     * @param EntityManagerInterface $entityManager
+     * @param SearchService $searchService
+     */
+    public function __construct(SearchResultTypesRegistry $searchResultTypesRegistry, ConfigurationManager $configurationManager, EntityManagerInterface $entityManager, SearchService $searchService)
+    {
+        parent::__construct();
+        $this->searchResultTypesRegistry = $searchResultTypesRegistry;
+        $this->configurationManager = $configurationManager;
+        $this->entityManager = $entityManager;
+        $this->searchService = $searchService;
+    }
+
 
     public function migrateCommand(bool $print = false): void
     {
         $databaseType = DatabaseType::detectDatabase($this->configurationManager);
+        $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
 
-        $migrateUpScript = $this->neos->getDatabaseMigration($databaseType)->up();
+        $migrationScripts = [];
+        foreach ($searchResultTypes as $searchResultTypeName => $searchResultType) {
+            $databaseMigration = $searchResultType->getDatabaseMigration($databaseType);
+            $this->outputLine('Migrating up for search result type: %s', [$searchResultTypeName]);
+            // SQL comment
+            $migrationScripts[] = '-- #####################################################################';
+            $migrationScripts[] = sprintf('-- migration (up) for search result type: %s', $searchResultTypeName);
+            // TODO implement migration hash logic to prevent migration for up-to-date databases
+            $migrationScripts[] = $databaseMigration->up();
+            $migrationScripts[] = sprintf('-- END: migration (up) for search result type: %s', $searchResultTypeName);
+        }
+
+        $migrateUpScript = implode("\n", $migrationScripts);
 
         if ($print) {
             $this->outputScript($migrateUpScript);
@@ -42,8 +69,21 @@ class KISSearchCommandController extends CommandController
     public function removeCommand(bool $print = false): void
     {
         $databaseType = DatabaseType::detectDatabase($this->configurationManager);
+        $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
 
-        $migrateDownScript = $this->neos->getDatabaseMigration($databaseType)->down();
+        $migrationScripts = [];
+        foreach ($searchResultTypes as $searchResultTypeName => $searchResultType) {
+            $databaseMigration = $searchResultType->getDatabaseMigration($databaseType);
+            $this->outputLine('Migrating down for search result type: %s', [$searchResultTypeName]);
+            // SQL comment
+            $migrationScripts[] = '-- #####################################################################';
+            $migrationScripts[] = sprintf('-- migration (down) for search result type: %s', $searchResultTypeName);
+            // TODO implement migration hash logic to prevent migration for up-to-date databases
+            $migrationScripts[] = $databaseMigration->down();
+            $migrationScripts[] = sprintf('-- END: migration (down) for search result type: %s', $searchResultTypeName);
+        }
+
+        $migrateDownScript = implode("\n", $migrationScripts);
 
         if ($print) {
             $this->outputScript($migrateDownScript);
@@ -72,10 +112,66 @@ class KISSearchCommandController extends CommandController
      * @param string $migrationScript
      * @return void
      */
-    public function outputScript(string $migrationScript): void
+    private function outputScript(string $migrationScript): void
     {
-        $this->output->outputLine(str_replace('\\', '\\\\', $migrationScript));
         $this->output->outputLine();
+        $this->output->outputLine('######### START OF SQL OUTPUT:');
+        $this->output->outputLine();
+        $this->output->outputLine($migrationScript);
+        $this->output->outputLine();
+    }
+
+    public function searchCommand(string $query, int $limit = 50): void
+    {
+        $this->output("Searching for '$query' with limit $limit ... ");
+        $startTime = microtime(true);
+        $results = $this->searchService->search(new SearchQuery($query, $limit));
+        $endTime = microtime(true);
+        $resultCount = count($results);
+        $searchQueryDuration = floor(($endTime - $startTime) * 1000);
+        $this->outputLine("found $resultCount results after $searchQueryDuration ms");
+
+        $tableRows = array_map(function (SearchResult $result) {
+            return $result->jsonSerialize();
+        }, $results);
+
+        $this->output->outputTable(
+            $tableRows,
+            [
+                'identifier' => 'Result Identifier',
+                'type' => 'Result Type',
+                'title' => 'Result Title',
+                'score' => 'Match Score'
+            ],
+            "Search Results for '$query'"
+        );
+    }
+
+    public function searchFrontendCommand(string $query, int $limit = 50): void
+    {
+        $this->output("Searching for '$query' with limit $limit ... ");
+        $startTime = microtime(true);
+        $results = $this->searchService->searchFrontend(new SearchQuery($query, $limit));
+        $endTime = microtime(true);
+        $resultCount = count($results);
+        $searchQueryDuration = floor(($endTime - $startTime) * 1000);
+        $this->outputLine("found $resultCount results after $searchQueryDuration ms");
+
+        $tableRows = array_map(function (SearchResultFrontend $result) {
+            return $result->jsonSerialize();
+        }, $results);
+
+        $this->output->outputTable(
+            $tableRows,
+            [
+                'identifier' => 'Result Identifier',
+                'type' => 'Result Type',
+                'title' => 'Result Title',
+                'url' => 'Document URL',
+                'score' => 'Match Score'
+            ],
+            "Search Results for '$query'"
+        );
     }
 
 }
