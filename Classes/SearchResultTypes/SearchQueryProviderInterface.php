@@ -9,4 +9,9 @@ interface SearchQueryProviderInterface
 
     function getResultMergingQueryPart(): string;
 
+    /**
+     * @return AdditionalQueryParameterDefinition[]|null
+     */
+    function getAdditionalQueryParameters(): ?array;
+
 }

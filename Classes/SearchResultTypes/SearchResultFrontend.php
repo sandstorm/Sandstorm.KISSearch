@@ -69,6 +69,14 @@ class SearchResultFrontend implements \JsonSerializable
         return $this->searchResult->getScore();
     }
 
+    /**
+     * @return array|null
+     */
+    public function getMetaData(): ?array
+    {
+        return $this->searchResult->getMetaData();
+    }
+
     public function jsonSerialize(): array
     {
         return  [
@@ -76,7 +84,8 @@ class SearchResultFrontend implements \JsonSerializable
             'type' => $this->getResultTypeName(),
             'title' => $this->getTitle(),
             'url' => $this->documentUrl,
-            'score' => $this->getScore()
+            'score' => $this->getScore(),
+            'metaData' => $this->getMetaData()
         ];
     }
 }

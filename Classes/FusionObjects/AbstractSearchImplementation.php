@@ -47,6 +47,21 @@ abstract class AbstractSearchImplementation extends AbstractFusionObject
         return $limitFusionValue;
     }
 
+    private function getAdditionalParameters(): ?array
+    {
+        $additionalParametersFusionValue = $this->fusionValue('additionalParameters');
+        if ($additionalParametersFusionValue === null) {
+            return null;
+        }
+        if (!is_array($additionalParametersFusionValue)) {
+            throw new InvalidFusionValueException(
+                "Fusion path 'additionalParameters' must evaluate to an array, but was: $additionalParametersFusionValue",
+                1689988600
+            );
+        }
+        return $additionalParametersFusionValue;
+    }
+
     /**
      * @return array
      */
@@ -59,7 +74,8 @@ abstract class AbstractSearchImplementation extends AbstractFusionObject
         }
         $searchQuery = new SearchQuery(
             $query,
-            $this->getLimit()
+            $this->getLimit(),
+            $this->getAdditionalParameters()
         );
         return $this->doSearchQuery($searchQuery);
     }

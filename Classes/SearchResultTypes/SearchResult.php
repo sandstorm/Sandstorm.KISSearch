@@ -16,19 +16,22 @@ class SearchResult implements \JsonSerializable
     private readonly SearchResultTypeName $resultTypeName;
     private readonly string $title;
     private readonly float $score;
+    private readonly ?array $metaData;
 
     /**
      * @param string $identifier
      * @param string $resultTypeName
      * @param string $title
      * @param float $score
+     * @param string|null $metaData
      */
-    public function __construct(string $identifier, string $resultTypeName, string $title, float $score)
+    public function __construct(string $identifier, string $resultTypeName, string $title, float $score, ?string $metaData)
     {
         $this->identifier = SearchResultIdentifier::create($identifier);
         $this->resultTypeName = SearchResultTypeName::create($resultTypeName);
         $this->title = $title;
         $this->score = $score;
+        $this->metaData = $metaData !== null ? json_decode($metaData, true) : null;
     }
 
     /**
@@ -72,13 +75,22 @@ class SearchResult implements \JsonSerializable
         return $this->score;
     }
 
+    /**
+     * @return array|null
+     */
+    public function getMetaData(): ?array
+    {
+        return $this->metaData;
+    }
+
     public function jsonSerialize(): array
     {
         return [
             'identifier' => $this->identifier->getIdentifier(),
             'type' => $this->resultTypeName->getName(),
             'title' => $this->title,
-            'score' => $this->score
+            'score' => $this->score,
+            'metaData' => $this->metaData
         ];
     }
 }

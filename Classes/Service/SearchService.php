@@ -6,7 +6,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Configuration\ConfigurationManager;
+use Sandstorm\KISSearch\SearchResultTypes\AdditionalQueryParameterValue;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
+use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
@@ -72,7 +74,7 @@ class SearchService
 
         return array_map(function (SearchResult $searchResult) use ($searchResultTypes) {
             $responsibleSearchResultType = $searchResultTypes[$searchResult->getResultTypeName()->getName()];
-            $resultPageUrl = $responsibleSearchResultType->buildUrlToResultPage($searchResult->getIdentifier());
+            $resultPageUrl = $responsibleSearchResultType->buildUrlToResultPage($searchResult);
             return $searchResult->withDocumentUrl($resultPageUrl);
         }, $results);
     }
@@ -86,7 +88,11 @@ class SearchService
     private function internalSearch(DatabaseType $databaseType, SearchQuery $searchQuery, array $searchResultTypes): array
     {
         // search query
-        $searchQuerySql = $this->buildSearchQuerySql($databaseType, $searchResultTypes);
+        $searchQueryProviders = [];
+        foreach ($searchResultTypes as $searchResultTypeName => $searchResultType) {
+            $searchQueryProviders[$searchResultTypeName] = $searchResultType->getSearchQueryProvider($databaseType);
+        }
+        $searchQuerySql = $this->buildSearchQuerySql($databaseType, $searchQueryProviders);
 
         // prepare search term parameter from user input
         $searchTermParameterValue = self::prepareSearchTermParameterValue($databaseType, $searchQuery->getQuery());
@@ -94,11 +100,26 @@ class SearchService
         // prepare query
         $resultSetMapping = self::buildResultSetMapping();
         $doctrineQuery = $this->entityManager->createNativeQuery($searchQuerySql, $resultSetMapping);
-        $doctrineQuery->setParameters([
+        // default parameters
+        $defaultParameters = [
             SearchResult::SQL_QUERY_PARAM_QUERY => $searchTermParameterValue,
             SearchResult::SQL_QUERY_PARAM_LIMIT => $searchQuery->getLimit(),
             SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp()
-        ]);
+        ];
+        $doctrineQuery->setParameters($defaultParameters);
+        // search type specific additional parameters
+        $additionalParameters = $this->getSearchTypeSpecificAdditionalParameters(
+            array_keys($defaultParameters),
+            $searchQueryProviders,
+            $searchQuery
+        );
+        foreach ($additionalParameters as $parameterName => $additionalParameter) {
+            $doctrineQuery->setParameter(
+                $parameterName,
+                $additionalParameter->getParameterValue(),
+                $additionalParameter->getParameterDefinition()->getParameterType()
+            );
+        }
 
         // fire query
         return $doctrineQuery->getResult();
@@ -106,15 +127,11 @@ class SearchService
 
     /**
      * @param DatabaseType $databaseType
-     * @param SearchResultTypeInterface[] $searchResultTypes
+     * @param SearchQueryProviderInterface[] $searchQueryProviders
      * @return string
      */
-    private function buildSearchQuerySql(DatabaseType $databaseType, array $searchResultTypes): string
+    private function buildSearchQuerySql(DatabaseType $databaseType, array $searchQueryProviders): string
     {
-        $searchQueryProviders = array_map(function (SearchResultTypeInterface $searchResultType) use ($databaseType) {
-            return $searchResultType->getSearchQueryProvider($databaseType);
-        }, $searchResultTypes);
-
         $searchingQueryParts = array_map(function (SearchQueryProviderInterface $provider) {
             return $provider->getResultSearchingQueryPart();
         }, $searchQueryProviders);
@@ -152,6 +169,7 @@ class SearchService
         $rsm->addScalarResult('result_type', 2);
         $rsm->addScalarResult('result_title', 3);
         $rsm->addScalarResult('sum_score', 4, 'float');
+        $rsm->addScalarResult('meta_data', 5);
         $rsm->newObjectMappings['result_id'] = [
             'className' => SearchResult::class,
             'objIndex' => 0,
@@ -172,8 +190,58 @@ class SearchService
             'objIndex' => 0,
             'argIndex' => 3,
         ];
-
+        $rsm->newObjectMappings['meta_data'] = [
+            'className' => SearchResult::class,
+            'objIndex' => 0,
+            'argIndex' => 4,
+        ];
         return $rsm;
     }
 
+    /**
+     * @param string[] $defaultParameterNames
+     * @param SearchQueryProviderInterface[] $searchQueryProviders
+     * @param SearchQuery $searchQuery
+     * @return AdditionalQueryParameterValue[]
+     */
+    private function getSearchTypeSpecificAdditionalParameters(array $defaultParameterNames, array $searchQueryProviders, SearchQuery $searchQuery): array
+    {
+        /** @var AdditionalQueryParameterValue[] $additionalParameters */
+        $additionalParameters = [];
+        $additionalParameterValues = $searchQuery->getSearchTypeSpecificAdditionalParameters() ?: [];
+
+        foreach ($searchQueryProviders as $searchResultTypeName => $searchQueryProvider) {
+            $additionalQueryParametersDefinitions = $searchQueryProvider->getAdditionalQueryParameters();
+            foreach ($additionalQueryParametersDefinitions as $additionalQueryParametersDefinition) {
+                $parameterName = $additionalQueryParametersDefinition->getParameterName();
+                // check for conflicts with default parameter names
+                if (in_array($parameterName, $defaultParameterNames)) {
+                    throw new InvalidAdditionalParameterException(
+                        "Additional query parameter '$parameterName' defined by search result type '$searchResultTypeName' "
+                          . "conflicts with default parameter name; please rename it",
+                        1689983919
+                    );
+                }
+                // check for conflicts with additional parameter names from other search result types
+                if (array_key_exists($parameterName, $additionalParameters)) {
+                    $existingDefinition = $additionalParameters[$parameterName];
+                    throw new InvalidAdditionalParameterException(
+                        sprintf(
+                            "Additional query parameter '%s' defined by search result type '%s' "
+                                    . "conflicts with existing parameter name defined by search result type '%s'; please rename it",
+                            $parameterName,
+                            $searchResultTypeName,
+                            $existingDefinition->getParameterDefinition()->getSearchResultTypeName()->getName()
+                        ),
+                        1689985645
+                    );
+                }
+                $additionalParameters[$parameterName] = $additionalQueryParametersDefinition->withParameterValue(
+                    array_key_exists($parameterName, $additionalParameterValues) ? $additionalParameterValues[$parameterName] : null
+                );
+            }
+        }
+
+        return $additionalParameters;
+    }
 }

@@ -13,6 +13,7 @@ use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Mvc\Routing\Dto\RouteParameters;
 use Neos\Flow\Mvc\Routing\Exception\MissingActionNameException;
 use Neos\Flow\Mvc\Routing\UriBuilder;
+use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 
 #[Scope("singleton")]
 class NeosDocumentUrlGenerator
@@ -35,12 +36,12 @@ class NeosDocumentUrlGenerator
     }
 
     /**
-     * @param string $nodeIdentifier
+     * @param SearchResult $searchResult
      * @return string|null
      * @throws Exception
      * @throws MissingActionNameException
      */
-    public function forNodeByIdentifier(string $nodeIdentifier): string|null
+    public function forSearchResult(SearchResult $searchResult): string|null
     {
         if ($this->contentContext === null) {
             $this->contentContext = $this->contextFactory->create([
@@ -51,12 +52,18 @@ class NeosDocumentUrlGenerator
             ]);
         }
 
-        $node = $this->contentContext->getNodeByIdentifier($nodeIdentifier);
+        $node = $this->contentContext->getNodeByIdentifier($searchResult->getIdentifier()->getIdentifier());
         if ($node == null) {
             return null;
         }
 
-        return $this->forNode($node);
+        $nodeUri = $this->forNode($node);
+        $metaData = $searchResult->getMetaData();
+        $primaryDomain = array_key_exists('primaryDomain', $metaData) ? $metaData['primaryDomain'] : null;
+        if ($primaryDomain !== null) {
+            return $primaryDomain . $nodeUri;
+        }
+        return $nodeUri;
     }
 
     /**

@@ -10,7 +10,7 @@ interface SearchResultTypeInterface
 
     function getName(): SearchResultTypeName;
 
-    function buildUrlToResultPage(SearchResultIdentifier $searchResultIdentifier): string;
+    function buildUrlToResultPage(SearchResult $searchResult): string;
 
     function getDatabaseMigration(DatabaseType $databaseType): DatabaseMigrationInterface;
 

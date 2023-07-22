@@ -121,18 +121,21 @@ class KISSearchCommandController extends CommandController
         $this->output->outputLine();
     }
 
-    public function searchCommand(string $query, int $limit = 50): void
+    public function searchCommand(string $query, int $limit = 50, ?string $additionalParams = null): void
     {
-        $this->output("Searching for '$query' with limit $limit ... ");
+        $additionalParamsArray = json_decode($additionalParams, true);
+        $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
         $startTime = microtime(true);
-        $results = $this->searchService->search(new SearchQuery($query, $limit));
+        $results = $this->searchService->search(new SearchQuery($query, $limit, $additionalParamsArray));
         $endTime = microtime(true);
         $resultCount = count($results);
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
         $this->outputLine("found $resultCount results after $searchQueryDuration ms");
 
         $tableRows = array_map(function (SearchResult $result) {
-            return $result->jsonSerialize();
+            $serialized = $result->jsonSerialize();
+            $serialized['metaData'] = json_encode($serialized['metaData'], JSON_PRETTY_PRINT);
+            return $serialized;
         }, $results);
 
         $this->output->outputTable(
@@ -141,24 +144,28 @@ class KISSearchCommandController extends CommandController
                 'identifier' => 'Result Identifier',
                 'type' => 'Result Type',
                 'title' => 'Result Title',
-                'score' => 'Match Score'
+                'score' => 'Match Score',
+                'metaData' => 'Meta Data'
             ],
             "Search Results for '$query'"
         );
     }
 
-    public function searchFrontendCommand(string $query, int $limit = 50): void
+    public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null): void
     {
-        $this->output("Searching for '$query' with limit $limit ... ");
+        $additionalParamsArray = json_decode($additionalParams, true);
+        $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
         $startTime = microtime(true);
-        $results = $this->searchService->searchFrontend(new SearchQuery($query, $limit));
+        $results = $this->searchService->searchFrontend(new SearchQuery($query, $limit, $additionalParamsArray));
         $endTime = microtime(true);
         $resultCount = count($results);
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
         $this->outputLine("found $resultCount results after $searchQueryDuration ms");
 
         $tableRows = array_map(function (SearchResultFrontend $result) {
-            return $result->jsonSerialize();
+            $serialized = $result->jsonSerialize();
+            $serialized['metaData'] = json_encode($serialized['metaData'], JSON_PRETTY_PRINT);
+            return $serialized;
         }, $results);
 
         $this->output->outputTable(
@@ -168,10 +175,25 @@ class KISSearchCommandController extends CommandController
                 'type' => 'Result Type',
                 'title' => 'Result Title',
                 'url' => 'Document URL',
-                'score' => 'Match Score'
+                'score' => 'Match Score',
+                'metaData' => 'Meta Data'
             ],
             "Search Results for '$query'"
         );
+    }
+
+    private function printSearchQueryInput(string $query, int $limit, ?array $additionalParams): void
+    {
+        if ($additionalParams === null) {
+            $this->output("Searching for '$query' with limit $limit ... ");
+        } else {
+            $additionalParamsReadable = [];
+            foreach ($additionalParams as $name => $value) {
+                $additionalParamsReadable[] = $name . '=' . $value;
+            }
+            $additionalParamsString = implode(', ', $additionalParamsReadable);
+            $this->output("Searching for '$query' with limit $limit with additional params: $additionalParamsString ... ");
+        }
     }
 
 }

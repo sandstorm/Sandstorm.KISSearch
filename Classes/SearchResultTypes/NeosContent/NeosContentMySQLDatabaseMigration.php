@@ -67,7 +67,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 
         // fulltext index on generated columns
         $sqlQueries[] = MySQLSearchQueryBuilder::createFulltextIndex(
-            SearchResultTypeName::create(NeosContentSearchResultType::$TYPE_NAME),
+            SearchResultTypeName::create(NeosContentSearchResultType::TYPE_NAME),
             'neos_contentrepository_domain_model_nodedata',
             new ColumnNamesByBucket(
                 critical: [$columnNameBucketCritical],
@@ -88,9 +88,11 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            n.parentpathhash,
                            n.nodetype,
                            n.dimensionshash,
-                           cast(null as varchar(255))                  as site_nodename,
+                           cast(null as varchar(255))
+                               collate utf8mb4_unicode_ci             as site_nodename,
                            n.identifier                                as document_id,
                            json_value(n.properties, '$.title')         as document_title,
+                           n.nodetype                                  as document_nodetype,
                            n.hidden = 0                                as not_hidden,
                            n.removed = 0                               as not_removed,
                            cast(if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
@@ -119,6 +121,9 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            if(n.nodetype in ($documentNodeTypesCommaSeparated),
                               json_value(n.properties, '$.title'),
                               r.document_title)            as document_title,
+                           if(n.nodetype in ($documentNodeTypesCommaSeparated),
+                              n.nodetype,
+                              r.document_nodetype)         as document_nodetype,
                            n.hidden = 0 and r.not_hidden   as not_hidden,
                            n.removed = 0 and r.not_removed as not_removed,
                            if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
@@ -132,15 +137,16 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                     where r.pathhash = n.parentpathhash
                       and n.workspace = 'live'
                       and n.dimensionshash = r.dimensionshash)
-            select nd.identifier     as identifier,
-                   nd.document_id    as document_id,
-                   nd.document_title as document_title,
-                   nd.nodetype       as nodetype,
-                   nd.dimensionshash as dimensionshash,
-                   nd.site_nodename  as site_nodename,
+            select nd.identifier        as identifier,
+                   nd.document_id       as document_id,
+                   nd.document_title    as document_title,
+                   nd.document_nodetype as document_nodetype,
+                   nd.nodetype          as nodetype,
+                   nd.dimensionshash    as dimensionshash,
+                   nd.site_nodename     as site_nodename,
                    if(json_length(nd.timed_hidden) > 0,
                       nd.timed_hidden,
-                      null)          as timed_hidden
+                      null)             as timed_hidden
             from nodes_and_their_documents nd
             where nd.site_nodename is not null
               and nd.not_hidden
@@ -187,7 +193,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             }, $values));
     }
 
-    private static function buildFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket)
+    private static function buildFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket): string
     {
         $sqlCases = [];
 
@@ -245,7 +251,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         ];
 
         $sqlQueries[] = MySQLSearchQueryBuilder::dropFulltextIndex(
-            SearchResultTypeName::create(NeosContentSearchResultType::$TYPE_NAME),
+            SearchResultTypeName::create(NeosContentSearchResultType::TYPE_NAME),
             'neos_contentrepository_domain_model_nodedata'
         );
 
