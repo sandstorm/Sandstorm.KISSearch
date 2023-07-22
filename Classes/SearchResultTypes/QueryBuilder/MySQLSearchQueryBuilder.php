@@ -166,4 +166,14 @@ class MySQLSearchQueryBuilder
         return implode(' ', $searchWordsFuzzy);
     }
 
+    public static function buildInsertOrUpdateVersionHashQuery(string $searchResultTypeName, string $versionHash): string
+    {
+        // TODO SQL-injection possible! Although the values does not come from client / user input, maybe use parameters
+        return <<<SQL
+            insert into sandstorm_kissearch_migration_status (search_result_type_name, version_hash)
+            values ('$searchResultTypeName', '$versionHash')
+            on duplicate key update version_hash = '$versionHash';
+        SQL;
+    }
+
 }

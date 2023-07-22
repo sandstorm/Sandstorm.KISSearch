@@ -85,4 +85,42 @@ class NodeTypesSearchConfiguration
         return $this->extractorsForMinor;
     }
 
+    public function buildVersionHash(): string
+    {
+        $stringRepresentation = 'NeosContentSearchResultType';
+        $stringRepresentation .= '_____docs---';
+        $stringRepresentation .= implode('_____', $this->documentNodeTypeNames);
+        $stringRepresentation .= '_____content---';
+        $stringRepresentation .= implode('_____', $this->contentNodeTypeNames);
+        $stringRepresentation .= '_____extractors---';
+        $stringRepresentation .= self::extractorsArrayToString('critical', $this->extractorsForCritical);
+        $stringRepresentation .= self::extractorsArrayToString('major', $this->extractorsForMajor);
+        $stringRepresentation .= self::extractorsArrayToString('normal', $this->extractorsForNormal);
+        $stringRepresentation .= self::extractorsArrayToString('minor', $this->extractorsForMinor);
+
+        return sha1($stringRepresentation);
+    }
+
+    private static function extractorsArrayToString(string $identifier, array $allExtractors): string
+    {
+        // sort for deterministic output
+        ksort($allExtractors);
+        $arrayStringRepresentation = '_____';
+        $arrayStringRepresentation .= $identifier;
+        foreach ($allExtractors as $nodeTypeName => $extractors) {
+            // sort for deterministic output
+            ksort($extractors);
+            $arrayStringRepresentation .= '_____';
+            $arrayStringRepresentation .= $nodeTypeName;
+            /** @var NodePropertyFulltextExtraction $extractor */
+            foreach ($extractors as $propertyName => $extractor) {
+                $arrayStringRepresentation .= '_____';
+                $arrayStringRepresentation .= $propertyName;
+                $arrayStringRepresentation .= '--=--';
+                $arrayStringRepresentation .= $extractor->getMode()->name;
+            }
+        }
+        return $arrayStringRepresentation;
+    }
+
 }

@@ -196,7 +196,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
         if (!array_key_exists($nodeTypeName, $bucketConfiguration)) {
             $bucketConfiguration[$nodeTypeName] = [];
         }
-        $bucketConfiguration[$nodeTypeName][] = $extraction;
+        $bucketConfiguration[$nodeTypeName][$extraction->getPropertyName()] = $extraction;
     }
 
     private function evaluateEelExpression(string $expression, string $propertyName): mixed

@@ -26,8 +26,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 
     function versionHash(): string
     {
-        // TODO implement
-        return "TODO";
+        return $this->nodeTypeSearchConfiguration->buildVersionHash();
     }
 
     function up(): string
