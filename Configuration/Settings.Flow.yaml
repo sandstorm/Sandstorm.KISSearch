@@ -1,0 +1,7 @@
+Neos:
+  Flow:
+    persistence:
+      doctrine:
+        migrations:
+          ignoredTables:
+            'sandstorm_kissearch_.*': true
