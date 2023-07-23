@@ -31,4 +31,9 @@ class SearchResultTypeName
         return $this->name;
     }
 
+    public function __toString(): string
+    {
+        return $this->name;
+    }
+
 }

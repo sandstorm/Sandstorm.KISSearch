@@ -31,4 +31,9 @@ class SearchResultIdentifier
         return $this->identifier;
     }
 
+    public function __toString(): string
+    {
+        return $this->identifier;
+    }
+
 }
