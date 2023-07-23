@@ -86,9 +86,10 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            n.pathhash,
                            n.parentpathhash,
                            n.nodetype,
-                           cast(null as varchar(32))                  as dimensionshash,
+                           cast(null as varchar(32))
+                               collate utf8mb4_unicode_ci              as dimensionshash,
                            cast(null as varchar(255))
-                               collate utf8mb4_unicode_ci             as site_nodename,
+                               collate utf8mb4_unicode_ci              as site_nodename,
                            n.identifier                                as document_id,
                            json_value(n.properties, '$.title')         as document_title,
                            n.nodetype                                  as document_nodetype,
