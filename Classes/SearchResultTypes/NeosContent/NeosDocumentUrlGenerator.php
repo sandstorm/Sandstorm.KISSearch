@@ -58,7 +58,7 @@ class NeosDocumentUrlGenerator
         }
 
         $nodeUri = $this->forNode($node);
-        $metaData = $searchResult->getMetaData();
+        $metaData = $searchResult->getGroupMetaData();
         $primaryDomain = array_key_exists('primaryDomain', $metaData) ? $metaData['primaryDomain'] : null;
         if ($primaryDomain !== null) {
             return $primaryDomain . $nodeUri;

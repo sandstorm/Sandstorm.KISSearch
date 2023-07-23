@@ -16,22 +16,35 @@ class SearchResult implements \JsonSerializable
     private readonly SearchResultTypeName $resultTypeName;
     private readonly string $title;
     private readonly float $score;
-    private readonly ?array $metaData;
+    private readonly int $matchCount;
+    private readonly ?array $groupMetaData;
+    private readonly ?array $aggregateMetaData;
 
     /**
      * @param string $identifier
      * @param string $resultTypeName
      * @param string $title
      * @param float $score
-     * @param string|null $metaData
+     * @param int $matchCount
+     * @param string|null $groupMetaData
+     * @param string|null $aggregateMetaData
      */
-    public function __construct(string $identifier, string $resultTypeName, string $title, float $score, ?string $metaData)
+    public function __construct(
+        string $identifier,
+        string $resultTypeName,
+        string $title,
+        float $score,
+        int $matchCount,
+        ?string $groupMetaData,
+        ?string $aggregateMetaData)
     {
         $this->identifier = SearchResultIdentifier::create($identifier);
         $this->resultTypeName = SearchResultTypeName::create($resultTypeName);
         $this->title = $title;
         $this->score = $score;
-        $this->metaData = $metaData !== null ? json_decode($metaData, true) : null;
+        $this->matchCount = $matchCount;
+        $this->groupMetaData = $groupMetaData !== null ? json_decode($groupMetaData, true) : null;
+        $this->aggregateMetaData = $aggregateMetaData !== null ? json_decode($aggregateMetaData, true) : null;
     }
 
     /**
@@ -76,11 +89,27 @@ class SearchResult implements \JsonSerializable
     }
 
     /**
+     * @return int
+     */
+    public function getMatchCount(): int
+    {
+        return $this->matchCount;
+    }
+
+    /**
      * @return array|null
      */
-    public function getMetaData(): ?array
+    public function getGroupMetaData(): ?array
     {
-        return $this->metaData;
+        return $this->groupMetaData;
+    }
+
+    /**
+     * @return array|null
+     */
+    public function getAggregateMetaData(): ?array
+    {
+        return $this->aggregateMetaData;
     }
 
     public function jsonSerialize(): array
@@ -90,7 +119,9 @@ class SearchResult implements \JsonSerializable
             'type' => $this->resultTypeName->getName(),
             'title' => $this->title,
             'score' => $this->score,
-            'metaData' => $this->metaData
+            'matchCount' => $this->matchCount,
+            'groupMetaData' => $this->groupMetaData,
+            'aggregateMetaData' => $this->aggregateMetaData
         ];
     }
 }

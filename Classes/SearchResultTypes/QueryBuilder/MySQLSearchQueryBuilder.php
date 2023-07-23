@@ -135,12 +135,15 @@ class MySQLSearchQueryBuilder
                  )
             select
                 -- select all search results
-                a.result_id as result_id,
-                a.result_type as result_type,
-                a.result_title as result_title,
+                a.result_id                         as result_id,
+                a.result_type                       as result_type,
+                a.result_title                      as result_title,
                 -- max score wins
-                max(score) as score,
-                a.meta_data as meta_data
+                -- TODO discuss, if max(score) vs. sum(score) vs. set mode via API
+                max(score)                          as score,
+                count(a.result_id)                  as match_count,
+                a.group_meta_data                   as group_meta_data,
+                json_arrayagg(a.result_meta_data)   as aggregate_meta_data
             from all_results a
             -- group by result id and type in case multiple merging query parts return the same result
             group by result_id, result_type

@@ -4,12 +4,11 @@ namespace Sandstorm\KISSearch\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
+use JsonSerializable;
 use Neos\Flow\Cli\CommandController;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
-use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
-use Sandstorm\KISSearch\SearchResultTypes\SearchResultFrontend;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypesRegistry;
 use Sandstorm\KISSearch\SearchResultTypes\UnsupportedDatabaseException;
 use Sandstorm\KISSearch\Service\SearchQuery;
@@ -106,7 +105,8 @@ class KISSearchCommandController extends CommandController
                 search_result_type_name varchar(255) primary key not null,
                 version_hash            varchar(255) not null
             );
-        SQL);
+        SQL
+        );
 
         $migrationScripts = [];
         foreach ($searchResultTypes as $searchResultTypeName => $searchResultType) {
@@ -260,32 +260,13 @@ class KISSearchCommandController extends CommandController
         $resultCount = count($results);
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
         $this->outputLine("found $resultCount results after $searchQueryDuration ms");
-
-        $tableRows = array_map(function (SearchResult $result) use ($showMetaData) {
-            $serialized = $result->jsonSerialize();
-            if ($showMetaData) {
-                $serialized['metaData'] = json_encode($serialized['metaData'], JSON_PRETTY_PRINT);
-            } else {
-                unset($serialized['metaData']);
-            }
-            return $serialized;
-        }, $results);
-
-        $headers = [
+        $this->outputSearchResultsTable($results, $query, $showMetaData, [
             'identifier' => 'Result Identifier',
             'type' => 'Result Type',
             'title' => 'Result Title',
-            'score' => 'Match Score'
-        ];
-        if ($showMetaData) {
-            $headers['metaData'] = 'Meta Data';
-        }
-
-        $this->output->outputTable(
-            $tableRows,
-            $headers,
-            "Search Results for '$query'"
-        );
+            'score' => 'Score',
+            'matchCount' => 'Match Count'
+        ]);
     }
 
     public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
@@ -298,26 +279,33 @@ class KISSearchCommandController extends CommandController
         $resultCount = count($results);
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
         $this->outputLine("found $resultCount results after $searchQueryDuration ms");
-
-        $tableRows = array_map(function (SearchResultFrontend $result) use ($showMetaData) {
-            $serialized = $result->jsonSerialize();
-            if ($showMetaData) {
-                $serialized['metaData'] = json_encode($serialized['metaData'], JSON_PRETTY_PRINT);
-            } else {
-                unset($serialized['metaData']);
-            }
-            return $serialized;
-        }, $results);
-
-        $headers = [
+        $this->outputSearchResultsTable($results, $query, $showMetaData, [
             'identifier' => 'Result Identifier',
             'type' => 'Result Type',
             'title' => 'Result Title',
             'url' => 'Document URL',
-            'score' => 'Match Score'
-        ];
+            'score' => 'Score',
+            'matchCount' => 'Match Count'
+        ]);
+    }
+
+    private function outputSearchResultsTable(array $results, string $query, bool $showMetaData, array $headers): void
+    {
+        $tableRows = array_map(function (JsonSerializable $result) use ($showMetaData) {
+            $serialized = $result->jsonSerialize();
+            if ($showMetaData) {
+                $serialized['groupMetaData'] = json_encode($serialized['groupMetaData'], JSON_PRETTY_PRINT);
+                $serialized['aggregateMetaData'] = json_encode($serialized['aggregateMetaData'], JSON_PRETTY_PRINT);
+            } else {
+                unset($serialized['groupMetaData']);
+                unset($serialized['aggregateMetaData']);
+            }
+            return $serialized;
+        }, $results);
+
         if ($showMetaData) {
-            $headers['metaData'] = 'Meta Data';
+            $headers['groupMetaData'] = 'Group Meta Data';
+            $headers['aggregateMetaData'] = 'Aggregate Meta Data';
         }
 
         $this->output->outputTable(

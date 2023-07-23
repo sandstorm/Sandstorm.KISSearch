@@ -25,10 +25,10 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
 
         return <<<SQL
              neos_content_results as (select *,
-                                             match ($columnNameBucketCritical) against ( :$paramNameQuery IN BOOLEAN MODE ) as score_bucket_critical,
-                                             match ($columnNameBucketMajor) against ( :$paramNameQuery IN BOOLEAN MODE ) as score_bucket_major,
-                                             match ($columnNameBucketNormal) against ( :$paramNameQuery IN BOOLEAN MODE ) as score_bucket_normal,
-                                             match ($columnNameBucketMinor) against ( :$paramNameQuery IN BOOLEAN MODE ) as score_bucket_minor
+                                             match ($columnNameBucketCritical) against ( :$paramNameQuery in boolean mode ) as score_bucket_critical,
+                                             match ($columnNameBucketMajor) against ( :$paramNameQuery in boolean mode ) as score_bucket_major,
+                                             match ($columnNameBucketNormal) against ( :$paramNameQuery in boolean mode ) as score_bucket_normal,
+                                             match ($columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ) as score_bucket_minor
                                       from neos_contentrepository_domain_model_nodedata
                                       where match ($columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor) against ( :$paramNameQuery in boolean mode )
              )
@@ -48,11 +48,14 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                     '$resultTypeName' as result_type,
                     (20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor) as score,
                     json_object(
+                        'score', (20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor),
                         'nodeIdentifier', nd.identifier,
                         'nodeType', nd.nodetype,
                         'documentNodeType', nd.document_nodetype,
                         'siteNodeName', nd.site_nodename,
-                        'dimensionsHash', nd.dimensionshash,
+                        'dimensionsHash', nd.dimensionshash
+                    ) as result_meta_data,
+                    json_object(
                         'primaryDomain', (select
                                        concat(
                                            if(d.scheme is not null, concat(d.scheme, ':'), ''),
@@ -62,7 +65,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                                    from neos_neos_domain_model_domain d
                                    where d.persistence_object_identifier = s.primarydomain
                                    and d.active = 1)
-                    ) as meta_data
+                    ) as group_meta_data
              -- for all nodes matching search terms, we have to find the corresponding document node
              -- to link to the content in the search result rendering
              from neos_content_results n

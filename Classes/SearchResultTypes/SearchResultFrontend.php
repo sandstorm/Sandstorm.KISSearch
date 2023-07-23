@@ -70,11 +70,27 @@ class SearchResultFrontend implements \JsonSerializable
     }
 
     /**
+     * @return int
+     */
+    public function getMatchCount(): int
+    {
+        return $this->searchResult->getMatchCount();
+    }
+
+    /**
      * @return array|null
      */
-    public function getMetaData(): ?array
+    public function getGroupMetaData(): ?array
     {
-        return $this->searchResult->getMetaData();
+        return $this->searchResult->getGroupMetaData();
+    }
+
+    /**
+     * @return array|null
+     */
+    public function getAggregateMetaData(): ?array
+    {
+        return $this->searchResult->getAggregateMetaData();
     }
 
     public function jsonSerialize(): array
@@ -85,7 +101,9 @@ class SearchResultFrontend implements \JsonSerializable
             'title' => $this->getTitle(),
             'url' => $this->documentUrl,
             'score' => $this->getScore(),
-            'metaData' => $this->getMetaData()
+            'matchCount' => $this->getMatchCount(),
+            'groupMetaData' => $this->getGroupMetaData(),
+            'aggregateMetaData' => $this->getAggregateMetaData()
         ];
     }
 }
