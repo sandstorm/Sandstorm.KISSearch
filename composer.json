@@ -14,7 +14,8 @@
     },
     "archive": {
         "exclude": [
-            "/test-distribution"
+            "/test-distribution",
+            "/dev-queries"
         ]
     },
     "extra": {
