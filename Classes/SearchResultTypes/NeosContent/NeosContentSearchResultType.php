@@ -228,7 +228,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
     {
         $baseNodeType = $this->configurationManager->getConfiguration(
             ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
-
+            $configurationPath
         );
         if ($baseNodeType === null) {
             return $defaultBaseNodeType;
