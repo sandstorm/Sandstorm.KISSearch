@@ -168,7 +168,7 @@ class SearchService
         $rsm->addScalarResult('result_id', 1);
         $rsm->addScalarResult('result_type', 2);
         $rsm->addScalarResult('result_title', 3);
-        $rsm->addScalarResult('sum_score', 4, 'float');
+        $rsm->addScalarResult('score', 4, 'float');
         $rsm->addScalarResult('meta_data', 5);
         $rsm->newObjectMappings['result_id'] = [
             'className' => SearchResult::class,
@@ -185,7 +185,7 @@ class SearchService
             'objIndex' => 0,
             'argIndex' => 2,
         ];
-        $rsm->newObjectMappings['sum_score'] = [
+        $rsm->newObjectMappings['score'] = [
             'className' => SearchResult::class,
             'objIndex' => 0,
             'argIndex' => 3,

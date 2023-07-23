@@ -138,13 +138,13 @@ class MySQLSearchQueryBuilder
                 a.result_id as result_id,
                 a.result_type as result_type,
                 a.result_title as result_title,
-                -- sum the score
-                sum(score) as sum_score,
+                -- max score wins
+                max(score) as score,
                 a.meta_data as meta_data
             from all_results a
             -- group by result id and type in case multiple merging query parts return the same result
             group by result_id, result_type
-            order by sum_score desc
+            order by score desc
             limit :$limitParamName;
         SQL;
     }
