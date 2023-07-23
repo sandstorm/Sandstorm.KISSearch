@@ -30,6 +30,7 @@ still early WIP phase, TODO more documentation!
 ## known bugs / current TODOs
 
 - handle Umlaute/special chars: 'äöüÄÖÜß' -> currently, they get removed during fulltext extraction
+- migrations must be transactional -> currently, they are not and may leave an inconsistent migration status on errors
 
 ## how to install
 
