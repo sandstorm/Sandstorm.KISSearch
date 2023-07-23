@@ -141,7 +141,7 @@ class SearchService
         }, $searchQueryProviders);
 
         return match ($databaseType) {
-            DatabaseType::MYSQL => MySQLSearchQueryBuilder::searchQuery($searchingQueryParts, $mergingQueryParts),
+            DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::searchQuery($searchingQueryParts, $mergingQueryParts),
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689933374),
             default => throw new UnsupportedDatabaseException(
                 "Search service does not support database of type '$databaseType->name'",
@@ -153,7 +153,7 @@ class SearchService
     private static function prepareSearchTermParameterValue(DatabaseType $databaseType, string $userInput): string
     {
         return match ($databaseType) {
-            DatabaseType::MYSQL => MySQLSearchQueryBuilder::prepareSearchTermQueryParameter($userInput),
+            DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::prepareSearchTermQueryParameter($userInput),
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689936252),
             default => throw new UnsupportedDatabaseException(
                 "Search service does not support database of type '$databaseType->name'",

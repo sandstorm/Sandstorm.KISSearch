@@ -65,7 +65,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
     {
         $nodeTypeSearchConfiguration = $this->getFulltextSearchConfiguration();
         return match ($databaseType) {
-            DatabaseType::MYSQL => new NeosContentMySQLDatabaseMigration($nodeTypeSearchConfiguration),
+            DatabaseType::MYSQL, DatabaseType::MARIADB => new NeosContentMySQLDatabaseMigration($nodeTypeSearchConfiguration),
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934286),
             default => throw new UnsupportedDatabaseException(
                 "Neos Content search does not support database of type '$databaseType->name'",
@@ -296,7 +296,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
     public function getSearchQueryProvider(DatabaseType $databaseType): SearchQueryProviderInterface
     {
         return match ($databaseType) {
-            DatabaseType::MYSQL => new NeosContentMySQLSearchQueryProvider(),
+            DatabaseType::MYSQL, DatabaseType::MARIADB => new NeosContentMySQLSearchQueryProvider(),
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934266),
             default => throw new UnsupportedDatabaseException(
                 "Neos Content search does not support database of type '$databaseType->name'",

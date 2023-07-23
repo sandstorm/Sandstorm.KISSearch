@@ -6,14 +6,15 @@ Search with the power of SQL fulltext queries. No need for additional infrastruc
 Search configuration is more or less downwards compatible to Neos.SearchPlugin / SimpleSearch / ElasticSearch.
 
 Supports:
- - MariaDB/MySQL version >= 10.6 -> first working draft
+ - MariaDB version >= 10.6
+ - MySQL version >= 8.0
  - PostgreSQL -> supported very soon
 
 Next Steps:
  - migration tooling
  - PostgreSQL support
 
-still early WIP phase, TODO documentation!
+still early WIP phase, TODO more documentation!
 
 ## Why KISSearch?
 
@@ -25,6 +26,10 @@ still early WIP phase, TODO documentation!
  - comes with Neos Content as default SearchResultType
  - designed to be database agnostic
  - search multiple sources with a single, performant SQL query
+
+## known bugs / current TODOs
+
+- handle Umlaute/special chars: 'äöüÄÖÜß' -> currently, they get removed during fulltext extraction
 
 ## how to install
 
@@ -39,6 +44,12 @@ Default config that lives inside the Sandstorm.KISSearch package:
 ```yaml
 Sandstorm:
   KISSearch:
+    # database type; mainly required for minimal version checking
+    # supported databases:
+    #  - MySQL
+    #  - MariaDB
+    #  - PostgreSQL (coming soon)
+    databaseType: 'MariaDB'
 
     # all registered search result types
     searchResultTypes:
@@ -96,6 +107,8 @@ Mode: Extract HTML tags into specific buckets.
         extractHtmlInto: 'all'
 ```
 
+This package is compatible to the fulltext extraction configuration used by Neos.SearchPlugin / Neos.SimpleSearch / Neos.ElasticSearch. 
+
 ### prepare your database for search
 
 Create SQL index:
@@ -106,6 +119,12 @@ Create SQL index:
 Remove SQL index:
 ```shell
 ./flow kissearch:remove
+```
+
+Check required minimum database version:
+```shell
+# if not fulfilled, this will print an error message and exit with code 1
+./flow kissearch:checkVersion
 ```
 
 ### run search queries

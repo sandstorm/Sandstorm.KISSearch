@@ -1,5 +1,11 @@
 Sandstorm:
   KISSearch:
+    # database type; mainly required for minimal version checking
+    # supported databases:
+    #  - MySQL
+    #  - MariaDB
+    #  - PostgreSQL (coming soon)
+    databaseType: 'MariaDB'
 
     # all registered search result types
     searchResultTypes:

@@ -46,10 +46,59 @@ class KISSearchCommandController extends CommandController
         $this->searchService = $searchService;
     }
 
+    public function checkVersionCommand(bool $printSuccess = true): void
+    {
+        $databaseType = DatabaseType::detectDatabase($this->configurationManager);
+        $this->internalCheckDatabaseVersion($databaseType, $printSuccess);
+    }
+
+    private function internalCheckDatabaseVersion(DatabaseType $databaseType, bool $printSuccess): void
+    {
+        $requiredVersion = match ($databaseType) {
+            DatabaseType::MARIADB => '10.6.0',
+            DatabaseType::MYSQL => '8.0',
+            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
+            default => throw new UnsupportedDatabaseException(
+                "Version check does not support database of type '$databaseType->name'",
+                1690118087
+            )
+        };
+        $actualVersion = $this->getActualDatabaseVersion($databaseType);
+        $versionRequirementsFulfilled = version_compare($actualVersion, $requiredVersion, '>=');
+        if ($versionRequirementsFulfilled) {
+            if ($printSuccess) {
+                $this->outputLine('<success>Minimal version requirements for %s database fulfilled, have fun with KISSearch!</success>', [$databaseType->value]);
+                $this->outputLine("Required minimal %s version is '%s'; your version: '%s'", [$databaseType->value, $requiredVersion, $actualVersion]);
+            }
+        } else {
+            $this->outputLine('<error>Minimal version requirements for %s database not fulfilled!</error>', [$databaseType->value]);
+            $this->outputLine("Required minimal %s version is '%s'; but was: '%s'", [$databaseType->value, $requiredVersion, $actualVersion]);
+            $this->sendAndExit(1);
+        }
+    }
+
+    private function getActualDatabaseVersion(DatabaseType $databaseType): string
+    {
+        $sql = match ($databaseType) {
+            DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::buildDatabaseVersionQuery(),
+            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
+            default => throw new UnsupportedDatabaseException(
+                "Version check does not support database of type '$databaseType->name'",
+                1690118078
+            )
+        };
+        $rsm = new ResultSetMapping();
+        $rsm->addScalarResult('version', 0);
+
+        $query = $this->entityManager->createNativeQuery($sql, $rsm);
+        return $query->getSingleResult()[0];
+    }
 
     public function migrateCommand(bool $print = false): void
     {
         $databaseType = DatabaseType::detectDatabase($this->configurationManager);
+        $this->internalCheckDatabaseVersion($databaseType, false);
+
         $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
 
         $this->executeMigration(<<<SQL
@@ -101,8 +150,8 @@ class KISSearchCommandController extends CommandController
 
     private static function buildInsertOrUpdateVersionHashSql(DatabaseType $databaseType, string $searchResultTypeName, string $versionHash): string
     {
-        return match($databaseType) {
-            DatabaseType::MYSQL => MySQLSearchQueryBuilder::buildInsertOrUpdateVersionHashQuery($searchResultTypeName, $versionHash),
+        return match ($databaseType) {
+            DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::buildInsertOrUpdateVersionHashQuery($searchResultTypeName, $versionHash),
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
             default => throw new UnsupportedDatabaseException(
                 "Migration does not support database of type '$databaseType->name'",
@@ -141,6 +190,8 @@ class KISSearchCommandController extends CommandController
     public function removeCommand(bool $print = false): void
     {
         $databaseType = DatabaseType::detectDatabase($this->configurationManager);
+        $this->internalCheckDatabaseVersion($databaseType, false);
+
         $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
 
         $migrationScripts = [
@@ -199,7 +250,7 @@ class KISSearchCommandController extends CommandController
         $this->output->outputLine();
     }
 
-    public function searchCommand(string $query, int $limit = 50, ?string $additionalParams = null): void
+    public function searchCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
     {
         $additionalParamsArray = json_decode($additionalParams, true);
         $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
@@ -210,26 +261,34 @@ class KISSearchCommandController extends CommandController
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
         $this->outputLine("found $resultCount results after $searchQueryDuration ms");
 
-        $tableRows = array_map(function (SearchResult $result) {
+        $tableRows = array_map(function (SearchResult $result) use ($showMetaData) {
             $serialized = $result->jsonSerialize();
-            $serialized['metaData'] = json_encode($serialized['metaData'], JSON_PRETTY_PRINT);
+            if ($showMetaData) {
+                $serialized['metaData'] = json_encode($serialized['metaData'], JSON_PRETTY_PRINT);
+            } else {
+                unset($serialized['metaData']);
+            }
             return $serialized;
         }, $results);
 
+        $headers = [
+            'identifier' => 'Result Identifier',
+            'type' => 'Result Type',
+            'title' => 'Result Title',
+            'score' => 'Match Score'
+        ];
+        if ($showMetaData) {
+            $headers['metaData'] = 'Meta Data';
+        }
+
         $this->output->outputTable(
             $tableRows,
-            [
-                'identifier' => 'Result Identifier',
-                'type' => 'Result Type',
-                'title' => 'Result Title',
-                'score' => 'Match Score',
-                'metaData' => 'Meta Data'
-            ],
+            $headers,
             "Search Results for '$query'"
         );
     }
 
-    public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null): void
+    public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
     {
         $additionalParamsArray = json_decode($additionalParams, true);
         $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
@@ -240,22 +299,30 @@ class KISSearchCommandController extends CommandController
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
         $this->outputLine("found $resultCount results after $searchQueryDuration ms");
 
-        $tableRows = array_map(function (SearchResultFrontend $result) {
+        $tableRows = array_map(function (SearchResultFrontend $result) use ($showMetaData) {
             $serialized = $result->jsonSerialize();
-            $serialized['metaData'] = json_encode($serialized['metaData'], JSON_PRETTY_PRINT);
+            if ($showMetaData) {
+                $serialized['metaData'] = json_encode($serialized['metaData'], JSON_PRETTY_PRINT);
+            } else {
+                unset($serialized['metaData']);
+            }
             return $serialized;
         }, $results);
 
+        $headers = [
+            'identifier' => 'Result Identifier',
+            'type' => 'Result Type',
+            'title' => 'Result Title',
+            'url' => 'Document URL',
+            'score' => 'Match Score'
+        ];
+        if ($showMetaData) {
+            $headers['metaData'] = 'Meta Data';
+        }
+
         $this->output->outputTable(
             $tableRows,
-            [
-                'identifier' => 'Result Identifier',
-                'type' => 'Result Type',
-                'title' => 'Result Title',
-                'url' => 'Document URL',
-                'score' => 'Match Score',
-                'metaData' => 'Meta Data'
-            ],
+            $headers,
             "Search Results for '$query'"
         );
     }

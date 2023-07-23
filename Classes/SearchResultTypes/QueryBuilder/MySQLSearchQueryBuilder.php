@@ -176,4 +176,11 @@ class MySQLSearchQueryBuilder
         SQL;
     }
 
+    public static function buildDatabaseVersionQuery(): string
+    {
+        return <<<SQL
+            SELECT @@version as version;
+        SQL;
+    }
+
 }
