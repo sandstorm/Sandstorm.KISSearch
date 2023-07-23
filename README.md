@@ -6,7 +6,7 @@ Search with the power of SQL fulltext queries. No need for additional infrastruc
 Search configuration is more or less downwards compatible to Neos.SearchPlugin / SimpleSearch / ElasticSearch.
 
 Supports:
- - MariaDB/MySQL -> first working draft
+ - MariaDB/MySQL version >= 10.6 -> first working draft
  - PostgreSQL -> supported very soon
 
 Next Steps:
@@ -31,6 +31,41 @@ still early WIP phase, TODO documentation!
 TODO: use composer - doc after first release
 
 ## how to use
+
+### Package configuration
+
+Default config that lives inside the Sandstorm.KISSearch package:
+
+```yaml
+Sandstorm:
+  KISSearch:
+
+    # all registered search result types
+    searchResultTypes:
+      # default search result type: Neos Content (Nodes from Content Repository)
+      neos_content: 'Sandstorm\KISSearch\SearchResultTypes\NeosContent\NeosContentSearchResultType'
+
+    # configuration for the Neos Content search result type
+    neosContent:
+      # explicit filter to exclude specific node types from search indexing
+      excludedNodeTypes:
+        - 'Neos.Neos:Shortcut'
+      # only document node types that extends this get indexed
+      # also only content nodes that lives below documents extending this get indexed
+      baseDocumentNodeType: 'Neos.Neos:Document'
+      # only content node types that extends this get indexed
+      baseContentNodeType: 'Neos.Neos:Content'
+```
+
+Write your own search result types and register them via config:
+
+```yaml
+Sandstorm:
+  KISSearch:
+    searchResultTypes:
+      # extensibility for your custom search result types 
+      my_products: 'Vendor\YourProject\SearchResultTypes\YourTypes\ProductSearchResultType'
+```
 
 ### NodeType search configuration
 
@@ -148,8 +183,6 @@ root = Sandstorm.KISSearch:Search {
 }
 ```
 
-The Fusion objects `Sandstorm.KISSearch:Search` and `Sandstorm.KISSearch:SearchFrontend` have cache mode `uncached` by default.
-
 Fusion Eel Helper API:
 ```neosfusion
 // includes URLs of the document nodes
@@ -161,7 +194,11 @@ root = ${KISSearch.search(request.arguments.q, 100)}
 root.@process.json = ${Json.stringify(value)}
 ```
 
-When using EelHelpers, you probably want to set the cache mode of the component that uses them to `uncached`.
+TODO document additionalParameters!
+
+### Fusion caching
+
+TODO document on how to use with Fusion caching
 
 ## how to extend
 

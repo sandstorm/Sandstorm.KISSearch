@@ -1,6 +1,18 @@
 Sandstorm:
   KISSearch:
+
+    # all registered search result types
     searchResultTypes:
+      # default search result type: Neos Content (Nodes from Content Repository)
       neos_content: 'Sandstorm\KISSearch\SearchResultTypes\NeosContent\NeosContentSearchResultType'
-    excludedNodeTypes:
-      - 'Neos.Neos:Shortcut'
+
+    # configuration for the Neos Content search result type
+    neosContent:
+      # explicit filter to exclude specific node types from search indexing
+      excludedNodeTypes:
+        - 'Neos.Neos:Shortcut'
+      # only document node types that extends this get indexed
+      # also only content nodes that lives below documents extending this get indexed
+      baseDocumentNodeType: 'Neos.Neos:Document'
+      # only content node types that extends this get indexed
+      baseContentNodeType: 'Neos.Neos:Content'
