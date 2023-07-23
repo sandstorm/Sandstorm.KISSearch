@@ -71,7 +71,7 @@ class MySQLSearchQueryBuilder
     public static function extractNormalizedFulltextFromJson(string $valueSql, string $jsonKey): string
     {
         return <<<SQL
-            lower(json_value($valueSql, '$.$jsonKey'))
+            lower(json_extract($valueSql, '$.$jsonKey'))
         SQL;
     }
 
@@ -83,7 +83,7 @@ class MySQLSearchQueryBuilder
     public static function fulltextExtractHtmlTagContents(string $valueSql, string ...$tagNames): string
     {
         $tagNamesPattern = sprintf('(%s)', implode('|', $tagNames));
-        $pattern = "(^.*?<$tagNamesPattern>)|(</$tagNamesPattern>.*?<$tagNamesPattern>)|(</$tagNamesPattern>.*?$)";
+        $pattern = "(^.*?<$tagNamesPattern>)|(<\\\\\\\\?/$tagNamesPattern>.*?<$tagNamesPattern>)|(<\\\\\\\\?/$tagNamesPattern>.*?$)";
 
         return self::sanitizeFulltextExtractionResult(<<<SQL
             -- remove everything between closing and opening tags
@@ -94,7 +94,7 @@ class MySQLSearchQueryBuilder
     public static function fulltextExtractHtmlTextContent(string $valueSql, string ...$excludedTags): string
     {
         $tagNamesPattern = sprintf('(%s)', implode('|', $excludedTags));
-        $tagContentPattern = sprintf('<%s.*?>.*?</%s>', $tagNamesPattern, $tagNamesPattern);
+        $tagContentPattern = sprintf('<%s.*?>.*?<\\\\\\\\?/%s>', $tagNamesPattern, $tagNamesPattern);
         return self::sanitizeFulltextExtractionResult(<<<SQL
             -- remove all excluded tags
             regexp_replace($valueSql, '$tagContentPattern', '')
