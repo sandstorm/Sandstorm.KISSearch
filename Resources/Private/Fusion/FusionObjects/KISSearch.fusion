@@ -3,9 +3,7 @@ prototype(Sandstorm.KISSearch:Search) {
 
   query = ''
   limit = 50
-  additionalParameters = null
-
-  @cache.mode = 'uncached'
+  additionalParameters = Neos.Fusion:DataStructure
 }
 
 prototype(Sandstorm.KISSearch:SearchFrontend) {
@@ -13,7 +11,5 @@ prototype(Sandstorm.KISSearch:SearchFrontend) {
 
   query = ''
   limit = 50
-  additionalParameters = null
-
-  @cache.mode = 'uncached'
+  additionalParameters = Neos.Fusion:DataStructure
 }
