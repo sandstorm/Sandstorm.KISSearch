@@ -2,9 +2,11 @@
 
 namespace Sandstorm\KISSearch\SearchResultTypes\QueryBuilder;
 
+use Neos\Flow\Annotations\Proxy;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 
+#[Proxy(false)]
 class MySQLSearchQueryBuilder
 {
 
@@ -122,11 +124,18 @@ class MySQLSearchQueryBuilder
         SQL;
     }
 
-    public static function searchQuery(array $searchingQueryParts, array $mergingQueryParts): string
+    public static function searchQuery(SearchQuery $searchQuery): string
     {
-        $searchingQueryPartsSql = implode(",\n", $searchingQueryParts);
-        $mergingQueryPartsSql = implode(" union \n", $mergingQueryParts);
+        $searchingQueryPartsSql = implode(",\n", $searchQuery->getSearchingQueryPartsAsString());
+        $mergingQueryPartsSql = implode(" union \n", $searchQuery->getMergingQueryPartsAsString());
         $limitParamName = SearchResult::SQL_QUERY_PARAM_LIMIT;
+
+        $aliasResultIdentifier = SearchQuery::ALIAS_RESULT_IDENTIFIER;
+        $aliasResultTitle = SearchQuery::ALIAS_RESULT_TITLE;
+        $aliasResultType = SearchQuery::ALIAS_RESULT_TYPE;
+        $aliasScore = SearchQuery::ALIAS_SCORE;
+        $aliasResultMetaData = SearchQuery::ALIAS_RESULT_META_DATA;
+        $aliasGroupMetaData = SearchQuery::ALIAS_GROUP_META_DATA;
 
         return <<<SQL
             -- searching query part
@@ -137,15 +146,15 @@ class MySQLSearchQueryBuilder
                  )
             select
                 -- select all search results
-                a.result_id                         as result_id,
-                a.result_type                       as result_type,
-                a.result_title                      as result_title,
+                a.$aliasResultIdentifier as result_id,
+                a.$aliasResultType as result_type,
+                a.$aliasResultTitle as result_title,
                 -- max score wins
                 -- TODO discuss, if max(score) vs. sum(score) vs. set mode via API
-                max(score)                          as score,
-                count(a.result_id)                  as match_count,
-                a.group_meta_data                   as group_meta_data,
-                json_arrayagg(a.result_meta_data)   as aggregate_meta_data
+                max(a.$aliasScore) as score,
+                count(a.$aliasResultIdentifier) as match_count,
+                a.$aliasGroupMetaData as group_meta_data,
+                json_arrayagg(a.$aliasResultMetaData) as aggregate_meta_data
             from all_results a
             -- group by result id and type in case multiple merging query parts return the same result
             group by result_id, result_type

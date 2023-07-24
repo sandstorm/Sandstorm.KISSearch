@@ -11,7 +11,7 @@ use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypesRegistry;
 use Sandstorm\KISSearch\SearchResultTypes\UnsupportedDatabaseException;
-use Sandstorm\KISSearch\Service\SearchQuery;
+use Sandstorm\KISSearch\Service\SearchQueryInput;
 use Sandstorm\KISSearch\Service\SearchService;
 use Throwable;
 
@@ -261,7 +261,7 @@ class KISSearchCommandController extends CommandController
         $additionalParamsArray = json_decode($additionalParams, true);
         $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
         $startTime = microtime(true);
-        $results = $this->searchService->search(new SearchQuery($query, $limit, $additionalParamsArray));
+        $results = $this->searchService->search(new SearchQueryInput($query, $limit, $additionalParamsArray));
         $endTime = microtime(true);
         $resultCount = count($results);
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
@@ -280,7 +280,7 @@ class KISSearchCommandController extends CommandController
         $additionalParamsArray = json_decode($additionalParams, true);
         $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
         $startTime = microtime(true);
-        $results = $this->searchService->searchFrontend(new SearchQuery($query, $limit, $additionalParamsArray));
+        $results = $this->searchService->searchFrontend(new SearchQueryInput($query, $limit, $additionalParamsArray));
         $endTime = microtime(true);
         $resultCount = count($results);
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);

@@ -139,9 +139,10 @@ Search on command line:
 ```
 
 Flow Service API:
+
 ```injectablephp
 
-use Sandstorm\KISSearch\Service\SearchQuery;
+use Sandstorm\KISSearch\Service\SearchQueryInput;
 use Sandstorm\KISSearch\Service\SearchService;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultFrontend;
@@ -166,7 +167,7 @@ class SearchController extends ActionController {
     public function searchFrontendAction(string $searchQueryUserInput): string
     {
         /** @var SearchResultFrontend[] $searchResults */
-        $searchResults = $this->searchService->searchFrontend(new SearchQuery($searchQueryUserInput, self::DEFAULT_SEARCH_LIMIT));
+        $searchResults = $this->searchService->searchFrontend(new SearchQueryInput($searchQueryUserInput, self::DEFAULT_SEARCH_LIMIT));
         return json_encode($searchResults);
     }    
 
@@ -179,7 +180,7 @@ class SearchController extends ActionController {
     public function searchAction(string $searchQueryUserInput): string
     {
         /** @var SearchResult[] $searchResults */
-        $searchResults = $this->searchService->search(new SearchQuery($searchQueryUserInput, self::DEFAULT_SEARCH_LIMIT));
+        $searchResults = $this->searchService->search(new SearchQueryInput($searchQueryUserInput, self::DEFAULT_SEARCH_LIMIT));
         return json_encode($searchResults);
     }
 }

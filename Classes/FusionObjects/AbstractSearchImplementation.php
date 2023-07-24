@@ -3,12 +3,12 @@
 namespace Sandstorm\KISSearch\FusionObjects;
 
 use Neos\Fusion\FusionObjects\AbstractFusionObject;
-use Sandstorm\KISSearch\Service\SearchQuery;
+use Sandstorm\KISSearch\Service\SearchQueryInput;
 
 abstract class AbstractSearchImplementation extends AbstractFusionObject
 {
 
-    protected abstract function doSearchQuery(SearchQuery $searchQuery): array;
+    protected abstract function doSearchQuery(SearchQueryInput $searchQuery): array;
 
     /**
      * @return ?string
@@ -72,7 +72,7 @@ abstract class AbstractSearchImplementation extends AbstractFusionObject
             // no query, no results! it's that simple ;)
             return [];
         }
-        $searchQuery = new SearchQuery(
+        $searchQuery = new SearchQueryInput(
             $query,
             $this->getLimit(),
             $this->getAdditionalParameters()

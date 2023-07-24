@@ -1,8 +1,9 @@
 <?php
 
-namespace Sandstorm\KISSearch\SearchResultTypes;
+namespace Sandstorm\KISSearch\SearchResultTypes\QueryBuilder;
 
 use Neos\Flow\Annotations\Proxy;
+use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
 
 #[Proxy(false)]
 class AdditionalQueryParameterValue

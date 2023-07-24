@@ -6,10 +6,13 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Configuration\ConfigurationManager;
-use Sandstorm\KISSearch\SearchResultTypes\AdditionalQueryParameterValue;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
+use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterValue;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
+use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultMergingQueryParts;
+use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultSearchingQueryParts;
+use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\SearchQuery;
 use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultFrontend;
@@ -36,7 +39,12 @@ class SearchService
      * @param EntityManagerInterface $entityManager
      * @param CurrentDateTimeProvider $currentDateTimeProvider
      */
-    public function __construct(SearchResultTypesRegistry $searchResultTypesRegistry, ConfigurationManager $configurationManager, \Doctrine\ORM\EntityManagerInterface $entityManager, CurrentDateTimeProvider $currentDateTimeProvider)
+    public function __construct(
+        SearchResultTypesRegistry $searchResultTypesRegistry,
+        ConfigurationManager      $configurationManager,
+        EntityManagerInterface    $entityManager,
+        CurrentDateTimeProvider   $currentDateTimeProvider
+    )
     {
         $this->searchResultTypesRegistry = $searchResultTypesRegistry;
         $this->configurationManager = $configurationManager;
@@ -47,30 +55,30 @@ class SearchService
     /**
      * Searches all sources from the registered search result types in one single SQL query.
      *
-     * @param SearchQuery $searchQuery
+     * @param SearchQueryInput $searchQueryInput
      * @return SearchResult[]
      */
-    public function search(SearchQuery $searchQuery): array
+    public function search(SearchQueryInput $searchQueryInput): array
     {
         $databaseType = DatabaseType::detectDatabase($this->configurationManager);
         $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
 
-        return $this->internalSearch($databaseType, $searchQuery, $searchResultTypes);
+        return $this->internalSearch($databaseType, $searchQueryInput, $searchResultTypes);
     }
 
     /**
      * Searches all sources from the registered search result types in one single SQL query.
      * Also enriches the search results with their respective search result document URLs.
      *
-     * @param SearchQuery $searchQuery
+     * @param SearchQueryInput $searchQueryInput
      * @return SearchResultFrontend[]
      */
-    public function searchFrontend(SearchQuery $searchQuery): array
+    public function searchFrontend(SearchQueryInput $searchQueryInput): array
     {
         $databaseType = DatabaseType::detectDatabase($this->configurationManager);
         $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
 
-        $results = $this->internalSearch($databaseType, $searchQuery, $searchResultTypes);
+        $results = $this->internalSearch($databaseType, $searchQueryInput, $searchResultTypes);
 
         return array_map(function (SearchResult $searchResult) use ($searchResultTypes) {
             $responsibleSearchResultType = $searchResultTypes[$searchResult->getResultTypeName()->getName()];
@@ -81,11 +89,11 @@ class SearchService
 
     /**
      * @param DatabaseType $databaseType
-     * @param SearchQuery $searchQuery
+     * @param SearchQueryInput $searchQueryInput
      * @param SearchResultTypeInterface[] $searchResultTypes
      * @return SearchResult[]
      */
-    private function internalSearch(DatabaseType $databaseType, SearchQuery $searchQuery, array $searchResultTypes): array
+    private function internalSearch(DatabaseType $databaseType, SearchQueryInput $searchQueryInput, array $searchResultTypes): array
     {
         // search query
         $searchQueryProviders = [];
@@ -95,7 +103,7 @@ class SearchService
         $searchQuerySql = $this->buildSearchQuerySql($databaseType, $searchQueryProviders);
 
         // prepare search term parameter from user input
-        $searchTermParameterValue = self::prepareSearchTermParameterValue($databaseType, $searchQuery->getQuery());
+        $searchTermParameterValue = self::prepareSearchTermParameterValue($databaseType, $searchQueryInput->getQuery());
 
         // prepare query
         $resultSetMapping = self::buildResultSetMapping();
@@ -103,7 +111,7 @@ class SearchService
         // default parameters
         $defaultParameters = [
             SearchResult::SQL_QUERY_PARAM_QUERY => $searchTermParameterValue,
-            SearchResult::SQL_QUERY_PARAM_LIMIT => $searchQuery->getLimit(),
+            SearchResult::SQL_QUERY_PARAM_LIMIT => $searchQueryInput->getLimit(),
             SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp()
         ];
         $doctrineQuery->setParameters($defaultParameters);
@@ -111,7 +119,7 @@ class SearchService
         $additionalParameters = $this->getSearchTypeSpecificAdditionalParameters(
             array_keys($defaultParameters),
             $searchQueryProviders,
-            $searchQuery
+            $searchQueryInput
         );
         foreach ($additionalParameters as $parameterName => $additionalParameter) {
             $doctrineQuery->setParameter(
@@ -132,16 +140,18 @@ class SearchService
      */
     private function buildSearchQuerySql(DatabaseType $databaseType, array $searchQueryProviders): string
     {
-        $searchingQueryParts = array_map(function (SearchQueryProviderInterface $provider) {
-            return $provider->getResultSearchingQueryPart();
-        }, $searchQueryProviders);
+        $searchingQueryParts = ResultSearchingQueryParts::merging(array_map(function (SearchQueryProviderInterface $provider) {
+            return $provider->getResultSearchingQueryParts();
+        }, $searchQueryProviders));
 
-        $mergingQueryParts = array_map(function (SearchQueryProviderInterface $provider) {
-            return $provider->getResultMergingQueryPart();
-        }, $searchQueryProviders);
+        $mergingQueryParts = ResultMergingQueryParts::merging(array_map(function (SearchQueryProviderInterface $provider) {
+            return $provider->getResultMergingQueryParts();
+        }, $searchQueryProviders));
+
+        $searchQuery = new SearchQuery($searchingQueryParts, $mergingQueryParts);
 
         return match ($databaseType) {
-            DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::searchQuery($searchingQueryParts, $mergingQueryParts),
+            DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::searchQuery($searchQuery),
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689933374),
             default => throw new UnsupportedDatabaseException(
                 "Search service does not support database of type '$databaseType->name'",
@@ -213,10 +223,10 @@ class SearchService
     /**
      * @param string[] $defaultParameterNames
      * @param SearchQueryProviderInterface[] $searchQueryProviders
-     * @param SearchQuery $searchQuery
+     * @param SearchQueryInput $searchQuery
      * @return AdditionalQueryParameterValue[]
      */
-    private function getSearchTypeSpecificAdditionalParameters(array $defaultParameterNames, array $searchQueryProviders, SearchQuery $searchQuery): array
+    private function getSearchTypeSpecificAdditionalParameters(array $defaultParameterNames, array $searchQueryProviders, SearchQueryInput $searchQuery): array
     {
         /** @var AdditionalQueryParameterValue[] $additionalParameters */
         $additionalParameters = [];
@@ -224,13 +234,16 @@ class SearchService
 
         foreach ($searchQueryProviders as $searchResultTypeName => $searchQueryProvider) {
             $additionalQueryParametersDefinitions = $searchQueryProvider->getAdditionalQueryParameters();
+            if ($additionalQueryParametersDefinitions === null) {
+                continue;
+            }
             foreach ($additionalQueryParametersDefinitions as $additionalQueryParametersDefinition) {
                 $parameterName = $additionalQueryParametersDefinition->getParameterName();
                 // check for conflicts with default parameter names
                 if (in_array($parameterName, $defaultParameterNames)) {
                     throw new InvalidAdditionalParameterException(
                         "Additional query parameter '$parameterName' defined by search result type '$searchResultTypeName' "
-                          . "conflicts with default parameter name; please rename it",
+                        . "conflicts with default parameter name; please rename it",
                         1689983919
                     );
                 }
@@ -240,7 +253,7 @@ class SearchService
                     throw new InvalidAdditionalParameterException(
                         sprintf(
                             "Additional query parameter '%s' defined by search result type '%s' "
-                                    . "conflicts with existing parameter name defined by search result type '%s'; please rename it",
+                            . "conflicts with existing parameter name defined by search result type '%s'; please rename it",
                             $parameterName,
                             $searchResultTypeName,
                             $existingDefinition->getParameterDefinition()->getSearchResultTypeName()->getName()
