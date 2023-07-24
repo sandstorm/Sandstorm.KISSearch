@@ -53,8 +53,14 @@ class KISSearchCommandController extends CommandController
 
     private function internalCheckDatabaseVersion(DatabaseType $databaseType, bool $printSuccess): void
     {
+        // TODO remove hotfix
+        $hotfixDisableTimedHiddenBeforeAfter = $this->configurationManager->getConfiguration(
+            ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
+            'Sandstorm.KISSearch.hotfixDisableTimedHiddenBeforeAfter'
+        );
+
         $requiredVersion = match ($databaseType) {
-            DatabaseType::MARIADB => '10.6.0',
+            DatabaseType::MARIADB => $hotfixDisableTimedHiddenBeforeAfter ? '10.5.0' : '10.6.0',
             DatabaseType::MYSQL => '8.0',
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
             default => throw new UnsupportedDatabaseException(

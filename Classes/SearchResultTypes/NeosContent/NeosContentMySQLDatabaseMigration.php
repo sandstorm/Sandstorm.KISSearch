@@ -15,12 +15,17 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 
     private readonly NodeTypesSearchConfiguration $nodeTypeSearchConfiguration;
 
+    // TODO remove hotfix
+    private readonly bool $hotfixDisableTimedHiddenBeforeAfter;
+
     /**
      * @param NodeTypesSearchConfiguration $nodeTypeSearchConfiguration
+     * @param bool $hotfixDisableTimedHiddenBeforeAfter
      */
-    public function __construct(NodeTypesSearchConfiguration $nodeTypeSearchConfiguration)
+    public function __construct(NodeTypesSearchConfiguration $nodeTypeSearchConfiguration, bool $hotfixDisableTimedHiddenBeforeAfter)
     {
         $this->nodeTypeSearchConfiguration = $nodeTypeSearchConfiguration;
+        $this->hotfixDisableTimedHiddenBeforeAfter = $hotfixDisableTimedHiddenBeforeAfter;
     }
 
 
@@ -157,15 +162,10 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                 );
         SQL;
 
-        // function for checking hidden before and after datetime for a set of parent nodes, given by array
-        $sqlQueries[] = <<<SQL
-            create or replace function sandstorm_kissearch_any_timed_hidden(
-                timed_hidden json,
-                now_time datetime
-            ) returns boolean
-            begin
-                return (
-                    select timed_hidden is not null
+        // TODO remove hotfix
+        $timedCheck = $this->hotfixDisableTimedHiddenBeforeAfter ? '0' :
+            <<<SQL
+                timed_hidden is not null
                         and exists(
                             select 1
                             from json_table (timed_hidden, '$[*]'
@@ -178,7 +178,20 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                                     when th.hiddenbeforedatetime is null then th.hiddenafterdatetime < now_time
                                     when th.hiddenafterdatetime is null then th.hiddenbeforedatetime > now_time
                                     else now_time not between th.hiddenbeforedatetime and th.hiddenafterdatetime
-                                end)
+                                end
+                        )
+            SQL;
+
+
+        // function for checking hidden before and after datetime for a set of parent nodes, given by array
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_any_timed_hidden(
+                timed_hidden json,
+                now_time datetime
+            ) returns boolean
+            begin
+                return (
+                    select $timedCheck
                     );
             end;
         SQL;

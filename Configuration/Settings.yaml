@@ -7,6 +7,11 @@ Sandstorm:
     #  - PostgreSQL (coming soon)
     databaseType: 'MariaDB'
 
+    # HOTFIX feature flag to support older versions of MariaDB
+    #   !!! this gets removed soon: please update your MariaDB to version > 10.6
+    #   when set to true: exclusion of timed hidden before and after is disabled but MariaDB version 10.5 is supported
+    hotfixDisableTimedHiddenBeforeAfter: false
+
     # all registered search result types
     searchResultTypes:
       # default search result type: Neos Content (Nodes from Content Repository)

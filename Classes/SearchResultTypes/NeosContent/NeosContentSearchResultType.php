@@ -64,8 +64,18 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
     public function getDatabaseMigration(DatabaseType $databaseType): DatabaseMigrationInterface
     {
         $nodeTypeSearchConfiguration = $this->getFulltextSearchConfiguration();
+
+        // TODO remove hotfix
+        $hotfixDisableTimedHiddenBeforeAfter = $this->configurationManager->getConfiguration(
+            ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
+            'Sandstorm.KISSearch.hotfixDisableTimedHiddenBeforeAfter'
+        );
+
         return match ($databaseType) {
-            DatabaseType::MYSQL, DatabaseType::MARIADB => new NeosContentMySQLDatabaseMigration($nodeTypeSearchConfiguration),
+            DatabaseType::MYSQL, DatabaseType::MARIADB => new NeosContentMySQLDatabaseMigration(
+                $nodeTypeSearchConfiguration,
+                $hotfixDisableTimedHiddenBeforeAfter
+            ),
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934286),
             default => throw new UnsupportedDatabaseException(
                 "Neos Content search does not support database of type '$databaseType->name'",
