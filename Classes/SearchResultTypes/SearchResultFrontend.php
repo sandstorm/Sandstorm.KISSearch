@@ -78,17 +78,17 @@ class SearchResultFrontend implements \JsonSerializable
     }
 
     /**
-     * @return array|null
+     * @return array
      */
-    public function getGroupMetaData(): ?array
+    public function getGroupMetaData(): array
     {
         return $this->searchResult->getGroupMetaData();
     }
 
     /**
-     * @return array|null
+     * @return array
      */
-    public function getAggregateMetaData(): ?array
+    public function getAggregateMetaData(): array
     {
         return $this->searchResult->getAggregateMetaData();
     }

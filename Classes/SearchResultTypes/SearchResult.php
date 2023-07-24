@@ -17,8 +17,8 @@ class SearchResult implements \JsonSerializable
     private readonly string $title;
     private readonly float $score;
     private readonly int $matchCount;
-    private readonly ?array $groupMetaData;
-    private readonly ?array $aggregateMetaData;
+    private readonly array $groupMetaData;
+    private readonly array $aggregateMetaData;
 
     /**
      * @param string $identifier
@@ -43,8 +43,8 @@ class SearchResult implements \JsonSerializable
         $this->title = $title;
         $this->score = $score;
         $this->matchCount = $matchCount;
-        $this->groupMetaData = $groupMetaData !== null ? json_decode($groupMetaData, true) : null;
-        $this->aggregateMetaData = $aggregateMetaData !== null ? json_decode($aggregateMetaData, true) : null;
+        $this->groupMetaData = $groupMetaData !== null ? json_decode($groupMetaData, true) : [];
+        $this->aggregateMetaData = $aggregateMetaData !== null ? array_filter(json_decode($aggregateMetaData, true)) : [];
     }
 
     /**
@@ -97,17 +97,17 @@ class SearchResult implements \JsonSerializable
     }
 
     /**
-     * @return array|null
+     * @return array
      */
-    public function getGroupMetaData(): ?array
+    public function getGroupMetaData(): array
     {
         return $this->groupMetaData;
     }
 
     /**
-     * @return array|null
+     * @return array
      */
-    public function getAggregateMetaData(): ?array
+    public function getAggregateMetaData(): array
     {
         return $this->aggregateMetaData;
     }
