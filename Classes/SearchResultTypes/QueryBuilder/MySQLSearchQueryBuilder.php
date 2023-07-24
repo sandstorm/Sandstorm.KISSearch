@@ -71,7 +71,9 @@ class MySQLSearchQueryBuilder
     public static function extractNormalizedFulltextFromJson(string $valueSql, string $jsonKey): string
     {
         return <<<SQL
-            lower(json_extract($valueSql, '$.$jsonKey'))
+            replace(replace(replace(replace(
+                lower(json_extract($valueSql, '$.$jsonKey')),
+                'ä','ae'),'ö','oe'), 'ü','ue'), 'ß','ss')
         SQL;
     }
 
@@ -155,7 +157,8 @@ class MySQLSearchQueryBuilder
     public static function prepareSearchTermQueryParameter(string $userInput): string
     {
         $sanitized = trim($userInput);
-        $sanitized = strtolower($sanitized);
+        $sanitized = mb_strtolower($sanitized);
+        $sanitized = str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $sanitized);
 
         $searchWords = explode(
             ' ',
