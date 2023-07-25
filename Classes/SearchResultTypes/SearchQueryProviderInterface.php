@@ -2,7 +2,6 @@
 
 namespace Sandstorm\KISSearch\SearchResultTypes;
 
-use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterDefinition;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterDefinitions;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultMergingQueryParts;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultSearchingQueryParts;

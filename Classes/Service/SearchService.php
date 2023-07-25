@@ -100,32 +100,31 @@ class SearchService
         foreach ($searchResultTypes as $searchResultTypeName => $searchResultType) {
             $searchQueryProviders[$searchResultTypeName] = $searchResultType->getSearchQueryProvider($databaseType);
         }
-        $searchQuerySql = $this->buildSearchQuerySql($databaseType, $searchQueryProviders);
-
         // prepare search term parameter from user input
         $searchTermParameterValue = self::prepareSearchTermParameterValue($databaseType, $searchQueryInput->getQuery());
-
-        // prepare query
-        $resultSetMapping = self::buildResultSetMapping();
-        $doctrineQuery = $this->entityManager->createNativeQuery($searchQuerySql, $resultSetMapping);
         // default parameters
         $defaultParameters = [
             SearchResult::SQL_QUERY_PARAM_QUERY => $searchTermParameterValue,
             SearchResult::SQL_QUERY_PARAM_LIMIT => $searchQueryInput->getLimit(),
             SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp()
         ];
-        $doctrineQuery->setParameters($defaultParameters);
         // search type specific additional parameters
         $additionalParameters = $this->getSearchTypeSpecificAdditionalParameters(
             array_keys($defaultParameters),
             $searchQueryProviders,
             $searchQueryInput
         );
+        $searchQuerySql = $this->buildSearchQuerySql($databaseType, $searchQueryProviders);
+
+        // prepare query
+        $resultSetMapping = self::buildResultSetMapping();
+        $doctrineQuery = $this->entityManager->createNativeQuery($searchQuerySql, $resultSetMapping);
+        $doctrineQuery->setParameters($defaultParameters);
         foreach ($additionalParameters as $parameterName => $additionalParameter) {
             $doctrineQuery->setParameter(
                 $parameterName,
-                $additionalParameter->getParameterValue(),
-                $additionalParameter->getParameterDefinition()->getParameterType()
+                $additionalParameter->getQueryParameterValue(),
+                $additionalParameter->getQueryParameterType()
             );
         }
 

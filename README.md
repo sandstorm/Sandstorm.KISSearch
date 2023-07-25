@@ -1,3 +1,7 @@
+# TODO
+
+ - remove '\n' and '\r' characters in fulltext extraction
+
 # Sandstorm.KISSearch - pure SQL search for Neos +X
 
 Extensible, low impact, self-contained, SQL-pure stupidly simple search integration for Neos.

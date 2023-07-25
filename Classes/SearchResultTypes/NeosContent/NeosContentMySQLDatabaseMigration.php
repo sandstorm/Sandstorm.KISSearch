@@ -93,6 +93,8 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            n.nodetype,
                            cast(null as varchar(32))
                                collate utf8mb4_unicode_ci              as dimensionshash,
+                           cast(null as varchar(10000000))
+                               collate utf8mb4_unicode_ci              as dimensionvalues,
                            cast(null as varchar(255))
                                collate utf8mb4_unicode_ci              as site_nodename,
                            n.identifier                                as document_id,
@@ -117,6 +119,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                            n.parentpathhash,
                            n.nodetype,
                            n.dimensionshash,
+                           n.dimensionvalues,
                            if((length(n.path) - length(replace(n.path, '/', ''))) = 2,
                               substring_index(n.path, '/', -1),
                               r.site_nodename)             as site_nodename,
@@ -148,6 +151,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                    nd.document_nodetype as document_nodetype,
                    nd.nodetype          as nodetype,
                    nd.dimensionshash    as dimensionshash,
+                   nd.dimensionvalues   as dimensionvalues,
                    nd.site_nodename     as site_nodename,
                    if(json_length(nd.timed_hidden) > 0,
                       nd.timed_hidden,
@@ -162,6 +166,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                 );
         SQL;
 
+        // function for checking hidden before and after datetime for a set of parent nodes, given by array
         // TODO remove hotfix
         $timedCheck = $this->hotfixDisableTimedHiddenBeforeAfter ? '0' :
             <<<SQL
@@ -181,9 +186,6 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                                 end
                         )
             SQL;
-
-
-        // function for checking hidden before and after datetime for a set of parent nodes, given by array
         $sqlQueries[] = <<<SQL
             create or replace function sandstorm_kissearch_any_timed_hidden(
                 timed_hidden json,
@@ -195,6 +197,42 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                     );
             end;
         SQL;
+
+        // TODO remove hotfix
+        $allContentDimensionValuesMatch = $this->hotfixDisableTimedHiddenBeforeAfter ? '1' :
+            <<<SQL
+                1 = all (
+                    select
+                        json_contains(
+                            dimension_values,
+                            concat('"', expected_dimension_values.filter_value, '"'),
+                            concat('$.', expected_dimension_values.dimension_name, '.', expected_dimension_values.index_key)
+                        )
+                    from json_table(
+                        dimension_values_filter,
+                        '$[*]'
+                        columns
+                        (
+                            dimension_name text path '$.dimension_name',
+                            index_key text path '$.index_key',
+                            filter_value text path '$.filter_value'
+                        )
+                    ) expected_dimension_values
+                )
+            SQL;
+
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_all_dimension_values_match(
+                dimension_values_filter longtext,
+                dimension_values longtext
+            ) returns boolean
+            begin
+                return (
+                    select $allContentDimensionValuesMatch
+                );
+            end;
+        SQL;
+
         return implode("\n", $sqlQueries);
     }
 
@@ -275,7 +313,9 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         $sqlQueries[] = <<<SQL
             drop function if exists sandstorm_kissearch_any_timed_hidden;
         SQL;
-
+        $sqlQueries[] = <<<SQL
+            drop function if exists sandstorm_kissearch_all_dimension_values_match;
+        SQL;
         return implode("\n", $sqlQueries);
     }
 

@@ -19,6 +19,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     public const CTE_ALIAS = 'neos_content_results';
 
     public const ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME = 'neosContentSiteNodeName';
+    public const ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES = 'neosContentDimensionValues';
 
     function getResultSearchingQueryParts(): ResultSearchingQueryParts
     {
@@ -49,6 +50,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     {
         $queryParamNowTime = SearchResult::SQL_QUERY_PARAM_NOW_TIME;
         $paramNameSiteNodeName = self::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME;
+        $paramNameDimensionValues = self::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES;
         $cteAlias = self::CTE_ALIAS;
 
         $scoreSelector = '(20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)';
@@ -63,10 +65,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                     json_object(
                         'score', $scoreSelector,
                         'nodeIdentifier', nd.identifier,
-                        'nodeType', nd.nodetype,
-                        'documentNodeType', nd.document_nodetype,
-                        'siteNodeName', nd.site_nodename,
-                        'dimensionsHash', nd.dimensionshash
+                        'nodeType', nd.nodetype
                     )
                 SQL,
                 <<<SQL
@@ -79,7 +78,11 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                                        )
                                    from neos_neos_domain_model_domain d
                                    where d.persistence_object_identifier = s.primarydomain
-                                   and d.active = 1)
+                                   and d.active = 1),
+                        'documentNodeType', nd.document_nodetype,
+                        'siteNodeName', nd.site_nodename,
+                        'dimensionsHash', nd.dimensionshash,
+                        'dimensionValues', nd.dimensionvalues
                     )
                 SQL,
                 <<<SQL
@@ -101,6 +104,14 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                             -- site node name (optional, if null all sites are searched)
                             :$paramNameSiteNodeName is null or nd.site_nodename = :$paramNameSiteNodeName
                         )
+                        and (
+                            -- content dimension values (optional, if null all dimensions are searched)
+                            :$paramNameDimensionValues is null
+                            or sandstorm_kissearch_all_dimension_values_match(
+                                    :$paramNameDimensionValues,
+                                    nd.dimensionvalues
+                            )
+                        )
                 SQL
             )
         );
@@ -112,7 +123,10 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     public function getAdditionalQueryParameters(): AdditionalQueryParameterDefinitions
     {
         return AdditionalQueryParameterDefinitions::create(
-            AdditionalQueryParameterDefinition::optional(self::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, 'string', NeosContentSearchResultType::name())
+            AdditionalQueryParameterDefinition::optional(self::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING, NeosContentSearchResultType::name()),
+            AdditionalQueryParameterDefinition::optionalJson(self::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES, NeosContentSearchResultType::name(), function($valueAsArray) {
+                return new ContentDimensionValuesFilter($valueAsArray);
+            })
         );
     }
 

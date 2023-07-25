@@ -328,6 +328,9 @@ class KISSearchCommandController extends CommandController
         } else {
             $additionalParamsReadable = [];
             foreach ($additionalParams as $name => $value) {
+                if (is_array($value)) {
+                    $value = json_encode($value);
+                }
                 $additionalParamsReadable[] = $name . '=' . $value;
             }
             $additionalParamsString = implode(', ', $additionalParamsReadable);
