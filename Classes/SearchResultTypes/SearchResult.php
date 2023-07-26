@@ -48,10 +48,10 @@ class SearchResult implements \JsonSerializable
     }
 
     /**
-     * @param string $documentUrl
+     * @param string|null $documentUrl
      * @return SearchResultFrontend
      */
-    public function withDocumentUrl(string $documentUrl): SearchResultFrontend
+    public function withDocumentUrl(?string $documentUrl): SearchResultFrontend
     {
         return new SearchResultFrontend($this, $documentUrl);
     }

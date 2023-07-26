@@ -9,13 +9,13 @@ class SearchResultFrontend implements \JsonSerializable
 {
 
     private readonly SearchResult $searchResult;
-    private readonly string $documentUrl;
+    private readonly ?string $documentUrl;
 
     /**
      * @param SearchResult $searchResult
-     * @param string $documentUrl
+     * @param string|null $documentUrl
      */
-    public function __construct(SearchResult $searchResult, string $documentUrl)
+    public function __construct(SearchResult $searchResult, ?string $documentUrl)
     {
         $this->searchResult = $searchResult;
         $this->documentUrl = $documentUrl;
@@ -30,9 +30,9 @@ class SearchResultFrontend implements \JsonSerializable
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getDocumentUrl(): string
+    public function getDocumentUrl(): ?string
     {
         return $this->documentUrl;
     }
