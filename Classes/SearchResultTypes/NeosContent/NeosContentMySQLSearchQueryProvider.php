@@ -91,7 +91,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                     from $cteAlias n
                         -- inner join filters hidden and deleted nodes
                         inner join sandstorm_kissearch_nodes_and_their_documents nd
-                            on nd.identifier = n.identifier
+                            on nd.persistence_object_identifier = n.persistence_object_identifier
                         inner join neos_neos_domain_model_site s
                             on s.nodename = nd.site_nodename
                     where

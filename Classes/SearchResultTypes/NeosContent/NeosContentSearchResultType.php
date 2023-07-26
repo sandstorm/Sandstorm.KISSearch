@@ -2,12 +2,17 @@
 
 namespace Sandstorm\KISSearch\SearchResultTypes\NeosContent;
 
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Query\ResultSetMapping;
+use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Model\NodeType;
+use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\Eel\EelEvaluatorInterface;
 use Neos\Eel\Utility as EelUtility;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Configuration\ConfigurationManager;
+use Neos\Neos\Domain\Model\Site;
 use Sandstorm\KISSearch\Eel\IndexingHelper;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseMigrationInterface;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
@@ -31,6 +36,10 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
     private readonly ConfigurationManager $configurationManager;
 
     private readonly NeosDocumentUrlGenerator $documentUrlGenerator;
+
+    private readonly EntityManager $entityManager;
+
+    private bool $requiresReindexOfNodesToTheirDocuments = false;
 
     /**
      * @param NodeTypeManager $nodeTypeManager
@@ -313,6 +322,67 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
                 1689934246
             )
         };
+    }
+
+    /**
+     * Called via AOP Signal Slot. See Package class.
+     *
+     * @param NodeInterface $node
+     * @param Workspace $targetWorkspace
+     * @return void
+     */
+    public function onNodePublished(NodeInterface $node, Workspace $targetWorkspace): void
+    {
+        if ($this->requiresReindexOfNodesToTheirDocuments === true) {
+            // already re-indexing
+            return;
+        }
+        if ($targetWorkspace->getName() !== 'live') {
+            // only re-index on live changes
+            return;
+        }
+        // TODO maybe this logic can be more sophisticated
+        //    - only changes to node-structure is relevant here
+        //      - add/remove/move documents
+        //      - moved content nodes, etc
+        $this->requiresReindexOfNodesToTheirDocuments = true;
+    }
+
+    /**
+     * Called via AOP Signal Slot. See Package class.
+     *
+     * @param Site $site
+     * @return void
+     */
+    public function onSiteImported(Site $site): void
+    {
+        $this->requiresReindexOfNodesToTheirDocuments = true;
+    }
+
+    public function shutdownObject(): void
+    {
+        if ($this->requiresReindexOfNodesToTheirDocuments === false) {
+            // nothing to do if no node was changed during the request
+            return;
+        }
+        $this->reindexNodesToTheirDocuments();
+    }
+
+    public function reindexNodesToTheirDocuments(): void
+    {
+        $databaseType = DatabaseType::detectDatabase($this->configurationManager);
+        $sqlQuery = match ($databaseType) {
+            DatabaseType::MYSQL, DatabaseType::MARIADB => <<<SQL
+                call sandstorm_kissearch_populate_nodes_and_their_documents();
+            SQL,
+            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934266),
+            default => throw new UnsupportedDatabaseException(
+                "Neos Content search does not support database of type '$databaseType->name'",
+                1690389124
+            )
+        };
+        $query = $this->entityManager->createNativeQuery($sqlQuery, new ResultSetMapping());
+        $query->execute();
     }
 
 }

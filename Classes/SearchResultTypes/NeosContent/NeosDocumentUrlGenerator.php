@@ -44,6 +44,7 @@ class NeosDocumentUrlGenerator
     public function forSearchResult(SearchResult $searchResult): string|null
     {
         if ($this->contentContext === null) {
+            // TODO add content dimensions
             $this->contentContext = $this->contextFactory->create([
                 'workspaceName' => 'live',
                 'invisibleContentShown' => false,

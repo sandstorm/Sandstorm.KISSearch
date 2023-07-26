@@ -81,89 +81,116 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             )
         );
 
-        // view for content node to closest parent document
+        // table for content node to closest parent document
         $documentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypeSearchConfiguration->getDocumentNodeTypeNames());
         $contentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypeSearchConfiguration->getContentNodeTypeNames());
         $sqlQueries[] = <<<SQL
-            create or replace view sandstorm_kissearch_nodes_and_their_documents as
-            with recursive nodes_and_their_documents as
-                   (select n.identifier,
-                           n.pathhash,
-                           n.parentpathhash,
-                           n.nodetype,
-                           cast(null as varchar(32))
-                               collate utf8mb4_unicode_ci              as dimensionshash,
-                           cast(null as varchar(10000000))
-                               collate utf8mb4_unicode_ci              as dimensionvalues,
-                           cast(null as varchar(255))
-                               collate utf8mb4_unicode_ci              as site_nodename,
-                           n.identifier                                as document_id,
-                           json_value(n.properties, '$.title')         as document_title,
-                           n.nodetype                                  as document_nodetype,
-                           n.hidden = 0                                as not_hidden,
-                           n.removed = 0                               as not_removed,
-                           cast(if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
-                                   json_array(json_object(
-                                           'before', n.hiddenbeforedatetime,
-                                           'after', n.hiddenafterdatetime
-                                       )),
-                                   json_array()) as varchar(10000000)) as timed_hidden
-                    from neos_contentrepository_domain_model_nodedata n
-                    where n.path = '/sites'
-                      and n.hidden = 0
-                      and n.removed = 0
-                      and n.workspace = 'live'
-                    union
-                    select n.identifier,
-                           n.pathhash,
-                           n.parentpathhash,
-                           n.nodetype,
-                           n.dimensionshash,
-                           n.dimensionvalues,
-                           if((length(n.path) - length(replace(n.path, '/', ''))) = 2,
-                              substring_index(n.path, '/', -1),
-                              r.site_nodename)             as site_nodename,
-                           if(n.nodetype in ($documentNodeTypesCommaSeparated),
-                              n.identifier,
-                              r.document_id)               as document_id,
-                           if(n.nodetype in ($documentNodeTypesCommaSeparated),
-                              json_value(n.properties, '$.title'),
-                              r.document_title)            as document_title,
-                           if(n.nodetype in ($documentNodeTypesCommaSeparated),
-                              n.nodetype,
-                              r.document_nodetype)         as document_nodetype,
-                           n.hidden = 0 and r.not_hidden   as not_hidden,
-                           n.removed = 0 and r.not_removed as not_removed,
-                           if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
-                              json_array_append(r.timed_hidden, '$', json_object(
-                                      'before', n.hiddenbeforedatetime,
-                                      'after', n.hiddenafterdatetime
-                                  )),
-                              r.timed_hidden)              as timed_hidden
-                    from neos_contentrepository_domain_model_nodedata n,
-                         nodes_and_their_documents r
-                    where r.pathhash = n.parentpathhash
-                      and n.workspace = 'live'
-                      and (r.dimensionshash is null or n.dimensionshash = r.dimensionshash))
-            select nd.identifier        as identifier,
-                   nd.document_id       as document_id,
-                   nd.document_title    as document_title,
-                   nd.document_nodetype as document_nodetype,
-                   nd.nodetype          as nodetype,
-                   nd.dimensionshash    as dimensionshash,
-                   nd.dimensionvalues   as dimensionvalues,
-                   nd.site_nodename     as site_nodename,
-                   if(json_length(nd.timed_hidden) > 0,
-                      nd.timed_hidden,
-                      null)             as timed_hidden
-            from nodes_and_their_documents nd
-            where nd.site_nodename is not null
-              and nd.not_hidden
-              and nd.not_removed
-              and (
-                        nd.nodetype in ($documentNodeTypesCommaSeparated)
-                    or nd.nodetype in ($contentNodeTypesCommaSeparated)
-                );
+            create table if not exists sandstorm_kissearch_nodes_and_their_documents (
+                persistence_object_identifier   varchar(40)     not null primary key,
+                identifier                      varchar(255)    not null,
+                document_id                     varchar(255)    not null,
+                document_title                  longtext,
+                document_nodetype               varchar(255)    not null,
+                nodetype                        varchar(255)    not null,
+                dimensionshash                  varchar(32)     not null,
+                dimensionvalues                 json            not null,
+                site_nodename                   varchar(255)    not null,
+                timed_hidden                    json
+            );
+        SQL;
+        $sqlQueries[] = <<<SQL
+            create procedure sandstorm_kissearch_populate_nodes_and_their_documents()
+            modifies sql data
+            begin
+                start transaction;
+                truncate table sandstorm_kissearch_nodes_and_their_documents;
+                insert into sandstorm_kissearch_nodes_and_their_documents
+                    with recursive nodes_and_their_documents as
+                           (select n.persistence_object_identifier,
+                                   n.identifier,
+                                   n.pathhash,
+                                   n.parentpathhash,
+                                   n.nodetype,
+                                   cast(null as varchar(32))
+                                       collate utf8mb4_unicode_ci              as dimensionshash,
+                                   cast(null as varchar(10000000))
+                                       collate utf8mb4_unicode_ci              as dimensionvalues,
+                                   cast(null as varchar(255))
+                                       collate utf8mb4_unicode_ci              as site_nodename,
+                                   n.identifier                                as document_id,
+                                   json_value(n.properties, '$.title')         as document_title,
+                                   n.nodetype                                  as document_nodetype,
+                                   n.hidden = 0                                as not_hidden,
+                                   n.removed = 0                               as not_removed,
+                                   cast(if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
+                                           json_array(json_object(
+                                                   'before', n.hiddenbeforedatetime,
+                                                   'after', n.hiddenafterdatetime
+                                               )),
+                                           json_array()) as varchar(10000000)) as timed_hidden
+                            from neos_contentrepository_domain_model_nodedata n
+                            where n.path = '/sites'
+                              and n.hidden = 0
+                              and n.removed = 0
+                              and n.workspace = 'live'
+                            union
+                            select n.persistence_object_identifier,
+                                   n.identifier,
+                                   n.pathhash,
+                                   n.parentpathhash,
+                                   n.nodetype,
+                                   n.dimensionshash,
+                                   n.dimensionvalues,
+                                   if((length(n.path) - length(replace(n.path, '/', ''))) = 2,
+                                      substring_index(n.path, '/', -1),
+                                      r.site_nodename)             as site_nodename,
+                                   if(n.nodetype in ($documentNodeTypesCommaSeparated),
+                                      n.identifier,
+                                      r.document_id)               as document_id,
+                                   if(n.nodetype in ($documentNodeTypesCommaSeparated),
+                                      json_value(n.properties, '$.title'),
+                                      r.document_title)            as document_title,
+                                   if(n.nodetype in ($documentNodeTypesCommaSeparated),
+                                      n.nodetype,
+                                      r.document_nodetype)         as document_nodetype,
+                                   n.hidden = 0 and r.not_hidden   as not_hidden,
+                                   n.removed = 0 and r.not_removed as not_removed,
+                                   if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
+                                      json_array_append(r.timed_hidden, '$', json_object(
+                                              'before', n.hiddenbeforedatetime,
+                                              'after', n.hiddenafterdatetime
+                                          )),
+                                      r.timed_hidden)              as timed_hidden
+                            from neos_contentrepository_domain_model_nodedata n,
+                                 nodes_and_their_documents r
+                            where r.pathhash = n.parentpathhash
+                              and n.workspace = 'live'
+                              and (r.dimensionshash is null or n.dimensionshash = r.dimensionshash))
+                    select nd.persistence_object_identifier as persistence_object_identifier,
+                           nd.identifier                    as identifier,
+                           nd.document_id                   as document_id,
+                           nd.document_title                as document_title,
+                           nd.document_nodetype             as document_nodetype,
+                           nd.nodetype                      as nodetype,
+                           nd.dimensionshash                as dimensionshash,
+                           nd.dimensionvalues               as dimensionvalues,
+                           nd.site_nodename                 as site_nodename,
+                           if(json_length(nd.timed_hidden) > 0,
+                              nd.timed_hidden,
+                              null)                         as timed_hidden
+                    from nodes_and_their_documents nd
+                    where nd.site_nodename is not null
+                      and nd.not_hidden
+                      and nd.not_removed
+                      and (
+                                nd.nodetype in ($documentNodeTypesCommaSeparated)
+                            or nd.nodetype in ($contentNodeTypesCommaSeparated)
+                        );
+                commit;
+            end;
+        SQL;
+        $sqlQueries[] = <<<SQL
+            call sandstorm_kissearch_populate_nodes_and_their_documents();
         SQL;
 
         // function for checking hidden before and after datetime for a set of parent nodes, given by array
@@ -307,7 +334,10 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         );
 
         $sqlQueries[] = <<<SQL
-            drop view if exists sandstorm_kissearch_nodes_and_their_documents;
+            drop table if exists sandstorm_kissearch_nodes_and_their_documents;
+        SQL;
+        $sqlQueries[] = <<<SQL
+            drop procedure if exists sandstorm_kissearch_populate_nodes_and_their_documents;
         SQL;
 
         $sqlQueries[] = <<<SQL
