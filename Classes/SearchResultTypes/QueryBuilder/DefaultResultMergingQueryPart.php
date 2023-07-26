@@ -52,14 +52,17 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         $aliasResultMetaData = SearchQuery::ALIAS_RESULT_META_DATA;
         $aliasGroupMetaData = SearchQuery::ALIAS_GROUP_META_DATA;
 
+        $resultMetaDataSelector = $this->resultMetaDataSelector !== null ? $this->resultMetaDataSelector : 'null';
+        $groupMetaDataSelector = $this->groupMetaDataSelector !== null ? $this->groupMetaDataSelector : 'null';
+
         return <<<SQL
             select
                 $this->resultIdentifierSelector as $aliasResultIdentifier,
                 $this->resultTitleSelector as $aliasResultTitle,
                 '$this->resultTypeName' as $aliasResultType,
                 $this->scoreSelector as $aliasScore,
-                $this->resultMetaDataSelector as $aliasResultMetaData,
-                $this->groupMetaDataSelector as $aliasGroupMetaData
+                $resultMetaDataSelector as $aliasResultMetaData,
+                $groupMetaDataSelector as $aliasGroupMetaData
             $this->querySource
         SQL;
     }
