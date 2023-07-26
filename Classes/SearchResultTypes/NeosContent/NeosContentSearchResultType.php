@@ -65,7 +65,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
         return self::name();
     }
 
-    public function buildUrlToResultPage(SearchResult $searchResult): string
+    public function buildUrlToResultPage(SearchResult $searchResult): ?string
     {
         return $this->documentUrlGenerator->forSearchResult($searchResult);
     }
