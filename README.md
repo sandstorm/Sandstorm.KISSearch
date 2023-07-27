@@ -1,6 +1,8 @@
 # TODO
 
  - remove '\n' and '\r' characters in fulltext extraction
+ - detect required 'utf8mb4' charset for mariaDB and throw readable error in migrate command
+   - update README, that utf8mb4 is required when using mariaDB
 
 # Sandstorm.KISSearch - pure SQL search for Neos +X
 
