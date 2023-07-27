@@ -335,6 +335,8 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 
         $sqlQueries[] = <<<SQL
             drop table if exists sandstorm_kissearch_nodes_and_their_documents;
+            -- TODO remove in first major release
+            drop view if exists sandstorm_kissearch_nodes_and_their_documents;
         SQL;
         $sqlQueries[] = <<<SQL
             drop procedure if exists sandstorm_kissearch_populate_nodes_and_their_documents;
