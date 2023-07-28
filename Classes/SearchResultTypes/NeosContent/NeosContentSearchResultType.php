@@ -12,11 +12,13 @@ use Neos\Eel\EelEvaluatorInterface;
 use Neos\Eel\Utility as EelUtility;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Configuration\ConfigurationManager;
+use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
 use Neos\Neos\Domain\Model\Site;
 use Sandstorm\KISSearch\Eel\IndexingHelper;
+use Sandstorm\KISSearch\InvalidConfigurationException;
+use Sandstorm\KISSearch\PostgresTS\PostgresFulltextSearchConfiguration;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseMigrationInterface;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
-use Sandstorm\KISSearch\SearchResultTypes\InvalidConfigurationException;
 use Sandstorm\KISSearch\SearchResultTypes\SearchBucket;
 use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
@@ -70,6 +72,11 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
         return $this->documentUrlGenerator->forSearchResult($searchResult);
     }
 
+    /**
+     * @param DatabaseType $databaseType
+     * @return DatabaseMigrationInterface
+     * @throws InvalidConfigurationTypeException
+     */
     public function getDatabaseMigration(DatabaseType $databaseType): DatabaseMigrationInterface
     {
         $nodeTypeSearchConfiguration = $this->getFulltextSearchConfiguration();
@@ -85,7 +92,10 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
                 $nodeTypeSearchConfiguration,
                 $hotfixDisableTimedHiddenBeforeAfter
             ),
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934286),
+            DatabaseType::POSTGRES => new NeosContentPostgresDatabaseMigration(
+                $nodeTypeSearchConfiguration,
+                PostgresFulltextSearchConfiguration::fromSettings($this->configurationManager)
+            ),
             default => throw new UnsupportedDatabaseException(
                 "Neos Content search does not support database of type '$databaseType->name'",
                 1689634320

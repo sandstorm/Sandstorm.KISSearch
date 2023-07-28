@@ -9,6 +9,7 @@ use Neos\Flow\Cli\CommandController;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
+use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\PostgresSearchQueryBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypesRegistry;
 use Sandstorm\KISSearch\SearchResultTypes\UnsupportedDatabaseException;
 use Sandstorm\KISSearch\Service\SearchQueryInput;
@@ -62,14 +63,18 @@ class KISSearchCommandController extends CommandController
         $requiredVersion = match ($databaseType) {
             DatabaseType::MARIADB => $hotfixDisableTimedHiddenBeforeAfter ? '10.5.0' : '10.6.0',
             DatabaseType::MYSQL => '8.0',
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
+            DatabaseType::POSTGRES => '15.0',
             default => throw new UnsupportedDatabaseException(
                 "Version check does not support database of type '$databaseType->name'",
                 1690118087
             )
         };
         $actualVersion = $this->getActualDatabaseVersion($databaseType);
-        $versionRequirementsFulfilled = version_compare($actualVersion, $requiredVersion, '>=');
+        $versionToCheck = match($databaseType) {
+            DatabaseType::POSTGRES => preg_replace('/^PostgreSQL /', '', $actualVersion),
+            default => $actualVersion
+        };
+        $versionRequirementsFulfilled = version_compare($versionToCheck, $requiredVersion, '>=');
         if ($versionRequirementsFulfilled) {
             if ($printSuccess) {
                 $this->outputLine('<success>Minimal version requirements for %s database fulfilled, have fun with KISSearch!</success>', [$databaseType->value]);
@@ -86,7 +91,7 @@ class KISSearchCommandController extends CommandController
     {
         $sql = match ($databaseType) {
             DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::buildDatabaseVersionQuery(),
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
+            DatabaseType::POSTGRES => PostgresSearchQueryBuilder::buildDatabaseVersionQuery(),
             default => throw new UnsupportedDatabaseException(
                 "Version check does not support database of type '$databaseType->name'",
                 1690118078
@@ -158,7 +163,7 @@ class KISSearchCommandController extends CommandController
     {
         return match ($databaseType) {
             DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::buildInsertOrUpdateVersionHashQuery($searchResultTypeName, $versionHash),
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
+            DatabaseType::POSTGRES => PostgresSearchQueryBuilder::buildInsertOrUpdateVersionHashQuery($searchResultTypeName, $versionHash),
             default => throw new UnsupportedDatabaseException(
                 "Migration does not support database of type '$databaseType->name'",
                 1690063479

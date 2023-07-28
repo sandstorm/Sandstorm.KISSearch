@@ -13,7 +13,7 @@ use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 {
 
-    private readonly NodeTypesSearchConfiguration $nodeTypeSearchConfiguration;
+    private readonly NodeTypesSearchConfiguration $nodeTypesSearchConfiguration;
 
     // TODO remove hotfix
     private readonly bool $hotfixDisableTimedHiddenBeforeAfter;
@@ -24,14 +24,14 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
      */
     public function __construct(NodeTypesSearchConfiguration $nodeTypeSearchConfiguration, bool $hotfixDisableTimedHiddenBeforeAfter)
     {
-        $this->nodeTypeSearchConfiguration = $nodeTypeSearchConfiguration;
+        $this->nodeTypesSearchConfiguration = $nodeTypeSearchConfiguration;
         $this->hotfixDisableTimedHiddenBeforeAfter = $hotfixDisableTimedHiddenBeforeAfter;
     }
 
 
     function versionHash(): string
     {
-        return $this->nodeTypeSearchConfiguration->buildVersionHash();
+        return $this->nodeTypesSearchConfiguration->buildVersionHash('1690488603');
     }
 
     function up(): string
@@ -41,14 +41,14 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         $columnNameBucketNormal = self::columnNameBucketNormal();
         $columnNameBucketMinor = self::columnNameBucketMinor();
 
-        $fulltextExtractorsByNodeTypeForCritical = self::buildFulltextExtractionForBucket(
-            $this->nodeTypeSearchConfiguration->getExtractorsForCritical(), SearchBucket::CRITICAL);
-        $fulltextExtractorsByNodeTypeForMajor = self::buildFulltextExtractionForBucket(
-            $this->nodeTypeSearchConfiguration->getExtractorsForMajor(), SearchBucket::MAJOR);
-        $fulltextExtractorsByNodeTypeForNormal = self::buildFulltextExtractionForBucket(
-            $this->nodeTypeSearchConfiguration->getExtractorsForNormal(), SearchBucket::NORMAL);
-        $fulltextExtractorsByNodeTypeForMinor = self::buildFulltextExtractionForBucket(
-            $this->nodeTypeSearchConfiguration->getExtractorsForMinor(), SearchBucket::MINOR);
+        $fulltextExtractorsByNodeTypeForCritical = self::buildMySQLFulltextExtractionForBucket(
+            $this->nodeTypesSearchConfiguration->getExtractorsForCritical(), SearchBucket::CRITICAL);
+        $fulltextExtractorsByNodeTypeForMajor = self::buildMySQLFulltextExtractionForBucket(
+            $this->nodeTypesSearchConfiguration->getExtractorsForMajor(), SearchBucket::MAJOR);
+        $fulltextExtractorsByNodeTypeForNormal = self::buildMySQLFulltextExtractionForBucket(
+            $this->nodeTypesSearchConfiguration->getExtractorsForNormal(), SearchBucket::NORMAL);
+        $fulltextExtractorsByNodeTypeForMinor = self::buildMySQLFulltextExtractionForBucket(
+            $this->nodeTypesSearchConfiguration->getExtractorsForMinor(), SearchBucket::MINOR);
 
         // generated fulltext extraction bucket columns
         $sqlQueries = [
@@ -82,8 +82,8 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         );
 
         // table for content node to closest parent document
-        $documentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypeSearchConfiguration->getDocumentNodeTypeNames());
-        $contentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypeSearchConfiguration->getContentNodeTypeNames());
+        $documentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypesSearchConfiguration->getDocumentNodeTypeNames());
+        $contentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypesSearchConfiguration->getContentNodeTypeNames());
         $sqlQueries[] = <<<SQL
             create table if not exists sandstorm_kissearch_nodes_and_their_documents (
                 persistence_object_identifier   varchar(40)     not null primary key,
@@ -271,7 +271,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             }, $values));
     }
 
-    private static function buildFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket): string
+    private static function buildMySQLFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket): string
     {
         $sqlCases = [];
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Sandstorm\KISSearch\SearchResultTypes;
+namespace Sandstorm\KISSearch;
 
 use Neos\Flow\Annotations\Proxy;
 use RuntimeException;
