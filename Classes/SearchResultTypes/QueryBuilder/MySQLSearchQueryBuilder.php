@@ -72,9 +72,18 @@ class MySQLSearchQueryBuilder
 
     public static function extractNormalizedFulltextFromJson(string $valueSql, string $jsonKey): string
     {
+        return self::normalizeFulltext(
+            <<<SQL
+                json_extract($valueSql, '$.$jsonKey')
+            SQL
+        );
+    }
+
+    public static function normalizeFulltext(string $valueSql): string
+    {
         return <<<SQL
             replace(replace(replace(replace(
-                lower(json_extract($valueSql, '$.$jsonKey')),
+                lower($valueSql),
                 'ä','ae'),'ö','oe'), 'ü','ue'), 'ß','ss')
         SQL;
     }
