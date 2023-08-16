@@ -282,7 +282,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             /** @var NodePropertyFulltextExtraction $propertyExtraction */
             foreach ($propertyExtractions as $propertyExtraction) {
                 $jsonExtractor = MySQLSearchQueryBuilder::extractNormalizedFulltextFromJson('properties', $propertyExtraction->getPropertyName());
-                $thenSql[] = match ($propertyExtraction->getMode()) {
+                $bucketExtractor = match ($propertyExtraction->getMode()) {
                     FulltextExtractionMode::EXTRACT_INTO_SINGLE_BUCKET => MySQLSearchQueryBuilder::extractAllText($jsonExtractor),
                     FulltextExtractionMode::EXTRACT_HTML_TAGS => match ($targetBucket) {
                         SearchBucket::CRITICAL => MySQLSearchQueryBuilder::fulltextExtractHtmlTagContents($jsonExtractor, 'h1', 'h2'),
@@ -290,6 +290,8 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                         SearchBucket::NORMAL, SearchBucket::MINOR => MySQLSearchQueryBuilder::fulltextExtractHtmlTextContent($jsonExtractor, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'),
                     }
                 };
+                // fallback null to empty string
+                $thenSql[] = "coalesce($bucketExtractor, '')";
             }
             if (count($thenSql) === 1) {
                 // only one property for node type
