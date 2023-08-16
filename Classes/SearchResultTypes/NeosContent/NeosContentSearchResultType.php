@@ -2,7 +2,7 @@
 
 namespace Sandstorm\KISSearch\SearchResultTypes\NeosContent;
 
-use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Model\NodeType;
@@ -37,7 +37,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
 
     private readonly NeosDocumentUrlGenerator $documentUrlGenerator;
 
-    private readonly EntityManager $entityManager;
+    private readonly EntityManagerInterface $entityManager;
 
     private bool $requiresReindexOfNodesToTheirDocuments = false;
 
@@ -46,13 +46,15 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
      * @param EelEvaluatorInterface $eelEvaluator
      * @param ConfigurationManager $configurationManager
      * @param NeosDocumentUrlGenerator $documentUrlGenerator
+     * @param EntityManagerInterface $entityManager
      */
-    public function __construct(NodeTypeManager $nodeTypeManager, EelEvaluatorInterface $eelEvaluator, ConfigurationManager $configurationManager, NeosDocumentUrlGenerator $documentUrlGenerator)
+    public function __construct(NodeTypeManager $nodeTypeManager, EelEvaluatorInterface $eelEvaluator, ConfigurationManager $configurationManager, NeosDocumentUrlGenerator $documentUrlGenerator, EntityManagerInterface $entityManager)
     {
         $this->nodeTypeManager = $nodeTypeManager;
         $this->eelEvaluator = $eelEvaluator;
         $this->configurationManager = $configurationManager;
         $this->documentUrlGenerator = $documentUrlGenerator;
+        $this->entityManager = $entityManager;
     }
 
     public static function name(): SearchResultTypeName

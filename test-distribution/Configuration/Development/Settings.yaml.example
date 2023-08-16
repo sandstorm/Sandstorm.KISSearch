@@ -1,0 +1,29 @@
+#                                                                        #
+# Example Settings                                                       #
+#                                                                        #
+# This file contains settings for various parts of the application.      #
+# Copy this file to Settings.yaml, and adjust as necessary.              #
+#                                                                        #
+# Please refer to the default settings file(s) or the manuals for        #
+# possible configuration options.                                        #
+#                                                                        #
+
+Neos:
+  Flow:
+    persistence:
+      # For a reference of the possible options, take a look at
+      # https://www.doctrine-project.org/projects/doctrine-dbal/en/latest/reference/configuration.html
+      backendOptions:
+        dbname: 'flow'       # adjust to your database name
+        user: ''             # adjust to your database user
+        password: ''         # adjust to your database password
+
+       # if you want to log executed SQL queries, enable the next 2 lines
+#      doctrine:
+#        sqlLogger: 'Neos\Flow\Persistence\Doctrine\Logging\SqlLogger'
+
+    # If you are running Flow within a Docker environment, you probably need to allow all proxies,
+    # because the container acts as such and the IP is variable.
+#    http:
+#      trustedProxies:
+#        proxies: '*'

@@ -1,0 +1,6 @@
+Sandstorm:
+  KISSearch:
+    excludedNodeTypes:
+      - 'Neos.Demo:Document.Shortcut'
+      - 'Neos.Neos:Shortcut'
+      - 'Neos.Demo:Document.NotFoundPage'
