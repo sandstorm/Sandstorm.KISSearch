@@ -300,18 +300,15 @@ class KISSearchCommandController extends CommandController
         $tableRows = array_map(function (JsonSerializable $result) use ($showMetaData) {
             $serialized = $result->jsonSerialize();
             if ($showMetaData) {
-                $serialized['groupMetaData'] = json_encode($serialized['groupMetaData'], JSON_PRETTY_PRINT);
-                $serialized['aggregateMetaData'] = json_encode($serialized['aggregateMetaData'], JSON_PRETTY_PRINT);
-            } else {
-                unset($serialized['groupMetaData']);
-                unset($serialized['aggregateMetaData']);
+                $serialized['metaData'] = self::formatMetaData($serialized['groupMetaData'], $serialized['aggregateMetaData']);
             }
+            unset($serialized['groupMetaData']);
+            unset($serialized['aggregateMetaData']);
             return $serialized;
         }, $results);
 
         if ($showMetaData) {
-            $headers['groupMetaData'] = 'Group Meta Data';
-            $headers['aggregateMetaData'] = 'Aggregate Meta Data';
+            $headers['metaData'] = 'Meta Data';
         }
 
         $this->output->outputTable(
@@ -319,6 +316,39 @@ class KISSearchCommandController extends CommandController
             $headers,
             "Search Results for '$query'"
         );
+    }
+
+    private static function formatMetaData(array $groupMetaData, array $aggregateMetaData): string
+    {
+        $groupString = '';
+        foreach ($groupMetaData as $key => $value) {
+            $groupString .= self::formatMetaDataValue($key, $value, 2);
+        }
+        $aggString = '';
+        foreach ($aggregateMetaData as $key => $value) {
+            $aggString .= self::formatMetaDataValue($key, $value, 2);
+        }
+        return "Group:\n" . $groupString . "\n" .
+            "Aggregate:\n" . $aggString;
+    }
+
+    private static function formatMetaDataValue(string $key, mixed $value, int $indent): string
+    {
+        $prefix = str_repeat(' ', $indent) . $key . ': ';
+        if ($value === null) {
+            return $prefix . "null\n";
+        }
+        if (is_string($value)) {
+            return $prefix . $value . "\n";
+        }
+        if (is_array($value)) {
+            $out = $prefix . "\n";
+            foreach ($value as $keyInner => $valueInner) {
+                $out .= self::formatMetaDataValue($keyInner, $valueInner, $indent + 2);
+            }
+            return $out;
+        }
+        return $prefix . ((string) $value) . "\n";
     }
 
     private function printSearchQueryInput(string $query, int $limit, ?array $additionalParams): void

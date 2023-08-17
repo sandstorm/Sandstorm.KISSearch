@@ -271,6 +271,44 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             }, $values));
     }
 
+    /**
+     * The general idea here is, to create fulltext extractors based on generated columns.
+     * Neos Nodes persist their properties inside a JSON object, so each row in the nodedata table
+     * have different extractors based on their respective Node Type. So the outermost structure of the
+     * generated column expression is a huge switch-case statement handling each specific configured Node Type.
+     * Inside the specific cases for each Node Type, all properties are extracted and sanitized from the properties JSON column.
+     * Generically, the DDL structure looks like:
+     *
+     * search_bucket_x => case
+     *     when nodetype = 'NodeType.A' then
+     *          concat(
+     *              fulltext_extractor_for_property_X,
+     *              ' ',
+     *              fulltext_extractor_for_property_Y,
+     *              ' ',
+     *              ...
+     *          )
+     *     when nodetype = 'NodeType.B' then
+     *          concat(
+     *              fulltext_extractor_for_property_P,
+     *              ' ',
+     *              fulltext_extractor_for_property_Q,
+     *              ' ',
+     *              ...
+     *          )
+     *     else null
+     * end
+     *
+     * Fulltext extractors most likely look like:
+     *
+     * json_extract(properties, '$.nodePropertyName')
+     *
+     * ... wrapped by lots of replace function calls to sanitize the values (f.e. remove HTML tags/entities, replace umlauts, etc.)
+     *
+     * @param array $extractorsByNodeType
+     * @param SearchBucket $targetBucket
+     * @return string
+     */
     private static function buildFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket): string
     {
         $sqlCases = [];
