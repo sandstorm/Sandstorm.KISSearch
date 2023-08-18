@@ -13,3 +13,4 @@ prototype(Sandstorm.KISSearch:SearchFrontend) {
   limit = 50
   additionalParameters = Neos.Fusion:DataStructure
 }
+

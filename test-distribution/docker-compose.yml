@@ -69,7 +69,7 @@ services:
       MYSQL_DATABASE: neos
       MYSQL_USER: neos
       MYSQL_PASSWORD: neos
-    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci', '--general-log=1', '--general-log-file=/var/lib/mysql/general-log.log']
 
   #####
   # Postgres DB
