@@ -2,6 +2,8 @@
 
 namespace Sandstorm\KISSearch\SearchResultTypes\QueryBuilder;
 
+use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
+
 class SearchQuery
 {
     public const ALIAS_RESULT_IDENTIFIER = 'result_id';
@@ -48,6 +50,16 @@ class SearchQuery
             $result[] = $mergingQueryPart->getMergingQueryPart();
         }
         return $result;
+    }
+
+    public static function buildSearchResultTypeSpecificLimitQueryParameterName(SearchResultTypeName $searchResultTypeName): string
+    {
+        return self::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName->getName());
+    }
+
+    public static function buildSearchResultTypeSpecificLimitQueryParameterNameFromString(string $searchResultTypeName): string
+    {
+        return sprintf("limit_%s", $searchResultTypeName);
     }
 
 }

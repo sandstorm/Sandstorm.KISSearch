@@ -256,12 +256,14 @@ class KISSearchCommandController extends CommandController
         $this->output->outputLine();
     }
 
-    public function searchCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
+    public function searchCommand(string $query, string $limitPerSearchResultType = '{"neos_content": 50}', int $limit = null, ?string $additionalParams = null, bool $showMetaData = false): void
     {
+        $limitPerSearchResultTypeArray = json_decode($limitPerSearchResultType, true);
         $additionalParamsArray = json_decode($additionalParams, true);
-        $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
+        $input = new SearchQueryInput($query, $limit, $limitPerSearchResultTypeArray, $additionalParamsArray);
+        $this->printSearchQueryInput($input);
         $startTime = microtime(true);
-        $results = $this->searchService->search(new SearchQueryInput($query, $limit, $additionalParamsArray));
+        $results = $this->searchService->search($input);
         $endTime = microtime(true);
         $resultCount = count($results);
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
@@ -275,12 +277,14 @@ class KISSearchCommandController extends CommandController
         ]);
     }
 
-    public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
+    public function searchFrontendCommand(string $query, string $limitPerSearchResultType = '{"neos_content": 50}', int $limit = null, ?string $additionalParams = null, bool $showMetaData = false): void
     {
+        $limitPerSearchResultTypeArray = json_decode($limitPerSearchResultType, true);
         $additionalParamsArray = json_decode($additionalParams, true);
-        $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
+        $input = new SearchQueryInput($query, $limit, $limitPerSearchResultTypeArray, $additionalParamsArray);
+        $this->printSearchQueryInput($input);
         $startTime = microtime(true);
-        $results = $this->searchService->searchFrontend(new SearchQueryInput($query, $limit, $additionalParamsArray));
+        $results = $this->searchService->searchFrontend($input);
         $endTime = microtime(true);
         $resultCount = count($results);
         $searchQueryDuration = floor(($endTime - $startTime) * 1000);
@@ -351,20 +355,26 @@ class KISSearchCommandController extends CommandController
         return $prefix . ((string) $value) . "\n";
     }
 
-    private function printSearchQueryInput(string $query, int $limit, ?array $additionalParams): void
+    private function printSearchQueryInput(SearchQueryInput $input): void
     {
-        if ($additionalParams === null) {
-            $this->output("Searching for '$query' with limit $limit ... ");
+        $this->outputLine('Query limits:');
+        $this->outputLine(' - global: %s', [$input->getLimit()]);
+        foreach ($input->getLimitPerResultType() as $resultTypeName => $limit) {
+            $this->outputLine(' - result type \'%s\': %s', [$resultTypeName, $limit]);
+        }
+        $this->outputLine();
+        if ($input->getSearchTypeSpecificAdditionalParameters() === null) {
+            $this->output("Searching for '%s' ... ", [$input->getQuery()]);
         } else {
             $additionalParamsReadable = [];
-            foreach ($additionalParams as $name => $value) {
+            foreach ($input->getSearchTypeSpecificAdditionalParameters() as $name => $value) {
                 if (is_array($value)) {
                     $value = json_encode($value);
                 }
                 $additionalParamsReadable[] = $name . '=' . $value;
             }
             $additionalParamsString = implode(', ', $additionalParamsReadable);
-            $this->output("Searching for '$query' with limit $limit with additional params: $additionalParamsString ... ");
+            $this->output("Searching for '%s' with additional params: %s ... ", [$input->getQuery(), $additionalParamsString]);
         }
     }
 

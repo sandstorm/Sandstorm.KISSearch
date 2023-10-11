@@ -108,6 +108,12 @@ class SearchService
             SearchResult::SQL_QUERY_PARAM_LIMIT => $searchQueryInput->getLimit(),
             SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp()
         ];
+        // limit per result type
+        $limitPerResultType = $searchQueryInput->getLimitPerResultType();
+        foreach (array_keys($searchResultTypes) as $searchResultTypeName) {
+            $defaultParameters[SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName)] = $limitPerResultType[$searchResultTypeName];
+        }
+
         // search type specific additional parameters
         $additionalParameters = $this->getSearchTypeSpecificAdditionalParameters(
             array_keys($defaultParameters),
