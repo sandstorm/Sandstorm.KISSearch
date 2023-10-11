@@ -111,6 +111,12 @@ class SearchService
         // limit per result type
         $limitPerResultType = $searchQueryInput->getLimitPerResultType();
         foreach (array_keys($searchResultTypes) as $searchResultTypeName) {
+            if (!array_key_exists($searchResultTypeName, $limitPerResultType) || !is_int($limitPerResultType[$searchResultTypeName])) {
+                throw new MissingLimitException(
+                    sprintf("Limit parameter is missing for search result type '%s'", $searchResultTypeName),
+                    1697034967
+                );
+            }
             $defaultParameters[SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName)] = $limitPerResultType[$searchResultTypeName];
         }
 
