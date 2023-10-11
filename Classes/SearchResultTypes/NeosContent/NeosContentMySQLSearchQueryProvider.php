@@ -121,7 +121,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                                     nd.dimensionvalues
                             )
                         )
-                    order by score
+                    order by score desc
                     limit :$paramNameLimit
                 SQL
             )
