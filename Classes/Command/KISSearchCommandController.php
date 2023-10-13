@@ -258,15 +258,41 @@ class KISSearchCommandController extends CommandController
 
     public function searchCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
     {
-        $additionalParamsArray = json_decode($additionalParams, true);
-        $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
-        $startTime = microtime(true);
-        $results = $this->searchService->search(new SearchQueryInput($query, $limit, $additionalParamsArray));
-        $endTime = microtime(true);
-        $resultCount = count($results);
-        $searchQueryDuration = floor(($endTime - $startTime) * 1000);
-        $this->outputLine("found $resultCount results after $searchQueryDuration ms");
-        $this->outputSearchResultsTable($results, $query, $showMetaData, [
+        $this->printGlobalLimit($limit);
+        $this->internalSearch($query, $additionalParams, $showMetaData, function(SearchQueryInput $input) use ($limit) {
+            return $this->searchService->search($input, $limit);
+        });
+    }
+
+    public function searchLimitPerResultTypeCommand(string $query, string $limit = '{"neos_content": 50}', ?string $additionalParams = null, bool $showMetaData = false): void
+    {
+        $limitPerSearchResultTypeArray = json_decode($limit, true);
+        $this->printResultSpecificLimits($limitPerSearchResultTypeArray);
+        $this->internalSearch($query, $additionalParams, $showMetaData, function(SearchQueryInput $input) use ($limitPerSearchResultTypeArray) {
+            return $this->searchService->searchLimitPerResultType($input, $limitPerSearchResultTypeArray);
+        });
+    }
+
+    public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
+    {
+        $this->printGlobalLimit($limit);
+        $this->internalSearchFrontend($query, $additionalParams, $showMetaData, function(SearchQueryInput $input) use ($limit) {
+            return $this->searchService->searchFrontend($input, $limit);
+        });
+    }
+
+    public function searchFrontendLimitByResultTypeCommand(string $query, string $limit = '{"neos_content": 50}', ?string $additionalParams = null, bool $showMetaData = false): void
+    {
+        $limitPerSearchResultTypeArray = json_decode($limit, true);
+        $this->printResultSpecificLimits($limitPerSearchResultTypeArray);
+        $this->internalSearchFrontend($query, $additionalParams, $showMetaData, function(SearchQueryInput $input) use ($limitPerSearchResultTypeArray) {
+            return $this->searchService->searchFrontendLimitPerResultType($input, $limitPerSearchResultTypeArray);
+        });
+    }
+
+    private function internalSearch(string $query, ?string $additionalParams, bool $showMetaData, \Closure $serviceCall): void
+    {
+        $this->searchAndPrintResults($query, $additionalParams, $showMetaData, $serviceCall, [
             'identifier' => 'Result Identifier',
             'type' => 'Result Type',
             'title' => 'Result Title',
@@ -275,17 +301,9 @@ class KISSearchCommandController extends CommandController
         ]);
     }
 
-    public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
+    private function internalSearchFrontend(string $query, ?string $additionalParams, bool $showMetaData, \Closure $serviceCall): void
     {
-        $additionalParamsArray = json_decode($additionalParams, true);
-        $this->printSearchQueryInput($query, $limit, $additionalParamsArray);
-        $startTime = microtime(true);
-        $results = $this->searchService->searchFrontend(new SearchQueryInput($query, $limit, $additionalParamsArray));
-        $endTime = microtime(true);
-        $resultCount = count($results);
-        $searchQueryDuration = floor(($endTime - $startTime) * 1000);
-        $this->outputLine("found $resultCount results after $searchQueryDuration ms");
-        $this->outputSearchResultsTable($results, $query, $showMetaData, [
+        $this->searchAndPrintResults($query, $additionalParams, $showMetaData, $serviceCall, [
             'identifier' => 'Result Identifier',
             'type' => 'Result Type',
             'title' => 'Result Title',
@@ -293,6 +311,28 @@ class KISSearchCommandController extends CommandController
             'score' => 'Score',
             'matchCount' => 'Match Count'
         ]);
+    }
+
+    private function searchAndPrintResults(string $query, ?string $additionalParams, bool $showMetaData, \Closure $serviceCall, array $headers): void
+    {
+        $additionalParamsArray = null;
+        try {
+            $additionalParamsArray = json_decode($additionalParams, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $jsonError) {
+            $this->outputLine('invalid --additional-params value; cause: %s', [$jsonError->getMessage()]);
+            $this->outputLine('Example usage: --additional-params \'{"neosContentDimensionValues": {"language": ["en_US"]}, "neosContentSiteNodeName": "neosdemo"}\'');
+            $this->sendAndExit(1);
+            return;
+        }
+        $input = new SearchQueryInput($query, $additionalParamsArray);
+        $this->printSearchQueryInput($input);
+        $startTime = microtime(true);
+        $results = $serviceCall($input);
+        $endTime = microtime(true);
+        $resultCount = count($results);
+        $searchQueryDuration = floor(($endTime - $startTime) * 1000);
+        $this->outputLine("found $resultCount results after $searchQueryDuration ms");
+        $this->outputSearchResultsTable($results, $query, $showMetaData, $headers);
     }
 
     private function outputSearchResultsTable(array $results, string $query, bool $showMetaData, array $headers): void
@@ -351,20 +391,35 @@ class KISSearchCommandController extends CommandController
         return $prefix . ((string) $value) . "\n";
     }
 
-    private function printSearchQueryInput(string $query, int $limit, ?array $additionalParams): void
+    private function printGlobalLimit(int $limit): void
     {
-        if ($additionalParams === null) {
-            $this->output("Searching for '$query' with limit $limit ... ");
+        $this->outputLine();
+        $this->outputLine('Global result limit: %s', [$limit]);
+    }
+
+    private function printResultSpecificLimits(array $limitPerResultType): void
+    {
+        $this->outputLine();
+        $this->outputLine('Limits by result type:');
+        foreach ($limitPerResultType as $resultTypeName => $limit) {
+            $this->outputLine(' - result type \'%s\': %s', [$resultTypeName, $limit]);
+        }
+    }
+
+    private function printSearchQueryInput(SearchQueryInput $input): void
+    {
+        if ($input->getSearchTypeSpecificAdditionalParameters() === null) {
+            $this->output("Searching for '%s' ... ", [$input->getQuery()]);
         } else {
             $additionalParamsReadable = [];
-            foreach ($additionalParams as $name => $value) {
+            foreach ($input->getSearchTypeSpecificAdditionalParameters() as $name => $value) {
                 if (is_array($value)) {
                     $value = json_encode($value);
                 }
                 $additionalParamsReadable[] = $name . '=' . $value;
             }
             $additionalParamsString = implode(', ', $additionalParamsReadable);
-            $this->output("Searching for '$query' with limit $limit with additional params: $additionalParamsString ... ");
+            $this->output("Searching for '%s' with additional params: %s ... ", [$input->getQuery(), $additionalParamsString]);
         }
     }
 

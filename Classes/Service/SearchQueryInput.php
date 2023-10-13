@@ -9,19 +9,15 @@ class SearchQueryInput
 {
     private readonly string $query;
 
-    private readonly int $limit;
-
     private readonly ?array $searchTypeSpecificAdditionalParameters;
 
     /**
      * @param string $query the search terms
-     * @param int $limit the result limit
      * @param array|null $searchTypeSpecificAdditionalParameters
      */
-    public function __construct(string $query, int $limit, ?array $searchTypeSpecificAdditionalParameters = null)
+    public function __construct(string $query, ?array $searchTypeSpecificAdditionalParameters = null)
     {
         $this->query = $query;
-        $this->limit = $limit;
         $this->searchTypeSpecificAdditionalParameters = $searchTypeSpecificAdditionalParameters;
     }
 
@@ -31,14 +27,6 @@ class SearchQueryInput
     public function getQuery(): string
     {
         return $this->query;
-    }
-
-    /**
-     * @return int
-     */
-    public function getLimit(): int
-    {
-        return $this->limit;
     }
 
     /**
