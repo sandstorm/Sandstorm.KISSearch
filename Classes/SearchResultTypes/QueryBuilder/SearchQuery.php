@@ -64,11 +64,6 @@ class SearchQuery
         return $result;
     }
 
-    public static function buildSearchResultTypeSpecificLimitQueryParameterName(SearchResultTypeName $searchResultTypeName): string
-    {
-        return self::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName->getName());
-    }
-
     public static function buildSearchResultTypeSpecificLimitQueryParameterNameFromString(string $searchResultTypeName): string
     {
         return sprintf("limit_%s", $searchResultTypeName);

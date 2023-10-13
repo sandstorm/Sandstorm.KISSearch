@@ -160,9 +160,11 @@ class MySQLSearchQueryBuilder
         foreach ($searchQuery->getMergingQueryPartsAsString() as $searchResultTypeName => $mergingSql) {
             $limitParamName = SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName);
             $mergingParts[] = <<<SQL
-                $mergingSql
-                order by score desc
-                limit :$limitParamName
+                (
+                    $mergingSql
+                    order by score desc
+                    limit :$limitParamName
+                )
             SQL;
         }
         $mergingQueryPartsSql = implode(" union \n", $mergingParts);
