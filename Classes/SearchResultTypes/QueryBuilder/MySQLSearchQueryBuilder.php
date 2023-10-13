@@ -133,12 +133,39 @@ class MySQLSearchQueryBuilder
         SQL;
     }
 
-    public static function searchQuery(SearchQuery $searchQuery): string
+    public static function searchQueryGlobalLimit(SearchQuery $searchQuery): string
     {
         $searchingQueryPartsSql = implode(",\n", $searchQuery->getSearchingQueryPartsAsString());
         $mergingQueryPartsSql = implode(" union \n", $searchQuery->getMergingQueryPartsAsString());
         $limitParamName = SearchResult::SQL_QUERY_PARAM_LIMIT;
+        $sql = self::buildSearchQueryWithoutLimit($searchingQueryPartsSql, $mergingQueryPartsSql);
+        $sql .= <<<SQL
+            -- global limit
+            limit :$limitParamName;
+        SQL;
+        return $sql;
+    }
 
+    public static function searchQueryLimitPerResultType(SearchQuery $searchQuery): string
+    {
+        $searchingQueryPartsSql = implode(",\n", $searchQuery->getSearchingQueryPartsAsString());
+        $mergingParts = [];
+        foreach ($searchQuery->getMergingQueryPartsAsString() as $searchResultTypeName => $mergingSql) {
+            $limitParamName = SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName);
+            $mergingParts[] = <<<SQL
+                $mergingSql
+                order by score desc
+                limit :$limitParamName
+            SQL;
+        }
+        $mergingQueryPartsSql = implode(" union \n", $mergingParts);
+        $sql = self::buildSearchQueryWithoutLimit($searchingQueryPartsSql, $mergingQueryPartsSql);
+        $sql .= ';';
+        return $sql;
+    }
+
+    private static function buildSearchQueryWithoutLimit(string $searchingQueryPartsSql, string $mergingQueryPartsSql): string
+    {
         $aliasResultIdentifier = SearchQuery::ALIAS_RESULT_IDENTIFIER;
         $aliasResultTitle = SearchQuery::ALIAS_RESULT_TITLE;
         $aliasResultType = SearchQuery::ALIAS_RESULT_TYPE;
@@ -168,7 +195,6 @@ class MySQLSearchQueryBuilder
             -- group by result id and type in case multiple merging query parts return the same result
             group by result_id, result_type
             order by score desc
-            limit :$limitParamName;
         SQL;
     }
 

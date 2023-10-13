@@ -2,6 +2,7 @@
 
 namespace Sandstorm\KISSearch\Service;
 
+use Closure;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Neos\Flow\Annotations\Scope;
@@ -14,6 +15,7 @@ use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultMergingQueryParts;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultSearchingQueryParts;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\SearchQuery;
 use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
+use Sandstorm\KISSearch\SearchResultTypes\SearchQueryType;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultFrontend;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeInterface;
@@ -55,46 +57,139 @@ class SearchService
     /**
      * Searches all sources from the registered search result types in one single SQL query.
      *
-     * @param SearchQueryInput $searchQueryInput
+     * How limit works here:
+     *  - limit is applied to the end result after sorting by score
+     *
+     * Example, let's say:
+     *  - you have two search result types: NeosContent and Products
+     *  - a limit of 20 results
+     *
+     * Possible search results may be:
+     *  - 20 Products
+     *  - 10 Products, 10 NeosContent documents
+     *  - 20 NeosContent documents
+     *
+     * With this strategy, the most relevant results are shown, independently of their search result type.
+     *
+     * @param SearchQueryInput $searchQueryInput the user input
+     * @param int $limit the global query result limit
      * @return SearchResult[]
      */
-    public function search(SearchQueryInput $searchQueryInput): array
+    public function search(SearchQueryInput $searchQueryInput, int $limit): array
     {
-        $databaseType = DatabaseType::detectDatabase($this->configurationManager);
-        $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
+        return $this->internalSearch(
+            $searchQueryInput,
+            $this->searchResultTypesRegistry->getConfiguredSearchResultTypes(),
+            // parameter initializer -> one global limit parameter
+            function(array $defaultParameters) use ($limit) {
+                $defaultParameters[SearchResult::SQL_QUERY_PARAM_LIMIT] = $limit;
+                return $defaultParameters;
+            },
+            SearchQueryType::GLOBAL_LIMIT
+        );
+    }
 
-        return $this->internalSearch($databaseType, $searchQueryInput, $searchResultTypes);
+    /**
+     * @param SearchQueryInput $searchQueryInput
+     * @param array $limitPerResultType
+     * @return SearchResult[]
+     */
+    public function searchLimitPerResultType(SearchQueryInput $searchQueryInput, array $limitPerResultType): array
+    {
+        $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
+        return $this->internalSearch(
+            $searchQueryInput,
+            $searchResultTypes,
+            // parameter initializer
+            function(array $defaultParameters) use ($limitPerResultType, $searchResultTypes) {
+                return self::buildLimitParametersPerSearchResultType($defaultParameters, $limitPerResultType, $searchResultTypes);
+            },
+            SearchQueryType::LIMIT_PER_RESULT_TYPE
+        );
+    }
+
+    private static function buildLimitParametersPerSearchResultType(array $defaultParameters, array $limitPerResultType, array $searchResultTypes): array
+    {
+        // limit per result type
+        foreach (array_keys($searchResultTypes) as $searchResultTypeName) {
+            if (!array_key_exists($searchResultTypeName, $limitPerResultType) || !is_int($limitPerResultType[$searchResultTypeName])) {
+                throw new MissingLimitException(
+                    sprintf("Limit parameter is missing for search result type '%s'", $searchResultTypeName),
+                    1697034967
+                );
+            }
+            $defaultParameters[SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName)] = $limitPerResultType[$searchResultTypeName];
+        }
+        return $defaultParameters;
     }
 
     /**
      * Searches all sources from the registered search result types in one single SQL query.
      * Also enriches the search results with their respective search result document URLs.
      *
+     * @see search
+     *
      * @param SearchQueryInput $searchQueryInput
+     * @param int $limit the global query result limit
      * @return SearchResultFrontend[]
      */
-    public function searchFrontend(SearchQueryInput $searchQueryInput): array
+    public function searchFrontend(SearchQueryInput $searchQueryInput, int $limit): array
     {
-        $databaseType = DatabaseType::detectDatabase($this->configurationManager);
         $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
+        $results = $this->internalSearch(
+            $searchQueryInput,
+            $searchResultTypes,
+            // parameter initializer -> one global limit parameter
+            function (array $defaultParameters) use ($limit) {
+                $defaultParameters[SearchResult::SQL_QUERY_PARAM_LIMIT] = $limit;
+                return $defaultParameters;
+            },
+            SearchQueryType::GLOBAL_LIMIT
+        );
+        return self::enrichResultsWithDocumentUrl($results, $searchResultTypes);
+    }
 
-        $results = $this->internalSearch($databaseType, $searchQueryInput, $searchResultTypes);
+    public function searchFrontendLimitPerResultType(SearchQueryInput $searchQueryInput, array $limitPerResultType): array
+    {
+        $searchResultTypes = $this->searchResultTypesRegistry->getConfiguredSearchResultTypes();
+        $results = $this->internalSearch(
+            $searchQueryInput,
+            $searchResultTypes,
+            // parameter initializer
+            function(array $defaultParameters) use ($limitPerResultType, $searchResultTypes) {
+                return self::buildLimitParametersPerSearchResultType($defaultParameters, $limitPerResultType, $searchResultTypes);
+            },
+            SearchQueryType::LIMIT_PER_RESULT_TYPE
+        );
+        return self::enrichResultsWithDocumentUrl($results, $searchResultTypes);
+    }
 
+    /**
+     * @param SearchResult[] $searchResults
+     * @param array $searchResultTypes
+     * @return SearchResultFrontend[]
+     */
+    private static function enrichResultsWithDocumentUrl(array $searchResults, array $searchResultTypes): array
+    {
         return array_map(function (SearchResult $searchResult) use ($searchResultTypes) {
             $responsibleSearchResultType = $searchResultTypes[$searchResult->getResultTypeName()->getName()];
             $resultPageUrl = $responsibleSearchResultType->buildUrlToResultPage($searchResult);
             return $searchResult->withDocumentUrl($resultPageUrl);
-        }, $results);
+        }, $searchResults);
     }
 
     /**
-     * @param DatabaseType $databaseType
      * @param SearchQueryInput $searchQueryInput
      * @param SearchResultTypeInterface[] $searchResultTypes
+     * @param Closure $parameterInitializer
+     * @param SearchQueryType $searchQueryType
      * @return SearchResult[]
      */
-    private function internalSearch(DatabaseType $databaseType, SearchQueryInput $searchQueryInput, array $searchResultTypes): array
+    private function internalSearch(SearchQueryInput $searchQueryInput, array $searchResultTypes, Closure $parameterInitializer, SearchQueryType $searchQueryType): array
     {
+        // setup
+        $databaseType = DatabaseType::detectDatabase($this->configurationManager);
+
         // search query
         $searchQueryProviders = [];
         foreach ($searchResultTypes as $searchResultTypeName => $searchResultType) {
@@ -105,20 +200,11 @@ class SearchService
         // default parameters
         $defaultParameters = [
             SearchResult::SQL_QUERY_PARAM_QUERY => $searchTermParameterValue,
-            SearchResult::SQL_QUERY_PARAM_LIMIT => $searchQueryInput->getLimit(),
             SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp()
         ];
-        // limit per result type
-        $limitPerResultType = $searchQueryInput->getLimitPerResultType();
-        foreach (array_keys($searchResultTypes) as $searchResultTypeName) {
-            if (!array_key_exists($searchResultTypeName, $limitPerResultType) || !is_int($limitPerResultType[$searchResultTypeName])) {
-                throw new MissingLimitException(
-                    sprintf("Limit parameter is missing for search result type '%s'", $searchResultTypeName),
-                    1697034967
-                );
-            }
-            $defaultParameters[SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName)] = $limitPerResultType[$searchResultTypeName];
-        }
+
+        // parameter initializer (different limit strategies)
+        $defaultParameters = $parameterInitializer($defaultParameters);
 
         // search type specific additional parameters
         $additionalParameters = $this->getSearchTypeSpecificAdditionalParameters(
@@ -126,7 +212,7 @@ class SearchService
             $searchQueryProviders,
             $searchQueryInput
         );
-        $searchQuerySql = $this->buildSearchQuerySql($databaseType, $searchQueryProviders);
+        $searchQuerySql = $this->buildSearchQuerySql($databaseType, $searchQueryProviders, $searchQueryType);
 
         // prepare query
         $resultSetMapping = self::buildResultSetMapping();
@@ -147,27 +233,40 @@ class SearchService
     /**
      * @param DatabaseType $databaseType
      * @param SearchQueryProviderInterface[] $searchQueryProviders
+     * @param SearchQueryType $searchQueryType
      * @return string
      */
-    private function buildSearchQuerySql(DatabaseType $databaseType, array $searchQueryProviders): string
+    private function buildSearchQuerySql(DatabaseType $databaseType, array $searchQueryProviders, SearchQueryType $searchQueryType): string
     {
+        // searching query parts
         $searchingQueryParts = ResultSearchingQueryParts::merging(array_map(function (SearchQueryProviderInterface $provider) {
             return $provider->getResultSearchingQueryParts();
         }, $searchQueryProviders));
 
-        $mergingQueryParts = ResultMergingQueryParts::merging(array_map(function (SearchQueryProviderInterface $provider) {
-            return $provider->getResultMergingQueryParts();
-        }, $searchQueryProviders));
+        // merging query parts
+        $mergingQueryParts = [];
+        foreach ($searchQueryProviders as $searchResultTypeName => $provider) {
+            $mergingQueryParts[$searchResultTypeName] = $provider->getResultMergingQueryParts();
+        }
 
         $searchQuery = new SearchQuery($searchingQueryParts, $mergingQueryParts);
 
         return match ($databaseType) {
-            DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::searchQuery($searchQuery),
+            DatabaseType::MYSQL, DatabaseType::MARIADB => $this->buildMySQLSearchQuerySql($searchQuery, $searchQueryType),
             DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689933374),
             default => throw new UnsupportedDatabaseException(
                 "Search service does not support database of type '$databaseType->name'",
                 1689933081
             )
+        };
+    }
+
+    private function buildMySQLSearchQuerySql(SearchQuery $searchQuery, SearchQueryType $searchQueryType): string
+    {
+        return match($searchQueryType) {
+            SearchQueryType::GLOBAL_LIMIT => MySQLSearchQueryBuilder::searchQueryGlobalLimit($searchQuery),
+            SearchQueryType::LIMIT_PER_RESULT_TYPE => MySQLSearchQueryBuilder::searchQueryLimitPerResultType($searchQuery),
+            default => throw new UnsupportedSearchQueryType("Search service does not support search query type '$searchQueryType->name'", 1697203050)
         };
     }
 

@@ -57,8 +57,6 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
         $paramNameDimensionValues = self::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES;
         $cteAlias = self::CTE_ALIAS;
 
-        $paramNameLimit = SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterName(NeosContentSearchResultType::name());
-
         $scoreSelector = '(20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)';
 
         return ResultMergingQueryParts::singlePart(
@@ -121,8 +119,6 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                                     nd.dimensionvalues
                             )
                         )
-                    order by score desc
-                    limit :$paramNameLimit
                 SQL
             )
         );
