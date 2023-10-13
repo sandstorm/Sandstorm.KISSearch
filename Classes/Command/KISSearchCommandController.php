@@ -315,7 +315,15 @@ class KISSearchCommandController extends CommandController
 
     private function searchAndPrintResults(string $query, ?string $additionalParams, bool $showMetaData, \Closure $serviceCall, array $headers): void
     {
-        $additionalParamsArray = json_decode($additionalParams, true);
+        $additionalParamsArray = null;
+        try {
+            $additionalParamsArray = json_decode($additionalParams, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $jsonError) {
+            $this->outputLine('invalid --additional-params value; cause: %s', [$jsonError->getMessage()]);
+            $this->outputLine('Example usage: --additional-params \'{"neosContentDimensionValues": {"language": ["en_US"]}, "neosContentSiteNodeName": "neosdemo"}\'');
+            $this->sendAndExit(1);
+            return;
+        }
         $input = new SearchQueryInput($query, $additionalParamsArray);
         $this->printSearchQueryInput($input);
         $startTime = microtime(true);

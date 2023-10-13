@@ -10,7 +10,6 @@ use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\DefaultResultMergingQuery
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\DefaultResultSearchingQueryPart;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultMergingQueryParts;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultSearchingQueryParts;
-use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\SearchQuery;
 use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 
