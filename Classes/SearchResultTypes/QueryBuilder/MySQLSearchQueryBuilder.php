@@ -170,7 +170,8 @@ class MySQLSearchQueryBuilder
         $aliasResultTitle = SearchQuery::ALIAS_RESULT_TITLE;
         $aliasResultType = SearchQuery::ALIAS_RESULT_TYPE;
         $aliasScore = SearchQuery::ALIAS_SCORE;
-        $aliasResultMetaData = SearchQuery::ALIAS_RESULT_META_DATA;
+        $aliasMatchCount = SearchQuery::ALIAS_MATCH_COUNT;
+        $aliasAggregateMetaData = SearchQuery::ALIAS_AGGREGATE_META_DATA;
         $aliasGroupMetaData = SearchQuery::ALIAS_GROUP_META_DATA;
 
         return <<<SQL
@@ -185,15 +186,11 @@ class MySQLSearchQueryBuilder
                 a.$aliasResultIdentifier as result_id,
                 a.$aliasResultType as result_type,
                 a.$aliasResultTitle as result_title,
-                -- max score wins
-                -- TODO discuss, if max(score) vs. sum(score) vs. set mode via API
-                max(a.$aliasScore) as score,
-                count(a.$aliasResultIdentifier) as match_count,
+                a.$aliasScore as score,
+                a.$aliasMatchCount as match_count,
                 a.$aliasGroupMetaData as group_meta_data,
-                json_arrayagg(a.$aliasResultMetaData) as aggregate_meta_data
+                a.$aliasAggregateMetaData as aggregate_meta_data
             from all_results a
-            -- group by result id and type in case multiple merging query parts return the same result
-            group by result_id, result_type
             order by score desc
         SQL;
     }

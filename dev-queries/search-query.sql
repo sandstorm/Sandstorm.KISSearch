@@ -352,7 +352,7 @@ with     neos_content_results as (
                   nd.document_title as result_title,
                   'neos_content' as result_type,
                   max((20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)) as score,
-                  count(nd.identifier) as match_count,
+                  count(nd.document_id) as match_count,
                   json_arrayagg(json_object(
                     'score', (20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor),
                     'nodeIdentifier', nd.identifier,

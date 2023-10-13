@@ -49,7 +49,8 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         $aliasResultTitle = SearchQuery::ALIAS_RESULT_TITLE;
         $aliasResultType = SearchQuery::ALIAS_RESULT_TYPE;
         $aliasScore = SearchQuery::ALIAS_SCORE;
-        $aliasResultMetaData = SearchQuery::ALIAS_RESULT_META_DATA;
+        $aliasMatchCount = SearchQuery::ALIAS_MATCH_COUNT;
+        $aliasAggregateMetaData = SearchQuery::ALIAS_AGGREGATE_META_DATA;
         $aliasGroupMetaData = SearchQuery::ALIAS_GROUP_META_DATA;
 
         $resultMetaDataSelector = $this->resultMetaDataSelector !== null ? $this->resultMetaDataSelector : 'null';
@@ -60,10 +61,12 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
                 $this->resultIdentifierSelector as $aliasResultIdentifier,
                 $this->resultTitleSelector as $aliasResultTitle,
                 '$this->resultTypeName' as $aliasResultType,
-                $this->scoreSelector as $aliasScore,
-                $resultMetaDataSelector as $aliasResultMetaData,
+                max($this->scoreSelector) as $aliasScore,
+                count($this->resultIdentifierSelector) as $aliasMatchCount,
+                json_arrayagg($resultMetaDataSelector) as $aliasAggregateMetaData,
                 $groupMetaDataSelector as $aliasGroupMetaData
             $this->querySource
+            group by $this->resultIdentifierSelector
         SQL;
     }
 }
