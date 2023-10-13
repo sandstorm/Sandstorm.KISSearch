@@ -135,10 +135,8 @@ class MySQLSearchQueryBuilder
 
     public static function searchQueryGlobalLimit(SearchQuery $searchQuery): string
     {
-        $searchingQueryPartsSql = implode(",\n", $searchQuery->getSearchingQueryPartsAsString());
-        $mergingQueryPartsSql = implode(" union \n", $searchQuery->getMergingQueryPartsAsString());
         $limitParamName = SearchResult::SQL_QUERY_PARAM_LIMIT;
-        $sql = self::buildSearchQueryWithoutLimit($searchingQueryPartsSql, $mergingQueryPartsSql);
+        $sql = self::buildSearchQueryWithoutLimit($searchQuery);
         $sql .= <<<SQL
             -- global limit
             limit :$limitParamName;
@@ -148,7 +146,16 @@ class MySQLSearchQueryBuilder
 
     public static function searchQueryLimitPerResultType(SearchQuery $searchQuery): string
     {
+        $sql = self::buildSearchQueryWithoutLimit($searchQuery);
+        $sql .= ';';
+        return $sql;
+    }
+
+    private static function buildSearchQueryWithoutLimit(SearchQuery $searchQuery): string
+    {
+        // searching part
         $searchingQueryPartsSql = implode(",\n", $searchQuery->getSearchingQueryPartsAsString());
+        // merging part
         $mergingParts = [];
         foreach ($searchQuery->getMergingQueryPartsAsString() as $searchResultTypeName => $mergingSql) {
             $limitParamName = SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName);
@@ -159,13 +166,7 @@ class MySQLSearchQueryBuilder
             SQL;
         }
         $mergingQueryPartsSql = implode(" union \n", $mergingParts);
-        $sql = self::buildSearchQueryWithoutLimit($searchingQueryPartsSql, $mergingQueryPartsSql);
-        $sql .= ';';
-        return $sql;
-    }
 
-    private static function buildSearchQueryWithoutLimit(string $searchingQueryPartsSql, string $mergingQueryPartsSql): string
-    {
         $aliasResultIdentifier = SearchQuery::ALIAS_RESULT_IDENTIFIER;
         $aliasResultTitle = SearchQuery::ALIAS_RESULT_TITLE;
         $aliasResultType = SearchQuery::ALIAS_RESULT_TYPE;
