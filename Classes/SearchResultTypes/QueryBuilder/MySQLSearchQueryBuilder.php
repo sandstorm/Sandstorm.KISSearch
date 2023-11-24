@@ -10,6 +10,8 @@ use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 class MySQLSearchQueryBuilder
 {
 
+    const SPECIAL_CHARACTERS = '-+~/<>\'":*$#@()!,.?`=%&^';
+
     public static function createFulltextIndex(SearchResultTypeName $searchResultTypeName, string $tableName, ColumnNamesByBucket $columnNames): string
     {
         // combined index
@@ -204,10 +206,17 @@ class MySQLSearchQueryBuilder
         $sanitized = mb_strtolower($sanitized);
         $sanitized = str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $sanitized);
 
+        $specialChars = str_split(self::SPECIAL_CHARACTERS);
+        $sanitized = str_replace($specialChars, ' ', $sanitized);
+
         $searchWords = explode(
             ' ',
             $sanitized
         );
+
+        $searchWords = array_filter($searchWords, function(string $searchWord) {
+            return strlen(trim($searchWord)) > 0;
+        });
 
         $searchWordsFuzzy = array_map(function(string $searchWord) {
             return $searchWord . '*';

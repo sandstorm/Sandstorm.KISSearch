@@ -1,3 +1,6 @@
+select * from neos_contentrepository_domain_model_nodedata where match (search_bucket_critical)
+                                                                   against ( 'eric@' in boolean mode );
+
 -- searching query part
 with neos_content_results as (select *,
                                      match (search_bucket_critical) against ( :query IN BOOLEAN MODE ) as score_bucket_critical,
