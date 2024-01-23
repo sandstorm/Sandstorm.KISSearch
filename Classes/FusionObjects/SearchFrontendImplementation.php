@@ -17,11 +17,12 @@ class SearchFrontendImplementation extends AbstractSearchImplementation
 
     /**
      * @param SearchQueryInput $searchQuery
+     * @param int $limit
      * @return SearchResultFrontend[]
      */
-    protected function doSearchQuery(SearchQueryInput $searchQuery): array
+    protected function doSearchQuery(SearchQueryInput $searchQuery, int $limit): array
     {
-        return $this->searchService->searchFrontend($searchQuery);
+        return $this->searchService->searchFrontend($searchQuery, $limit);
     }
 
 }

@@ -293,7 +293,7 @@ class SearchController extends ActionController {
     public function searchAction(string $searchQueryUserInput): string
     {
         /** @var SearchResult[] $searchResults */
-        $searchResults = $this->searchService->search(new SearchQueryInput($searchQueryUserInput, self::DEFAULT_SEARCH_LIMIT));
+        $searchResults = $this->searchService->search(new SearchQueryInput($searchQueryUserInput), self::DEFAULT_SEARCH_LIMIT);
         return json_encode($searchResults);
     }
 }
