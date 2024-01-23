@@ -56,13 +56,12 @@ class SearchService
     // BEGIN: public API
 
     /**
-     * Searches all sources from the registered search result types in one single SQL query.
+     * Searches all sources from the registered search result types.
+     * The in one single SQL query involved in loading results. An overall score is used
+     * for sorting the result items.
      *
      * How limit works here:
-     *  - a "global" limit is applied to the merged end result after sorting by score
-     *  - that means, f.e. lots of very important results from one type may "push out" results from other types
-     *  - if you want at least some of all types, you should probably use @see searchLimitPerResultType
-     *  - internally, each result type is also limited using the global limit to improve search performance
+     * A "global" limit is applied to the merged end result after sorting by score.
      *
      * Example, let's say:
      *  - you have two search result types: NeosContent and Products
@@ -72,6 +71,9 @@ class SearchService
      *  - 20 Products
      *  - 10 Products, 10 NeosContent documents
      *  - 20 NeosContent documents
+     *
+     * That means, f.e. lots of very important results from one type may "push out" results from other types.
+     * If you want to see at least some items of all search result types: @see searchLimitPerResultType
      *
      * With this strategy, the most relevant results are shown, independently of their search result type.
      *
@@ -88,6 +90,7 @@ class SearchService
             // parameter initializer -> one global limit parameter
             function(array $defaultParameters) use ($limit, $searchResultTypes) {
                 $defaultParameters[SearchResult::SQL_QUERY_PARAM_LIMIT] = $limit;
+                // internally, each result type is also limited using the global limit to improve search performance
                 return self::buildLimitParametersForGlobalLimit($defaultParameters, $limit, $searchResultTypes);
             },
             SearchQueryType::GLOBAL_LIMIT
@@ -95,10 +98,11 @@ class SearchService
     }
 
     /**
-     * Searches all sources from the registered search result types in one single SQL query.
+     * Searches all sources from the registered search result types.
+     * The in one single SQL query involved in loading results.
+     * The search result limits can be specified individually for each result type.
      *
      * How limits work here:
-     *  - the search result query limits are given for each result type.
      *  - limit is applied to each result set separately
      *  - no "global" limit is explicitly applied to the merged end results
      *  - the max number of results can not be more than the *sum* of the given result-specific limits
@@ -107,7 +111,7 @@ class SearchService
      *  - if you want to have a global limit based on overall score, you should probably use @see search
      *
      * @param SearchQueryInput $searchQueryInput
-     * @param array $limitPerResultType
+     * @param array $limitPerResultType the limit per search result
      * @return SearchResult[]
      */
     public function searchLimitPerResultType(SearchQueryInput $searchQueryInput, array $limitPerResultType): array

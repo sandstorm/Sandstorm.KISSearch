@@ -422,5 +422,4 @@ select
   a.group_meta_data as group_meta_data,
   a.aggregate_meta_data as aggregate_meta_data
 from all_results a
-     -- group by result id and type in case multiple merging query parts return the same result
 order by score desc;

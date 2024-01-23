@@ -194,6 +194,35 @@ live in two places:
 
 ### run search queries
 
+In general, you can choose between two search modes (or even use both in different places):
+
+#### search all result types with a global limit
+
+Use this API if you want results purely ranked by the overall score importance. What can happen here is, that lots of 
+important results from one single result type can "push out" results from other types.
+
+Example, let's say you have:
+
+- two different search result types: neos_content (built in) and products (custom)
+- a global query limit of `10`
+
+Let's also say: without applying the limit, the search result query matches 20 results from neos_content and 20 results
+from products. All 20 results from products have a higher score than the results from neos_content. That means, after
+applying the global limit of 10, the end result will be 10 products. 
+
+That works well, if you want the most important results from all result types.
+That does not work well, if you want at least a few results from each result type. For those use-cases, the next search
+mode might be the better approach.
+
+#### search with limit per result type
+
+Use this API if you want at least a few results from all search result types.
+
+TODO more doc -> "push out" cannot happen, but less scored results from other types will be returned.
+
+
+#### search APIs
+
 Search on command line:
 
 ```shell
