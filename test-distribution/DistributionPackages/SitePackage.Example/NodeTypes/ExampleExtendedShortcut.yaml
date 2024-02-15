@@ -1,0 +1,3 @@
+'SitePackage.Example:ExampleExtendedShortcut':
+  superTypes:
+    'Neos.Neos:Shortcut': true

@@ -103,7 +103,12 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
 
         // filter excluded node types
         $exclusionFilter = function (NodeType $documentNodeType) use ($excludedNodeTypes) {
-            return !in_array($documentNodeType->getName(), $excludedNodeTypes);
+            foreach ($excludedNodeTypes as $excluded) {
+                if ($documentNodeType->isOfType($excluded)) {
+                    return false;
+                }
+            }
+            return true;
         };
 
         $documentNodeTypes = array_filter(
