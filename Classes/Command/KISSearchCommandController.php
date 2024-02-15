@@ -7,6 +7,8 @@ use Doctrine\ORM\Query\ResultSetMapping;
 use JsonSerializable;
 use Neos\Flow\Cli\CommandController;
 use Neos\Flow\Configuration\ConfigurationManager;
+use Neos\Flow\Http\BaseUriProvider;
+use Neos\Utility\ObjectAccess;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypesRegistry;
@@ -30,19 +32,28 @@ class KISSearchCommandController extends CommandController
 
     private readonly SearchService $searchService;
 
+    private readonly BaseUriProvider $baseUriProvider;
+
     /**
      * @param SearchResultTypesRegistry $searchResultTypesRegistry
      * @param ConfigurationManager $configurationManager
      * @param EntityManagerInterface $entityManager
      * @param SearchService $searchService
      */
-    public function __construct(SearchResultTypesRegistry $searchResultTypesRegistry, ConfigurationManager $configurationManager, EntityManagerInterface $entityManager, SearchService $searchService)
+    public function __construct(
+        SearchResultTypesRegistry $searchResultTypesRegistry,
+        ConfigurationManager $configurationManager,
+        EntityManagerInterface $entityManager,
+        SearchService $searchService,
+        BaseUriProvider $baseUriProvider
+    )
     {
         parent::__construct();
         $this->searchResultTypesRegistry = $searchResultTypesRegistry;
         $this->configurationManager = $configurationManager;
         $this->entityManager = $entityManager;
         $this->searchService = $searchService;
+        $this->baseUriProvider = $baseUriProvider;
     }
 
     public function checkVersionCommand(bool $printSuccess = true): void
@@ -101,6 +112,8 @@ class KISSearchCommandController extends CommandController
 
     public function migrateCommand(bool $print = false): void
     {
+        $this->hotfixUriResolvingForCliCommand();
+
         $databaseType = DatabaseType::detectDatabase($this->configurationManager);
         $this->internalCheckDatabaseVersion($databaseType, false);
 
@@ -166,6 +179,21 @@ class KISSearchCommandController extends CommandController
         };
     }
 
+    private function hotfixUriResolvingForCliCommand() {
+        // HOTFIX for "No base URI could be provided." -> we fake a configured base URI, in case
+        // no value is configured.
+        // When does this happen? ->
+        //   In some cases, you configured URIs in your NodeTypes (f.e. thumbnails).
+        //   When KISSearch evaluates the NodeTypes configuration, those URIs gets resolved. During this process,
+        //   the error "No base URI could be provided." is thrown when there is no base URI configured in your system.
+        //   We simply fake this configuration for the current CLI command, since we do NOT need correctly resolved public
+        //   resource URIs at all.
+        $configuredBaseUri = ObjectAccess::getProperty($this->baseUriProvider, 'configuredBaseUri', true);
+        if ($configuredBaseUri === null) {
+            ObjectAccess::setProperty($this->baseUriProvider, 'configuredBaseUri', 'http://localhost:8080', true);
+        }
+    }
+
     private function getMigrationStatus(string $searchResultTypeName, string $actualVersionHash): int
     {
         $rsm = new ResultSetMapping();
@@ -195,6 +223,8 @@ class KISSearchCommandController extends CommandController
 
     public function removeCommand(bool $print = false): void
     {
+        $this->hotfixUriResolvingForCliCommand();
+
         $databaseType = DatabaseType::detectDatabase($this->configurationManager);
         $this->internalCheckDatabaseVersion($databaseType, false);
 
