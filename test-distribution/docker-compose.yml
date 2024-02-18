@@ -19,6 +19,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       FLOW_CONTEXT: 'Development/Docker/Postgres'
+      #FLOW_CONTEXT: 'Development/Docker/MariaDB'
       COMPOSER_CACHE_DIR: '/composer_cache'
       # DB connection
       MARIA_DB_NEOS_HOST: 'maria-db'
@@ -69,7 +70,7 @@ services:
       MYSQL_DATABASE: neos
       MYSQL_USER: neos
       MYSQL_PASSWORD: neos
-    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci', '--general-log=1', '--general-log-file=/var/lib/mysql/general-log.log']
 
   #####
   # Postgres DB

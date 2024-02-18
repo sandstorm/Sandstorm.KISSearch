@@ -2,6 +2,7 @@
 
 namespace Sandstorm\KISSearch\SearchResultTypes\QueryBuilder;
 
+use Doctrine\DBAL\Connection;
 use Neos\Flow\Annotations\Proxy;
 use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
 
@@ -48,6 +49,19 @@ class AdditionalQueryParameterValue
                         $parameterValueDump
                     ),
                     1690297443
+                );
+            }
+            if ($parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY &&
+                !is_array($parameterValue)) {
+                throw new InvalidAdditionalParameterException(
+                    sprintf(
+                        "Additional parameter '%s' is declared to be of type string array, expect " .
+                            "array but was of type '%s' (value: %s)",
+                        $parameterName,
+                        $actualParameterType,
+                        $parameterValueDump
+                    ),
+                    1692281782
                 );
             }
             if ($parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_INTEGER && !is_integer($parameterValue)) {
@@ -97,13 +111,16 @@ class AdditionalQueryParameterValue
     }
 
     /**
-     * @return string
+     * @return null|string
      */
-    public function getQueryParameterType(): string
+    public function getQueryParameterType(): ?string
     {
         if ($this->parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_JSON) {
             // JSON parameters are treated as string in SQL queries
             return AdditionalQueryParameterDefinition::TYPE_STRING;
+        }
+        if ($this->parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY) {
+            return null;
         }
         return $this->parameterDefinition->getParameterType();
     }

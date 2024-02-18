@@ -1,0 +1,8 @@
+'Neos.Seo:SeoMetaTagsMixin':
+  properties:
+    metaDescription:
+      search:
+        bucket: "critical"
+    metaKeywords:
+      search:
+        bucket: "critical"

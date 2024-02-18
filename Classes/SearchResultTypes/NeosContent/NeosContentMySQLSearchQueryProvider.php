@@ -2,6 +2,7 @@
 
 namespace Sandstorm\KISSearch\SearchResultTypes\NeosContent;
 
+use Neos\ContentRepository\Domain\NodeAggregate\NodeName;
 use Neos\Flow\Annotations\Proxy;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterDefinition;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterDefinitions;
@@ -19,6 +20,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     public const CTE_ALIAS = 'neos_content_results';
 
     public const ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME = 'neosContentSiteNodeName';
+    public const ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME = 'neosContentExcludedSiteNodeName';
     public const ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES = 'neosContentDimensionValues';
 
     function getResultSearchingQueryParts(): ResultSearchingQueryParts
@@ -50,6 +52,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     {
         $queryParamNowTime = SearchResult::SQL_QUERY_PARAM_NOW_TIME;
         $paramNameSiteNodeName = self::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME;
+        $paramNameExcludeSiteNodeName = self::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME;
         $paramNameDimensionValues = self::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES;
         $cteAlias = self::CTE_ALIAS;
 
@@ -102,7 +105,10 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                         -- additional query parameters
                         and (
                             -- site node name (optional, if null all sites are searched)
-                            :$paramNameSiteNodeName is null or nd.site_nodename = :$paramNameSiteNodeName
+                            json_value(json_array(:$paramNameSiteNodeName), '$[0]') is null or nd.site_nodename in (:$paramNameSiteNodeName)
+                        )
+                        and (
+                            json_value(json_array(:$paramNameExcludeSiteNodeName), '$[0]') is null or nd.site_nodename not in (:$paramNameExcludeSiteNodeName)
                         )
                         and (
                             -- content dimension values (optional, if null all dimensions are searched)
@@ -122,8 +128,27 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
      */
     public function getAdditionalQueryParameters(): AdditionalQueryParameterDefinitions
     {
+        $nodeNameMapper = function(mixed $nodeNames) {
+            if ($nodeNames === null) {
+                return null;
+            }
+            if (is_array($nodeNames)) {
+                return array_map(function(mixed $nodeName) {
+                    if ($nodeName instanceof NodeName) {
+                        return $nodeName->__toString();
+                    }
+                    return $nodeName;
+                }, $nodeNames);
+            }
+            if ($nodeNames instanceof NodeName) {
+                return [$nodeNames->__toString()];
+            }
+            return [(string) $nodeNames];
+        };
+
         return AdditionalQueryParameterDefinitions::create(
-            AdditionalQueryParameterDefinition::optional(self::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING, NeosContentSearchResultType::name()),
+            AdditionalQueryParameterDefinition::optional(self::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), $nodeNameMapper),
+            AdditionalQueryParameterDefinition::optional(self::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), $nodeNameMapper),
             AdditionalQueryParameterDefinition::optionalJson(self::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES, NeosContentSearchResultType::name(), function($valueAsArray) {
                 return new ContentDimensionValuesFilter($valueAsArray);
             })

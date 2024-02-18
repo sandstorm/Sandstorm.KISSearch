@@ -8,7 +8,7 @@ use Sandstorm\KISSearch\Service\SearchQueryInput;
 abstract class AbstractSearchImplementation extends AbstractFusionObject
 {
 
-    protected abstract function doSearchQuery(SearchQueryInput $searchQuery): array;
+    protected abstract function doSearchQuery(SearchQueryInput $searchQuery, int $limit): array;
 
     /**
      * @return ?string
@@ -74,9 +74,8 @@ abstract class AbstractSearchImplementation extends AbstractFusionObject
         }
         $searchQuery = new SearchQueryInput(
             $query,
-            $this->getLimit(),
             $this->getAdditionalParameters()
         );
-        return $this->doSearchQuery($searchQuery);
+        return $this->doSearchQuery($searchQuery, $this->getLimit());
     }
 }

@@ -1,0 +1,14 @@
+# local development setup (docker)
+
+Neos:
+  Flow:
+    persistence:
+      # https://www.doctrine-project.org/projects/doctrine-dbal/en/latest/reference/configuration.html
+      backendOptions:
+        driver: 'pdo_mysql'
+        charset: 'utf8mb4'
+        host: '%env:MARIA_DB_NEOS_HOST%'
+        port: '%env:MARIA_DB_NEOS_PORT%'
+        password: '%env:MARIA_DB_NEOS_PASSWORD%'
+        user: '%env:MARIA_DB_NEOS_USER%'
+        dbname: '%env:MARIA_DB_NEOS_DATABASE%'

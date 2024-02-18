@@ -10,6 +10,8 @@ use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 class MySQLSearchQueryBuilder
 {
 
+    const SPECIAL_CHARACTERS = '-+~/<>\'":*$#@()!,.?`=%&^';
+
     public static function createFulltextIndex(SearchResultTypeName $searchResultTypeName, string $tableName, ColumnNamesByBucket $columnNames): string
     {
         // combined index
@@ -72,9 +74,18 @@ class MySQLSearchQueryBuilder
 
     public static function extractNormalizedFulltextFromJson(string $valueSql, string $jsonKey): string
     {
+        return self::normalizeFulltext(
+            <<<SQL
+                json_extract($valueSql, '$.$jsonKey')
+            SQL
+        );
+    }
+
+    public static function normalizeFulltext(string $valueSql): string
+    {
         return <<<SQL
             replace(replace(replace(replace(
-                lower(json_extract($valueSql, '$.$jsonKey')),
+                lower($valueSql),
                 'ä','ae'),'ö','oe'), 'ü','ue'), 'ß','ss')
         SQL;
     }
@@ -124,17 +135,48 @@ class MySQLSearchQueryBuilder
         SQL;
     }
 
-    public static function searchQuery(SearchQuery $searchQuery): string
+    public static function searchQueryGlobalLimit(SearchQuery $searchQuery): string
     {
-        $searchingQueryPartsSql = implode(",\n", $searchQuery->getSearchingQueryPartsAsString());
-        $mergingQueryPartsSql = implode(" union \n", $searchQuery->getMergingQueryPartsAsString());
         $limitParamName = SearchResult::SQL_QUERY_PARAM_LIMIT;
+        $sql = self::buildSearchQueryWithoutLimit($searchQuery);
+        $sql .= <<<SQL
+            -- global limit
+            limit :$limitParamName;
+        SQL;
+        return $sql;
+    }
+
+    public static function searchQueryLimitPerResultType(SearchQuery $searchQuery): string
+    {
+        $sql = self::buildSearchQueryWithoutLimit($searchQuery);
+        $sql .= ';';
+        return $sql;
+    }
+
+    private static function buildSearchQueryWithoutLimit(SearchQuery $searchQuery): string
+    {
+        // searching part
+        $searchingQueryPartsSql = implode(",\n", $searchQuery->getSearchingQueryPartsAsString());
+        // merging part
+        $mergingParts = [];
+        foreach ($searchQuery->getMergingQueryPartsAsString() as $searchResultTypeName => $mergingSql) {
+            $limitParamName = SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName);
+            $mergingParts[] = <<<SQL
+                (
+                    $mergingSql
+                    order by score desc
+                    limit :$limitParamName
+                )
+            SQL;
+        }
+        $mergingQueryPartsSql = implode(" union \n", $mergingParts);
 
         $aliasResultIdentifier = SearchQuery::ALIAS_RESULT_IDENTIFIER;
         $aliasResultTitle = SearchQuery::ALIAS_RESULT_TITLE;
         $aliasResultType = SearchQuery::ALIAS_RESULT_TYPE;
         $aliasScore = SearchQuery::ALIAS_SCORE;
-        $aliasResultMetaData = SearchQuery::ALIAS_RESULT_META_DATA;
+        $aliasMatchCount = SearchQuery::ALIAS_MATCH_COUNT;
+        $aliasAggregateMetaData = SearchQuery::ALIAS_AGGREGATE_META_DATA;
         $aliasGroupMetaData = SearchQuery::ALIAS_GROUP_META_DATA;
 
         return <<<SQL
@@ -149,17 +191,12 @@ class MySQLSearchQueryBuilder
                 a.$aliasResultIdentifier as result_id,
                 a.$aliasResultType as result_type,
                 a.$aliasResultTitle as result_title,
-                -- max score wins
-                -- TODO discuss, if max(score) vs. sum(score) vs. set mode via API
-                max(a.$aliasScore) as score,
-                count(a.$aliasResultIdentifier) as match_count,
+                a.$aliasScore as score,
+                a.$aliasMatchCount as match_count,
                 a.$aliasGroupMetaData as group_meta_data,
-                json_arrayagg(a.$aliasResultMetaData) as aggregate_meta_data
+                a.$aliasAggregateMetaData as aggregate_meta_data
             from all_results a
-            -- group by result id and type in case multiple merging query parts return the same result
-            group by result_id, result_type
             order by score desc
-            limit :$limitParamName;
         SQL;
     }
 
@@ -169,10 +206,17 @@ class MySQLSearchQueryBuilder
         $sanitized = mb_strtolower($sanitized);
         $sanitized = str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $sanitized);
 
+        $specialChars = str_split(self::SPECIAL_CHARACTERS);
+        $sanitized = str_replace($specialChars, ' ', $sanitized);
+
         $searchWords = explode(
             ' ',
             $sanitized
         );
+
+        $searchWords = array_filter($searchWords, function(string $searchWord) {
+            return strlen(trim($searchWord)) > 0;
+        });
 
         $searchWordsFuzzy = array_map(function(string $searchWord) {
             return $searchWord . '*';

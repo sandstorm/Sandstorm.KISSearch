@@ -271,6 +271,44 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             }, $values));
     }
 
+    /**
+     * The general idea here is, to create fulltext extractors based on generated columns.
+     * Neos Nodes persist their properties inside a JSON object, so each row in the nodedata table
+     * have different extractors based on their respective Node Type. So the outermost structure of the
+     * generated column expression is a huge switch-case statement handling each specific configured Node Type.
+     * Inside the specific cases for each Node Type, all properties are extracted and sanitized from the properties JSON column.
+     * Generically, the DDL structure looks like:
+     *
+     * search_bucket_x => case
+     *     when nodetype = 'NodeType.A' then
+     *          concat(
+     *              fulltext_extractor_for_property_X,
+     *              ' ',
+     *              fulltext_extractor_for_property_Y,
+     *              ' ',
+     *              ...
+     *          )
+     *     when nodetype = 'NodeType.B' then
+     *          concat(
+     *              fulltext_extractor_for_property_P,
+     *              ' ',
+     *              fulltext_extractor_for_property_Q,
+     *              ' ',
+     *              ...
+     *          )
+     *     else null
+     * end
+     *
+     * Fulltext extractors most likely look like:
+     *
+     * json_extract(properties, '$.nodePropertyName')
+     *
+     * ... wrapped by lots of replace function calls to sanitize the values (f.e. remove HTML tags/entities, replace umlauts, etc.)
+     *
+     * @param array $extractorsByNodeType
+     * @param SearchBucket $targetBucket
+     * @return string
+     */
     private static function buildMySQLFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket): string
     {
         $sqlCases = [];
@@ -282,7 +320,7 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
             /** @var NodePropertyFulltextExtraction $propertyExtraction */
             foreach ($propertyExtractions as $propertyExtraction) {
                 $jsonExtractor = MySQLSearchQueryBuilder::extractNormalizedFulltextFromJson('properties', $propertyExtraction->getPropertyName());
-                $thenSql[] = match ($propertyExtraction->getMode()) {
+                $bucketExtractor = match ($propertyExtraction->getMode()) {
                     FulltextExtractionMode::EXTRACT_INTO_SINGLE_BUCKET => MySQLSearchQueryBuilder::extractAllText($jsonExtractor),
                     FulltextExtractionMode::EXTRACT_HTML_TAGS => match ($targetBucket) {
                         SearchBucket::CRITICAL => MySQLSearchQueryBuilder::fulltextExtractHtmlTagContents($jsonExtractor, 'h1', 'h2'),
@@ -290,6 +328,8 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                         SearchBucket::NORMAL, SearchBucket::MINOR => MySQLSearchQueryBuilder::fulltextExtractHtmlTextContent($jsonExtractor, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'),
                     }
                 };
+                // fallback null to empty string
+                $thenSql[] = "coalesce($bucketExtractor, '')";
             }
             if (count($thenSql) === 1) {
                 // only one property for node type

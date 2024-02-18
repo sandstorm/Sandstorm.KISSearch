@@ -17,11 +17,12 @@ class SearchImplementation extends AbstractSearchImplementation
 
     /**
      * @param SearchQueryInput $searchQuery
+     * @param int $limit
      * @return SearchResult[]
      */
-    protected function doSearchQuery(SearchQueryInput $searchQuery): array
+    protected function doSearchQuery(SearchQueryInput $searchQuery, int $limit): array
     {
-        return $this->searchService->search($searchQuery);
+        return $this->searchService->search($searchQuery, $limit);
     }
 
 }

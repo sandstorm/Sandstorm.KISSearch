@@ -1,1 +1,11 @@
 include: **/*.fusion
+
+/*
+root = Sandstorm.KISSearch:Search {
+  query = 'Neos'
+  additionalParameters {
+    neosContentExcludedSiteNodeName = ${site.nodeName}
+  }
+  @process.json = ${Json.stringify(value)}
+}
+*/

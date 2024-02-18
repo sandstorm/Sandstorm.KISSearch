@@ -1,0 +1,16 @@
+# local development setup (docker)
+
+Neos:
+  Flow:
+    persistence:
+      # https://www.doctrine-project.org/projects/doctrine-dbal/en/latest/reference/configuration.html
+      backendOptions:
+        driver: 'pdo_pgsql'
+        charset: 'utf8'
+        defaultTableOptions:
+          charset: 'utf8'
+        host: '%env:POSTGRES_DB_NEOS_HOST%'
+        port: '%env:POSTGRES_DB_NEOS_PORT%'
+        password: '%env:POSTGRES_DB_NEOS_PASSWORD%'
+        user: '%env:POSTGRES_DB_NEOS_USER%'
+        dbname: '%env:POSTGRES_DB_NEOS_DATABASE%'

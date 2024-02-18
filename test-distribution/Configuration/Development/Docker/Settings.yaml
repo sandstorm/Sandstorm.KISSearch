@@ -1,0 +1,19 @@
+# local development setup (docker)
+
+Neos:
+  Flow:
+    cache:
+      applicationIdentifier: 'app'
+
+  Imagine:
+    driver: 'Vips'
+    enabledDrivers:
+      Vips: true
+      Gd: true
+      Imagick: true
+
+  Media:
+    image:
+      defaultOptions:
+        # The Vips driver does not support interlace
+        interlace: ~

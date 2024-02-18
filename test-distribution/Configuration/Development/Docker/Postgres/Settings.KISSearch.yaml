@@ -1,0 +1,6 @@
+Sandstorm:
+  KISSearch:
+    databaseType: 'PostgreSQL'
+
+    #postgres:
+      #mode: 'contentDimension'
