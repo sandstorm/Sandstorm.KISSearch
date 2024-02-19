@@ -115,7 +115,12 @@ class KISSearchCommandController extends CommandController
         return $query->getSingleResult()[0];
     }
 
-    public function migrateCommand(bool $print = true): void
+    /**
+     * @param bool $dryRun when true will just print the sql queries and not apply them
+     * @param bool $silent suppress any outputs
+     * @return void
+     */
+    public function migrateCommand(bool $dryRun = false, bool $silent = false): void
     {
         $this->hotfixUriResolvingForCliCommand();
 
@@ -135,7 +140,7 @@ class KISSearchCommandController extends CommandController
         $migrationScripts = [];
         foreach ($searchResultTypes as $searchResultTypeName => $searchResultType) {
             $databaseMigration = $searchResultType->getDatabaseMigration($databaseType);
-            $this->printIfEnabled($print, 'Migrating up for search result type: %s', [$searchResultTypeName]);
+            $this->printIfEnabled(!$silent, 'Migrating up for search result type: %s', [$searchResultTypeName]);
             // migration hash logic to prevent migration for up-to-date databases
             $actualVersionHash = $databaseMigration->versionHash();
             $migrationStatus = $this->getMigrationStatus($searchResultTypeName, $actualVersionHash);
@@ -143,11 +148,11 @@ class KISSearchCommandController extends CommandController
                 // SQL comment
                 $migrationScripts[] = '-- #####################################################################';
                 if ($migrationStatus === self::MIGRATION_OUTDATED) {
-                    $this->printIfEnabled($print, '  - type %s is outdated; remove and reapply migration', [$searchResultTypeName]);
+                    $this->printIfEnabled(!$silent, '  - type %s is outdated; remove and reapply migration', [$searchResultTypeName]);
                     $migrationScripts[] = sprintf('-- removing outdated schema for search result type: %s', $searchResultTypeName);
                     $migrationScripts[] = $databaseMigration->down();
                 } else {
-                    $this->printIfEnabled($print, '  - type %s is not jet applied; perform migration', [$searchResultTypeName]);
+                    $this->printIfEnabled(!$silent, '  - type %s is not jet applied; perform migration', [$searchResultTypeName]);
                 }
                 $migrationScripts[] = sprintf('-- migration (up) for search result type: %s', $searchResultTypeName);
                 $migrationScripts[] = sprintf('--   version hash: %s', $actualVersionHash);
@@ -156,15 +161,15 @@ class KISSearchCommandController extends CommandController
                 $migrationScripts[] = $databaseMigration->up();
                 $migrationScripts[] = sprintf('-- END: migration (up) for search result type: %s', $searchResultTypeName);
             } else {
-                $this->printIfEnabled($print, '  - type %s is already up to date; skipping migration', [$searchResultTypeName]);
+                $this->printIfEnabled(!$silent, '  - type %s is already up to date; skipping migration', [$searchResultTypeName]);
             }
         }
 
         if (empty($migrationScripts)) {
-            $this->printIfEnabled($print, 'Everything up to date; no migration needs to be applied');
+            $this->printIfEnabled(!$silent, 'Everything up to date; no migration needs to be applied');
         } else {
             $migrateUpScript = implode("\n", $migrationScripts);
-            if ($print) {
+            if ($dryRun) {
                 $this->outputScript($migrateUpScript);
             } else {
                 $this->executeMigration($migrateUpScript);
@@ -239,7 +244,7 @@ class KISSearchCommandController extends CommandController
         }
     }
 
-    public function removeCommand(bool $print = true): void
+    public function removeCommand(bool $dryRun = false, bool $silent = false): void
     {
         $this->hotfixUriResolvingForCliCommand();
 
@@ -255,7 +260,7 @@ class KISSearchCommandController extends CommandController
         ];
         foreach ($searchResultTypes as $searchResultTypeName => $searchResultType) {
             $databaseMigration = $searchResultType->getDatabaseMigration($databaseType);
-            $this->printIfEnabled($print, 'Migrating down for search result type: %s', [$searchResultTypeName]);
+            $this->printIfEnabled(!$silent, 'Migrating down for search result type: %s', [$searchResultTypeName]);
             // SQL comment
             // migration hash logic to prevent migration for up-to-date databases
 
@@ -268,7 +273,7 @@ class KISSearchCommandController extends CommandController
 
         $migrateDownScript = implode("\n", $migrationScripts);
 
-        if ($print) {
+        if ($dryRun) {
             $this->outputScript($migrateDownScript);
         } else {
             $this->executeMigration($migrateDownScript);
