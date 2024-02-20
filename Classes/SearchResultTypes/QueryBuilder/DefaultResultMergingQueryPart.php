@@ -15,6 +15,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
     private readonly ?string $resultMetaDataSelector;
     private readonly ?string $groupMetaDataSelector;
     private readonly string $querySource;
+    private readonly ?string $groupBy;
 
     /**
      * @param SearchResultTypeName $resultTypeName
@@ -24,6 +25,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
      * @param string|null $resultMetaDataSelector
      * @param string|null $groupMetaDataSelector
      * @param string $querySource
+     * @param string|null $groupBy
      */
     public function __construct(
         SearchResultTypeName $resultTypeName,
@@ -32,7 +34,9 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         string               $scoreSelector,
         ?string              $resultMetaDataSelector,
         ?string              $groupMetaDataSelector,
-        string               $querySource)
+        string               $querySource,
+        ?string              $groupBy = null
+    )
     {
         $this->resultTypeName = $resultTypeName;
         $this->resultIdentifierSelector = $resultIdentifierSelector;
@@ -41,6 +45,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         $this->resultMetaDataSelector = $resultMetaDataSelector;
         $this->groupMetaDataSelector = $groupMetaDataSelector;
         $this->querySource = $querySource;
+        $this->groupBy = $groupBy;
     }
 
     function getMergingQueryPart(): string
@@ -56,6 +61,8 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         $resultMetaDataSelector = $this->resultMetaDataSelector !== null ? $this->resultMetaDataSelector : 'null';
         $groupMetaDataSelector = $this->groupMetaDataSelector !== null ? $this->groupMetaDataSelector : 'null';
 
+        $groupBy = $this->groupBy !== null ? $this->groupBy : $this->resultIdentifierSelector;
+
         return <<<SQL
             select
                 $this->resultIdentifierSelector as $aliasResultIdentifier,
@@ -63,10 +70,10 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
                 '$this->resultTypeName' as $aliasResultType,
                 max($this->scoreSelector) as $aliasScore,
                 count($this->resultIdentifierSelector) as $aliasMatchCount,
-                json_arrayagg($resultMetaDataSelector) as $aliasAggregateMetaData,
+                $resultMetaDataSelector as $aliasAggregateMetaData,
                 $groupMetaDataSelector as $aliasGroupMetaData
             $this->querySource
-            group by $this->resultIdentifierSelector
+            group by $groupBy
         SQL;
     }
 }

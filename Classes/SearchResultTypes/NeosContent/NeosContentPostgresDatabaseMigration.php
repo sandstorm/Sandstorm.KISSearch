@@ -213,6 +213,149 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
                 ) stored;
         SQL;
 
+        $sqlQueries[] = <<<SQL
+            create index idx_kissearch_nodedata_critical on neos_contentrepository_domain_model_nodedata USING gin($columnNameBucketCritical);
+            create index idx_kissearch_nodedata_major on neos_contentrepository_domain_model_nodedata USING gin($columnNameBucketMajor);
+            create index idx_kissearch_nodedata_normal on neos_contentrepository_domain_model_nodedata USING gin($columnNameBucketNormal);
+            create index idx_kissearch_nodedata_minor on neos_contentrepository_domain_model_nodedata USING gin($columnNameBucketMinor);
+            create index idx_kissearch_nodedata_all on neos_contentrepository_domain_model_nodedata USING gin($columnNameAll);
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            create materialized view if not exists sandstorm_kissearch_nodes_and_their_documents as
+            with recursive nodes_and_their_documents as
+                             (select n.persistence_object_identifier,
+                                     n.identifier,
+                                     n.pathhash,
+                                     n.parentpathhash,
+                                     n.nodetype,
+                                     null::varchar(32)        as dimensionshash,
+                                     null::jsonb              as dimensionvalues,
+                                     null::text               as site_nodename,
+                                     n.identifier             as document_id,
+                                     n.properties ->> 'title' as document_title,
+                                     n.nodetype               as document_nodetype,
+                                     not n.hidden             as not_hidden,
+                                     not n.removed            as not_removed,
+                                     case
+                                       when n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null then
+                                         jsonb_build_array(
+                                           jsonb_build_object(
+                                             'before', n.hiddenbeforedatetime,
+                                             'after', n.hiddenafterdatetime
+                                           )
+                                         )
+                                       else
+                                         '[]'::jsonb
+                                       end                    as timed_hidden
+                              from neos_contentrepository_domain_model_nodedata n
+                              where n.path = '/sites'
+                                and not n.hidden
+                                and not n.removed
+                                and n.workspace = 'live'
+                              union
+                              select n.persistence_object_identifier,
+                                     n.identifier,
+                                     n.pathhash,
+                                     n.parentpathhash,
+                                     n.nodetype,
+                                     n.dimensionshash,
+                                     n.dimensionvalues,
+                                     -- site node name
+                                     coalesce(substring(n.path from '^/sites/(\w+)$'), r.site_nodename) as site_nodename,
+                                     -- document id
+                                     case
+                                       when sandstorm_kissearch_is_document(n.nodetype) then n.identifier
+                                       else r.document_id end                                           as document_id,
+                                     case
+                                       when sandstorm_kissearch_is_document(n.nodetype) then n.properties ->> 'title'
+                                       else r.document_title end                                        as document_title,
+                                     case
+                                       when sandstorm_kissearch_is_document(n.nodetype) then n.nodetype
+                                       else r.document_nodetype end                                     as document_nodetype,
+                                     not n.hidden and r.not_hidden                                      as not_hidden,
+                                     not n.removed and r.not_removed                                    as not_removed,
+                                     case
+                                       when n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null then
+                                         r.timed_hidden || jsonb_build_object(
+                                           'before', n.hiddenbeforedatetime,
+                                           'after', n.hiddenafterdatetime
+                                                           )
+                                       else r.timed_hidden end                                          as timed_hidden
+                              from neos_contentrepository_domain_model_nodedata n,
+                                   nodes_and_their_documents r
+                              where r.pathhash = n.parentpathhash
+                                and workspace = 'live'
+                                and (r.dimensionshash is null or n.dimensionshash = r.dimensionshash))
+            select nd.persistence_object_identifier as persistence_object_identifier,
+                   nd.identifier                    as identifier,
+                   nd.document_id                   as document_id,
+                   nd.document_title                as document_title,
+                   nd.document_nodetype             as document_nodetype,
+                   nd.nodetype                      as nodetype,
+                   nd.dimensionshash                as dimensionshash,
+                   nd.dimensionvalues               as dimensionvalues,
+                   nd.site_nodename                 as site_nodename,
+                   case
+                     when jsonb_array_length(nd.timed_hidden) > 0 then
+                       nd.timed_hidden
+                     end                            as timed_hidden
+            from nodes_and_their_documents nd
+            where nd.site_nodename is not null
+              and nd.not_hidden
+              and nd.not_removed
+              and (
+              sandstorm_kissearch_is_document(nd.nodetype)
+                or sandstorm_kissearch_is_content(nd.nodetype)
+              );
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_all_dimension_values_match(
+              dimension_values_filter jsonb,
+              dimension_values jsonb
+            )
+              returns boolean
+            as
+            $$
+            begin
+              return (select not exists(
+                select 1 from jsonb_array_elements(sandstorm_kissearch_all_dimension_values_match.dimension_values_filter) f
+                         where (sandstorm_kissearch_all_dimension_values_match.dimension_values ->> (f ->> 'dimension_name'))::jsonb ->> (f ->> 'index_key') != f ->> 'filter_value'
+              ));
+            end
+            $$
+              language 'plpgsql' immutable
+                                 parallel safe;
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_any_timed_hidden(
+              timed_hidden jsonb,
+              now_time timestamptz
+            )
+              returns boolean
+            as
+            $$
+            begin
+              return (select sandstorm_kissearch_any_timed_hidden.timed_hidden is not null
+                               and exists(select 1
+                                          from jsonb_array_elements(sandstorm_kissearch_any_timed_hidden.timed_hidden) as th
+                                          where case
+                                                  when th::jsonb ->> 'before' is null
+                                                    then (th::jsonb ->> 'after')::timestamptz <
+                                                         sandstorm_kissearch_any_timed_hidden.now_time
+                                                  when th::jsonb ->> 'after' is null
+                                                    then (th::jsonb ->> 'before')::timestamptz >
+                                                         sandstorm_kissearch_any_timed_hidden.now_time
+                                                  else sandstorm_kissearch_any_timed_hidden.now_time not between (th::jsonb ->> 'before')::timestamptz and (th::jsonb ->> 'after')::timestamptz
+                                                  end));
+            end
+            $$
+              language 'plpgsql' immutable
+                                 parallel safe;
+        SQL;
+
         return implode("\n", $sqlQueries);
     }
 
@@ -239,6 +382,20 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
             drop function if exists sandstorm_kissearch_get_ts_config_for_node(varchar(40), jsonb);
             drop function if exists sandstorm_kissearch_extract_html_content(text, text[]);
             drop function if exists sandstorm_kissearch_remove_html_tags_with_content(text, text[]);
+            drop function if exists sandstorm_kissearch_all_dimension_values_match(jsonb, jsonb);
+            drop function if exists sandstorm_kissearch_any_timed_hidden(jsonb, timestamptz);
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            drop index if exists idx_kissearch_nodedata_critical;
+            drop index if exists idx_kissearch_nodedata_major;
+            drop index if exists idx_kissearch_nodedata_normal;
+            drop index if exists idx_kissearch_nodedata_minor;
+            drop index if exists idx_kissearch_nodedata_all;
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            drop materialized view if exists sandstorm_kissearch_nodes_and_their_documents;
         SQL;
 
         return implode("\n", $sqlQueries);
@@ -257,7 +414,7 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
                 $propertyName = $propertyExtraction->getPropertyName();
                 $jsonExtractor = "properties ->> '$propertyName'";
                 $thenSql[] = match ($propertyExtraction->getMode()) {
-                    FulltextExtractionMode::EXTRACT_INTO_SINGLE_BUCKET => $jsonExtractor,
+                    FulltextExtractionMode::EXTRACT_INTO_SINGLE_BUCKET => "($jsonExtractor)",
                     FulltextExtractionMode::EXTRACT_HTML_TAGS => match ($targetBucket) {
                         SearchBucket::CRITICAL => "sandstorm_kissearch_extract_html_content($jsonExtractor, 'h1', 'h2')",
                         SearchBucket::MAJOR => "sandstorm_kissearch_extract_html_content($jsonExtractor, 'h3', 'h4', 'h5', 'h6')",

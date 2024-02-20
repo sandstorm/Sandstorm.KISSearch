@@ -121,9 +121,9 @@ begin
                            ')(?: .*?)?>([^<>]*?)</(?:' ||
                            array_to_string(sandstorm_kissearch_extract_html_content.html_tags, '|') || ')>',
                            'gmi'
-                           ),
+                         ),
                          ''
-                         ) as match) m);
+                       ) as match) m);
 end
 $$
   language 'plpgsql' immutable
@@ -147,7 +147,7 @@ begin
     array_to_string(sandstorm_kissearch_remove_html_tags_with_content.html_tags, '|') || ')>',
     '',
     'gmi'
-    );
+         );
 end
 $$
   language 'plpgsql' immutable
@@ -155,3 +155,78 @@ $$
 
 select sandstorm_kissearch_remove_html_tags_with_content('foo <h1>heading 1</h1> asdasd <h2>heading 2</h2>', 'h1', 'h2',
                                                          'h3', 'h4', 'h5', 'h6');
+
+
+create or replace function sandstorm_kissearch_all_dimension_values_match(
+  dimension_values_filter jsonb,
+  dimension_values jsonb
+)
+  returns boolean
+as
+$$
+begin
+  return (select not exists(select 1
+                            from jsonb_array_elements(sandstorm_kissearch_all_dimension_values_match.dimension_values_filter) f
+                            where (sandstorm_kissearch_all_dimension_values_match.dimension_values ->>
+                                   (f ->> 'dimension_name'))::jsonb ->> (f ->> 'index_key') != f ->> 'filter_value'));
+end
+$$
+  language 'plpgsql' immutable
+                     parallel safe;
+
+select sandstorm_kissearch_all_dimension_values_match(
+         '[
+           {
+             "dimension_name": "language",
+             "index_key": 0,
+             "filter_value": "en_US"
+           }
+         ]',
+         '{
+           "language": {
+             "0": "en_US"
+           }
+         }'
+       );
+
+select *
+from jsonb_array_elements('[
+  {
+    "dimension_name": "language",
+    "index_key": 0,
+    "filter_value": "en_US"
+  }
+]'::jsonb);
+
+select '[
+  {
+    "dimension_name": "language",
+    "index_key": 0,
+    "filter_value": "en_US"
+  }
+]'::jsonb ->> 0;
+
+create or replace function sandstorm_kissearch_any_timed_hidden(
+  timed_hidden jsonb,
+  now_time timestamptz
+)
+  returns boolean
+as
+$$
+begin
+  return (select sandstorm_kissearch_any_timed_hidden.timed_hidden is not null
+                   and exists(select 1
+                              from jsonb_array_elements(sandstorm_kissearch_any_timed_hidden.timed_hidden) as th
+                              where case
+                                      when th::jsonb ->> 'before' is null
+                                        then (th::jsonb ->> 'after')::timestamptz <
+                                             sandstorm_kissearch_any_timed_hidden.now_time
+                                      when th::jsonb ->> 'after' is null
+                                        then (th::jsonb ->> 'before')::timestamptz >
+                                             sandstorm_kissearch_any_timed_hidden.now_time
+                                      else sandstorm_kissearch_any_timed_hidden.now_time not between (th::jsonb ->> 'before')::timestamptz and (th::jsonb ->> 'after')::timestamptz
+                                      end));
+end
+$$
+  language 'plpgsql' immutable
+                     parallel safe;

@@ -333,7 +333,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
     {
         return match ($databaseType) {
             DatabaseType::MYSQL, DatabaseType::MARIADB => new NeosContentMySQLSearchQueryProvider(),
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934266),
+            DatabaseType::POSTGRES => new NeosContentPostgresSearchQueryProvider(),
             default => throw new UnsupportedDatabaseException(
                 "Neos Content search does not support database of type '$databaseType->name'",
                 1689934246
@@ -392,7 +392,9 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
             DatabaseType::MYSQL, DatabaseType::MARIADB => <<<SQL
                 call sandstorm_kissearch_populate_nodes_and_their_documents();
             SQL,
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689934266),
+            DatabaseType::POSTGRES => <<<SQL
+                refresh materialized view sandstorm_kissearch_nodes_and_their_documents;
+            SQL,
             default => throw new UnsupportedDatabaseException(
                 "Neos Content search does not support database of type '$databaseType->name'",
                 1690389124
