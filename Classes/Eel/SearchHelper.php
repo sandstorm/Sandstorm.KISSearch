@@ -22,14 +22,14 @@ class SearchHelper implements ProtectedContextAwareInterface
         $this->searchService = $searchService;
     }
 
-    public function search(string $query, int $limit = 50, ?array $additionalParameters = null): array
+    public function search(string $query, int $limit = 50, ?array $additionalParameters = null, ?string $language = null): array
     {
-        return $this->searchService->search(new SearchQueryInput($query, $limit, $additionalParameters));
+        return $this->searchService->search(new SearchQueryInput($query, $additionalParameters, $language), $limit);
     }
 
-    public function searchFrontend(string $query, int $limit = 50, ?array $additionalParameters = null): array
+    public function searchFrontend(string $query, int $limit = 50, ?array $additionalParameters = null, ?string $language = null): array
     {
-        return $this->searchService->searchFrontend(new SearchQueryInput($query, $limit, $additionalParameters));
+        return $this->searchService->searchFrontend(new SearchQueryInput($query, $additionalParameters, $language), $limit);
     }
 
     public function allowsCallOfMethod($methodName)

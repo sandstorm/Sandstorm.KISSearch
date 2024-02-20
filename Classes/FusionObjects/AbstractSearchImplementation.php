@@ -62,6 +62,21 @@ abstract class AbstractSearchImplementation extends AbstractFusionObject
         return $additionalParametersFusionValue;
     }
 
+    private function getLanguage(): ?string
+    {
+        $languageFusionValue = $this->fusionValue('language');
+        if ($languageFusionValue === null) {
+            return null;
+        }
+        if (!is_string($languageFusionValue)) {
+            throw new InvalidFusionValueException(
+                "Fusion path 'language' must evaluate to a string, but was: $languageFusionValue",
+                1689988600
+            );
+        }
+        return $languageFusionValue;
+    }
+
     /**
      * @return array
      */
@@ -74,7 +89,8 @@ abstract class AbstractSearchImplementation extends AbstractFusionObject
         }
         $searchQuery = new SearchQueryInput(
             $query,
-            $this->getAdditionalParameters()
+            $this->getAdditionalParameters(),
+            $this->getLanguage()
         );
         return $this->doSearchQuery($searchQuery, $this->getLimit());
     }

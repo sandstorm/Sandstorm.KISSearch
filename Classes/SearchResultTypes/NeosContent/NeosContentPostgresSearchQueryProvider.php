@@ -127,9 +127,13 @@ class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInter
     public function getAdditionalQueryParameters(): AdditionalQueryParameterDefinitions
     {
         return AdditionalQueryParameterDefinitions::create(
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, NeosContentSearchResultType::name(), function($value) {return NeosContentAdditionalParameters::nodeNameMapper($value);}),
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME, NeosContentSearchResultType::name(), function($value) {return NeosContentAdditionalParameters::nodeNameMapper($value);}),
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES, NeosContentSearchResultType::name(), function($valueAsArray) {
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, NeosContentSearchResultType::name(), function ($value) {
+                return NeosContentAdditionalParameters::nodeNameMapper($value);
+            }),
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME, NeosContentSearchResultType::name(), function ($value) {
+                return NeosContentAdditionalParameters::nodeNameMapper($value);
+            }),
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES, NeosContentSearchResultType::name(), function ($valueAsArray) {
                 return new ContentDimensionValuesFilter($valueAsArray);
             })
         );

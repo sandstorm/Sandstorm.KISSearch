@@ -8,6 +8,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Configuration\ConfigurationManager;
+use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
+use Sandstorm\KISSearch\PostgresTS\PostgresFulltextSearchConfiguration;
+use Sandstorm\KISSearch\PostgresTS\PostgresFulltextSearchMode;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterValue;
@@ -227,6 +230,7 @@ class SearchService
      * @param Closure $parameterInitializer
      * @param SearchQueryType $searchQueryType
      * @return SearchResult[]
+     * @throws InvalidConfigurationTypeException
      */
     private function internalSearch(SearchQueryInput $searchQueryInput, array $searchResultTypes, Closure $parameterInitializer, SearchQueryType $searchQueryType): array
     {
@@ -244,7 +248,7 @@ class SearchService
         $defaultParameters = [
             SearchResult::SQL_QUERY_PARAM_QUERY => $searchTermParameterValue,
             SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp(),
-            SearchResult::SQL_QUERY_PARAM_LANGUAGE => 'english'
+            SearchResult::SQL_QUERY_PARAM_LANGUAGE => $searchQueryInput->getLanguage() ?: $this->getDefaultLanguage($databaseType)
         ];
 
         // parameter initializer (different limit strategies)
@@ -272,6 +276,23 @@ class SearchService
 
         // fire query
         return $doctrineQuery->getResult();
+    }
+
+    /**
+     * @throws InvalidConfigurationTypeException
+     */
+    private function getDefaultLanguage(DatabaseType $databaseType): ?string
+    {
+        if ($databaseType !== DatabaseType::POSTGRES) {
+            // for now, only postgres supports language-specific fulltext search
+            return null;
+        }
+        $searchConfiguration = PostgresFulltextSearchConfiguration::fromSettings($this->configurationManager);
+        if ($searchConfiguration->getMode() === PostgresFulltextSearchMode::CONTENT_DIMENSION) {
+            // For content dimension mode, there is no default value for the language. Users must set the language via API explicitly.
+            throw new MissingLanguageException("No language set for postgres search query; no default language available for mode 'contentDimension'. Please specify the language via API.", 1708432220);
+        }
+        return $searchConfiguration->getDefaultTsConfig();
     }
 
     /**

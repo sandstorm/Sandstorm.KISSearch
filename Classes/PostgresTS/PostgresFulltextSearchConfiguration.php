@@ -2,10 +2,12 @@
 
 namespace Sandstorm\KISSearch\PostgresTS;
 
+use Neos\Flow\Annotations\Proxy;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
 use Sandstorm\KISSearch\InvalidConfigurationException;
 
+#[Proxy(false)]
 class PostgresFulltextSearchConfiguration
 {
 
