@@ -219,7 +219,7 @@ class MySQLSearchQueryBuilder
         });
 
         $searchWordsFuzzy = array_map(function(string $searchWord) {
-            return $searchWord . '*';
+            return '+' . $searchWord . '*';
         }, $searchWords);
 
         return implode(' ', $searchWordsFuzzy);
