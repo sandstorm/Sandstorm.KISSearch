@@ -427,6 +427,8 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
             drop function if exists sandstorm_kissearch_remove_html_tags_with_content(text, text[]);
             drop function if exists sandstorm_kissearch_all_dimension_values_match(jsonb, jsonb);
             drop function if exists sandstorm_kissearch_any_timed_hidden(jsonb, timestamptz);
+            drop function if exists sandstorm_kissearch_is_document(text);
+            drop function if exists sandstorm_kissearch_is_content(text);
         SQL;
 
         $sqlQueries[] = <<<SQL
