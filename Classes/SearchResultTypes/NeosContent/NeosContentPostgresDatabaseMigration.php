@@ -221,6 +221,37 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
             create index idx_kissearch_nodedata_all on neos_contentrepository_domain_model_nodedata USING gin($columnNameAll);
         SQL;
 
+        $allDocumentNodeTypes = self::nodeTypeNamesToQuotedCommaSeparatedString($this->nodeTypesSearchConfiguration->getDocumentNodeTypeNames());
+        $allContentNodeTypes = self::nodeTypeNamesToQuotedCommaSeparatedString($this->nodeTypesSearchConfiguration->getContentNodeTypeNames());
+
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_is_document(
+              nodetype_name text
+            ) returns boolean
+            as
+            $$
+            begin
+              return sandstorm_kissearch_is_document.nodetype_name in
+                     ($allDocumentNodeTypes);
+            end;
+            $$ language 'plpgsql' immutable
+                                  parallel safe;
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_is_content(
+              nodetype_name text
+            ) returns boolean
+            as
+            $$
+            begin
+              return sandstorm_kissearch_is_content.nodetype_name in
+                     ($allContentNodeTypes);
+            end;
+            $$ language 'plpgsql' immutable
+                                  parallel safe;
+        SQL;
+
         $sqlQueries[] = <<<SQL
             create materialized view if not exists sandstorm_kissearch_nodes_and_their_documents as
             with recursive nodes_and_their_documents as
@@ -357,6 +388,18 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
         SQL;
 
         return implode("\n", $sqlQueries);
+    }
+
+    private static function nodeTypeNamesToQuotedCommaSeparatedString(array $nodeTypeNames): string {
+        return implode(
+            ', ',
+            array_map(
+                function(string $documentNodeType) {
+                    return sprintf("'%s'", $documentNodeType);
+                },
+                $nodeTypeNames
+            )
+        );
     }
 
     function down(): string
