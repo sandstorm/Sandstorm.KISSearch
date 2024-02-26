@@ -293,7 +293,7 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
                                      n.dimensionshash,
                                      n.dimensionvalues,
                                      -- site node name
-                                     coalesce(substring(n.path from '^/sites/(\w+)$'), r.site_nodename) as site_nodename,
+                                     coalesce(substring(n.path from '^/sites/([a-z0-9\-]+)$'), r.site_nodename) as site_nodename,
                                      -- document id
                                      case
                                        when sandstorm_kissearch_is_document(n.nodetype) then n.identifier
