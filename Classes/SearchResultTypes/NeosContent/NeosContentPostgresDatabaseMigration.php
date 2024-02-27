@@ -422,16 +422,6 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
         ];
 
         $sqlQueries[] = <<<SQL
-            drop function if exists sandstorm_kissearch_get_ts_config_for_node(varchar(40), jsonb);
-            drop function if exists sandstorm_kissearch_extract_html_content(text, text[]);
-            drop function if exists sandstorm_kissearch_remove_html_tags_with_content(text, text[]);
-            drop function if exists sandstorm_kissearch_all_dimension_values_match(jsonb, jsonb);
-            drop function if exists sandstorm_kissearch_any_timed_hidden(jsonb, timestamptz);
-            drop function if exists sandstorm_kissearch_is_document(text);
-            drop function if exists sandstorm_kissearch_is_content(text);
-        SQL;
-
-        $sqlQueries[] = <<<SQL
             drop index if exists idx_kissearch_nodedata_critical;
             drop index if exists idx_kissearch_nodedata_major;
             drop index if exists idx_kissearch_nodedata_normal;
@@ -441,6 +431,16 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
 
         $sqlQueries[] = <<<SQL
             drop materialized view if exists sandstorm_kissearch_nodes_and_their_documents;
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            drop function if exists sandstorm_kissearch_get_ts_config_for_node(varchar(40), jsonb);
+            drop function if exists sandstorm_kissearch_extract_html_content(text, text[]);
+            drop function if exists sandstorm_kissearch_remove_html_tags_with_content(text, text[]);
+            drop function if exists sandstorm_kissearch_all_dimension_values_match(jsonb, jsonb);
+            drop function if exists sandstorm_kissearch_any_timed_hidden(jsonb, timestamptz);
+            drop function if exists sandstorm_kissearch_is_document(text);
+            drop function if exists sandstorm_kissearch_is_content(text);
         SQL;
 
         return implode("\n", $sqlQueries);
