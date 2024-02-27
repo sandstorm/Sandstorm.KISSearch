@@ -29,7 +29,7 @@ class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInter
         $paramNameQuery = SearchResult::SQL_QUERY_PARAM_QUERY;
         $paramNameLanguage = SearchResult::SQL_QUERY_PARAM_LANGUAGE;
 
-        $searchQuery = "websearch_to_tsquery(:$paramNameLanguage, :$paramNameQuery)";
+        $searchQuery = "to_tsquery(:$paramNameLanguage, :$paramNameQuery)";
 
         return ResultSearchingQueryParts::singlePart(
             new DefaultResultSearchingQueryPart(
