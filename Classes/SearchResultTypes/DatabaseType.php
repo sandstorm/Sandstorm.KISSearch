@@ -4,6 +4,7 @@ namespace Sandstorm\KISSearch\SearchResultTypes;
 
 use Neos\Flow\Annotations\Proxy;
 use Neos\Flow\Configuration\ConfigurationManager;
+use Sandstorm\KISSearch\InvalidConfigurationException;
 
 #[Proxy(false)]
 enum DatabaseType: string
@@ -42,7 +43,13 @@ enum DatabaseType: string
         $databaseType = DatabaseType::tryFrom($configuredDatabaseType);
         if ($databaseType === null) {
             throw new UnsupportedDatabaseException(
-                "Configured database type '$configuredDatabaseType' is not supported by Sandstorm.KISSearch",
+                sprintf(
+                    "Configured database type '%s' is not supported by Sandstorm.KISSearch; supported types: %s",
+                    $configuredDatabaseType,
+                    implode(', ', array_map(function(DatabaseType $t) {
+                        return $t->value;
+                    }, DatabaseType::cases()))
+                ),
                 1690134239
             );
         }
@@ -50,7 +57,13 @@ enum DatabaseType: string
             self::MYSQL, self::MARIADB => 'pdo_mysql',
             self::POSTGRES => 'pdo_pgsql',
             default => throw new UnsupportedDatabaseException(
-                "Configured database type '$configuredDatabaseType' is not supported by Sandstorm.KISSearch",
+                sprintf(
+                    "Configured database type '%s' is not supported by Sandstorm.KISSearch; supported types: %s",
+                    $configuredDatabaseType,
+                    implode(', ', array_map(function(DatabaseType $t) {
+                        return $t->value;
+                    }, DatabaseType::cases()))
+                ),
                 1689629845
             )
         };

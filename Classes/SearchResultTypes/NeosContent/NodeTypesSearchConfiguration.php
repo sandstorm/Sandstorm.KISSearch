@@ -85,9 +85,11 @@ class NodeTypesSearchConfiguration
         return $this->extractorsForMinor;
     }
 
-    public function buildVersionHash(): string
+    public function buildVersionHash(string $versionSalt): string
     {
         $stringRepresentation = 'NeosContentSearchResultType';
+        $stringRepresentation .= '_____salt---';
+        $stringRepresentation .= $versionSalt;
         $stringRepresentation .= '_____docs---';
         $stringRepresentation .= implode('_____', $this->documentNodeTypeNames);
         $stringRepresentation .= '_____content---';

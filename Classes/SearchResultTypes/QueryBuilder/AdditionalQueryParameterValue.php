@@ -3,6 +3,8 @@
 namespace Sandstorm\KISSearch\SearchResultTypes\QueryBuilder;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Types\Type;
+use Doctrine\DBAL\Types\Types;
 use Neos\Flow\Annotations\Proxy;
 use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
 
@@ -107,6 +109,11 @@ class AdditionalQueryParameterValue
             }
             return json_encode($valueAsArray);
         }
+        if ($this->parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY) {
+            if ($this->parameterValue === null) {
+                return null;
+            }
+        }
         return $this->parameterValue;
     }
 
@@ -117,7 +124,8 @@ class AdditionalQueryParameterValue
     {
         if ($this->parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_JSON) {
             // JSON parameters are treated as string in SQL queries
-            return AdditionalQueryParameterDefinition::TYPE_STRING;
+            #return AdditionalQueryParameterDefinition::TYPE_STRING;
+            return Types::JSON;
         }
         if ($this->parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY) {
             return null;

@@ -3,14 +3,19 @@
 namespace Sandstorm\KISSearch\Service;
 
 use Closure;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Configuration\ConfigurationManager;
+use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
+use Sandstorm\KISSearch\PostgresTS\PostgresFulltextSearchConfiguration;
+use Sandstorm\KISSearch\PostgresTS\PostgresFulltextSearchMode;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterValue;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
+use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\PostgresSearchQueryBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultSearchingQueryParts;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\SearchQuery;
 use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
@@ -225,6 +230,7 @@ class SearchService
      * @param Closure $parameterInitializer
      * @param SearchQueryType $searchQueryType
      * @return SearchResult[]
+     * @throws InvalidConfigurationTypeException
      */
     private function internalSearch(SearchQueryInput $searchQueryInput, array $searchResultTypes, Closure $parameterInitializer, SearchQueryType $searchQueryType): array
     {
@@ -241,7 +247,8 @@ class SearchService
         // default parameters
         $defaultParameters = [
             SearchResult::SQL_QUERY_PARAM_QUERY => $searchTermParameterValue,
-            SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp()
+            SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp(),
+            SearchResult::SQL_QUERY_PARAM_LANGUAGE => $searchQueryInput->getLanguage() ?: $this->getDefaultLanguage($databaseType)
         ];
 
         // parameter initializer (different limit strategies)
@@ -272,6 +279,23 @@ class SearchService
     }
 
     /**
+     * @throws InvalidConfigurationTypeException
+     */
+    private function getDefaultLanguage(DatabaseType $databaseType): ?string
+    {
+        if ($databaseType !== DatabaseType::POSTGRES) {
+            // for now, only postgres supports language-specific fulltext search
+            return null;
+        }
+        $searchConfiguration = PostgresFulltextSearchConfiguration::fromSettings($this->configurationManager);
+        if ($searchConfiguration->getMode() === PostgresFulltextSearchMode::CONTENT_DIMENSION) {
+            // For content dimension mode, there is no default value for the language. Users must set the language via API explicitly.
+            throw new MissingLanguageException("No language set for postgres search query; no default language available for mode 'contentDimension'. Please specify the language via API.", 1708432220);
+        }
+        return $searchConfiguration->getDefaultTsConfig();
+    }
+
+    /**
      * @param DatabaseType $databaseType
      * @param SearchQueryProviderInterface[] $searchQueryProviders
      * @param SearchQueryType $searchQueryType
@@ -294,7 +318,7 @@ class SearchService
 
         return match ($databaseType) {
             DatabaseType::MYSQL, DatabaseType::MARIADB => $this->buildMySQLSearchQuerySql($searchQuery, $searchQueryType),
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689933374),
+            DatabaseType::POSTGRES => $this->buildPostgresSearchQuerySql($searchQuery, $searchQueryType),
             default => throw new UnsupportedDatabaseException(
                 "Search service does not support database of type '$databaseType->name'",
                 1689933081
@@ -311,11 +335,20 @@ class SearchService
         };
     }
 
+    private function buildPostgresSearchQuerySql(SearchQuery $searchQuery, SearchQueryType $searchQueryType): string
+    {
+        return match($searchQueryType) {
+            SearchQueryType::GLOBAL_LIMIT => PostgresSearchQueryBuilder::searchQueryGlobalLimit($searchQuery),
+            SearchQueryType::LIMIT_PER_RESULT_TYPE => PostgresSearchQueryBuilder::searchQueryLimitPerResultType($searchQuery),
+            default => throw new UnsupportedSearchQueryType("Search service does not support search query type '$searchQueryType->name'", 1697203051)
+        };
+    }
+
     private static function prepareSearchTermParameterValue(DatabaseType $databaseType, string $userInput): string
     {
         return match ($databaseType) {
             DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::prepareSearchTermQueryParameter($userInput),
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1689936252),
+            DatabaseType::POSTGRES => PostgresSearchQueryBuilder::prepareSearchTermQueryParameter($userInput),
             default => throw new UnsupportedDatabaseException(
                 "Search service does not support database of type '$databaseType->name'",
                 1689936258

@@ -7,4 +7,4 @@
     position: 30
     help:
       message: i18n
-      thumbnail: 'resource://SitePackage.Example/Public/Thumbnails/TestImage.png'
+      #thumbnail: 'resource://SitePackage.Example/Public/Thumbnails/TestImage.png'
