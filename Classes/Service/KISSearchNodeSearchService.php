@@ -33,19 +33,18 @@ class KISSearchNodeSearchService implements NodeSearchServiceInterface
         // TODO handle this better: new API in KISSearch that looks inside language content dimension of a node and returns the PG TS language
         try {
             $language = $this->searchService->getDefaultLanguage();
-        } catch (InvalidConfigurationTypeException $e) {
+        } catch (\Throwable $e) {
             $language = 'simple';
         }
+
         $siteNodeName = $contentContext->getCurrentSite()->getNodeName();
         $query = new SearchQueryInput(
             $term,
             [
-                NeosContentSearchResultType::TYPE_NAME => [
-                    NeosContentAdditionalParameters::SITE_NODE_NAME => $siteNodeName,
-                    NeosContentAdditionalParameters::DOCUMENT_NODE_TYPES => count($searchNodeTypes) > 0 ? $searchNodeTypes : null
-                    //NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES => TODO dimension values
-                    // TODO new parameter: workspace
-                ]
+                NeosContentAdditionalParameters::SITE_NODE_NAME => $siteNodeName,
+                NeosContentAdditionalParameters::DOCUMENT_NODE_TYPES => $searchNodeTypes,
+                //NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES => TODO dimension values
+                // TODO new parameter: workspace
             ],
             $language
         );
