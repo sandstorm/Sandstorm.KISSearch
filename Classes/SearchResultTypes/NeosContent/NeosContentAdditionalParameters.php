@@ -4,8 +4,6 @@ namespace Sandstorm\KISSearch\SearchResultTypes\NeosContent;
 
 use Neos\ContentRepository\Domain\NodeAggregate\NodeName;
 use Neos\Flow\Annotations\Proxy;
-use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterDefinition;
-use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalQueryParameterDefinitions;
 
 #[Proxy(false)]
 class NeosContentAdditionalParameters
@@ -14,6 +12,7 @@ class NeosContentAdditionalParameters
     public const ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME = 'neosContentSiteNodeName';
     public const ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME = 'neosContentExcludedSiteNodeName';
     public const ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES = 'neosContentDimensionValues';
+    public const ADDITIONAL_QUERY_PARAM_NAME_DOCUMENT_NODE_TYPES = 'neosContentDocumentNodeTypes';
 
     public static function nodeNameMapper(mixed $nodeNames): ?array {
         if ($nodeNames === null) {

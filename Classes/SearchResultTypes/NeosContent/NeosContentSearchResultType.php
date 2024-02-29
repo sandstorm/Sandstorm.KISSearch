@@ -137,6 +137,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
         $extractorsForMajor = [];
         $extractorsForNormal = [];
         $extractorsForMinor = [];
+        $nodeTypeInheritance = [];
         /** @var NodeType $searchableNodeType */
         foreach ($allSearchableNodeTypes as $searchableNodeType) {
             $nodeTypeName = $searchableNodeType->getName();
@@ -210,6 +211,13 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
                     }
                 }
             }
+
+            // inheritance
+            $nodeTypeInheritance[$searchableNodeType->getName()] = [$searchableNodeType->getName()];
+            $nodeTypeInheritance[$searchableNodeType->getName()] = array_merge(
+                $nodeTypeInheritance[$searchableNodeType->getName()],
+                array_keys($searchableNodeType->getFullConfiguration()['superTypes'])
+            );
         }
 
         return new NodeTypesSearchConfiguration(
@@ -219,6 +227,7 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
             array_map(function (NodeType $contentNodeType) {
                 return $contentNodeType->getName();
             }, $contentNodeTypes),
+            $nodeTypeInheritance,
             $extractorsForCritical,
             $extractorsForMajor,
             $extractorsForNormal,

@@ -124,8 +124,7 @@ class AdditionalQueryParameterValue
     {
         if ($this->parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_JSON) {
             // JSON parameters are treated as string in SQL queries
-            #return AdditionalQueryParameterDefinition::TYPE_STRING;
-            return Types::JSON;
+            return AdditionalQueryParameterDefinition::TYPE_STRING;
         }
         if ($this->parameterDefinition->getParameterType() === AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY) {
             return null;

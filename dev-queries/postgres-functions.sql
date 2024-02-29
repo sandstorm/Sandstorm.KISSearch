@@ -230,3 +230,28 @@ end
 $$
   language 'plpgsql' immutable
                      parallel safe;
+
+create or replace function sandstorm_kissearch_get_super_types(
+  nodetype text
+) returns text[]
+as
+$$
+begin
+  case sandstorm_kissearch_get_super_types.nodetype
+    when 'Foo.Bar' then
+      return array['Foo.Bar', 'Neos.Document'];
+    else
+      return array[];
+  end case;
+end;
+$$ language 'plpgsql' immutable
+                                  parallel safe;
+
+select sandstorm_kissearch_get_super_types('Foo.Bar');
+
+select '["a", "c"]'::jsonb ?| array['a', 'b']::text[];
+select jsonb_array_elements('["b", "c"]'::jsonb);
+
+
+select * from sandstorm_kissearch_nodes_and_their_documents n
+where cast('["Neos.Neos:Document"]' as jsonb) ?| n.super_nodetypes;
