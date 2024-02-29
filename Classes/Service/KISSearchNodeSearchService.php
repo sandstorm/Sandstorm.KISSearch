@@ -41,8 +41,8 @@ class KISSearchNodeSearchService implements NodeSearchServiceInterface
             $term,
             [
                 NeosContentSearchResultType::TYPE_NAME => [
-                    NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME => $siteNodeName,
-                    NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DOCUMENT_NODE_TYPES => count($searchNodeTypes) > 0 ? $searchNodeTypes : null
+                    NeosContentAdditionalParameters::SITE_NODE_NAME => $siteNodeName,
+                    NeosContentAdditionalParameters::DOCUMENT_NODE_TYPES => count($searchNodeTypes) > 0 ? $searchNodeTypes : null
                     //NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES => TODO dimension values
                     // TODO new parameter: workspace
                 ]

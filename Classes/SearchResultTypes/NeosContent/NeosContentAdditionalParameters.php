@@ -9,10 +9,10 @@ use Neos\Flow\Annotations\Proxy;
 class NeosContentAdditionalParameters
 {
 
-    public const ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME = 'neosContentSiteNodeName';
-    public const ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME = 'neosContentExcludedSiteNodeName';
-    public const ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES = 'neosContentDimensionValues';
-    public const ADDITIONAL_QUERY_PARAM_NAME_DOCUMENT_NODE_TYPES = 'neosContentDocumentNodeTypes';
+    public const SITE_NODE_NAME = 'neosContentSiteNodeName';
+    public const EXCLUDED_SITE_NODE_NAME = 'neosContentExcludedSiteNodeName';
+    public const DIMENSION_VALUES = 'neosContentDimensionValues';
+    public const DOCUMENT_NODE_TYPES = 'neosContentDocumentNodeTypes';
 
     public static function nodeNameMapper(mixed $nodeNames): ?array {
         if ($nodeNames === null) {
