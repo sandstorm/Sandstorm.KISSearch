@@ -221,6 +221,37 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
             create index idx_kissearch_nodedata_all on neos_contentrepository_domain_model_nodedata USING gin($columnNameAll);
         SQL;
 
+        $allDocumentNodeTypes = self::nodeTypeNamesToQuotedCommaSeparatedString($this->nodeTypesSearchConfiguration->getDocumentNodeTypeNames());
+        $allContentNodeTypes = self::nodeTypeNamesToQuotedCommaSeparatedString($this->nodeTypesSearchConfiguration->getContentNodeTypeNames());
+
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_is_document(
+              nodetype_name text
+            ) returns boolean
+            as
+            $$
+            begin
+              return sandstorm_kissearch_is_document.nodetype_name in
+                     ($allDocumentNodeTypes);
+            end;
+            $$ language 'plpgsql' immutable
+                                  parallel safe;
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_is_content(
+              nodetype_name text
+            ) returns boolean
+            as
+            $$
+            begin
+              return sandstorm_kissearch_is_content.nodetype_name in
+                     ($allContentNodeTypes);
+            end;
+            $$ language 'plpgsql' immutable
+                                  parallel safe;
+        SQL;
+
         $sqlQueries[] = <<<SQL
             create materialized view if not exists sandstorm_kissearch_nodes_and_their_documents as
             with recursive nodes_and_their_documents as
@@ -262,7 +293,7 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
                                      n.dimensionshash,
                                      n.dimensionvalues,
                                      -- site node name
-                                     coalesce(substring(n.path from '^/sites/(\w+)$'), r.site_nodename) as site_nodename,
+                                     coalesce(substring(n.path from '^/sites/([a-z0-9\-]+)$'), r.site_nodename) as site_nodename,
                                      -- document id
                                      case
                                        when sandstorm_kissearch_is_document(n.nodetype) then n.identifier
@@ -359,6 +390,18 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
         return implode("\n", $sqlQueries);
     }
 
+    private static function nodeTypeNamesToQuotedCommaSeparatedString(array $nodeTypeNames): string {
+        return implode(
+            ', ',
+            array_map(
+                function(string $documentNodeType) {
+                    return sprintf("'%s'", $documentNodeType);
+                },
+                $nodeTypeNames
+            )
+        );
+    }
+
     function down(): string
     {
         $columnNameBucketCritical = self::columnNameBucketCritical();
@@ -379,14 +422,6 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
         ];
 
         $sqlQueries[] = <<<SQL
-            drop function if exists sandstorm_kissearch_get_ts_config_for_node(varchar(40), jsonb);
-            drop function if exists sandstorm_kissearch_extract_html_content(text, text[]);
-            drop function if exists sandstorm_kissearch_remove_html_tags_with_content(text, text[]);
-            drop function if exists sandstorm_kissearch_all_dimension_values_match(jsonb, jsonb);
-            drop function if exists sandstorm_kissearch_any_timed_hidden(jsonb, timestamptz);
-        SQL;
-
-        $sqlQueries[] = <<<SQL
             drop index if exists idx_kissearch_nodedata_critical;
             drop index if exists idx_kissearch_nodedata_major;
             drop index if exists idx_kissearch_nodedata_normal;
@@ -396,6 +431,16 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
 
         $sqlQueries[] = <<<SQL
             drop materialized view if exists sandstorm_kissearch_nodes_and_their_documents;
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            drop function if exists sandstorm_kissearch_get_ts_config_for_node(varchar(40), jsonb);
+            drop function if exists sandstorm_kissearch_extract_html_content(text, text[]);
+            drop function if exists sandstorm_kissearch_remove_html_tags_with_content(text, text[]);
+            drop function if exists sandstorm_kissearch_all_dimension_values_match(jsonb, jsonb);
+            drop function if exists sandstorm_kissearch_any_timed_hidden(jsonb, timestamptz);
+            drop function if exists sandstorm_kissearch_is_document(text);
+            drop function if exists sandstorm_kissearch_is_content(text);
         SQL;
 
         return implode("\n", $sqlQueries);

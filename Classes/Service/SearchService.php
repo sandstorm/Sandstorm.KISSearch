@@ -78,13 +78,14 @@ class SearchService
      *  - 20 NeosContent documents
      *
      * That means, f.e. lots of very important results from one type may "push out" results from other types.
-     * If you want to see at least some items of all search result types: @see searchLimitPerResultType
+     * If you want to see at least some items of all search result types: @param SearchQueryInput $searchQueryInput the user input
+     * @param int $limit the global query result limit
+     * @return SearchResult[]
+     * @throws InvalidConfigurationTypeException
+     * @see searchLimitPerResultType
      *
      * With this strategy, the most relevant results are shown, independently of their search result type.
      *
-     * @param SearchQueryInput $searchQueryInput the user input
-     * @param int $limit the global query result limit
-     * @return SearchResult[]
      */
     public function search(SearchQueryInput $searchQueryInput, int $limit): array
     {
@@ -113,11 +114,12 @@ class SearchService
      *  - the max number of results can not be more than the *sum* of the given result-specific limits
      *  - that means, f.e. lots of very important results from one type cannot "push out" results from less
      *    important types (in other words, you may get the most important results from all types)
-     *  - if you want to have a global limit based on overall score, you should probably use @see search
-     *
-     * @param SearchQueryInput $searchQueryInput
+     *  - if you want to have a global limit based on overall score, you should probably use @param SearchQueryInput $searchQueryInput
      * @param array $limitPerResultType the limit per search result
      * @return SearchResult[]
+     * @throws InvalidConfigurationTypeException
+     * @see search
+     *
      */
     public function searchLimitPerResultType(SearchQueryInput $searchQueryInput, array $limitPerResultType): array
     {
@@ -137,11 +139,12 @@ class SearchService
      * Searches all sources from the registered search result types in one single SQL query.
      * Also enriches the search results with their respective search result document URLs.
      *
-     * @see search
-     *
      * @param SearchQueryInput $searchQueryInput
      * @param int $limit the global query result limit
      * @return SearchResultFrontend[]
+     * @throws InvalidConfigurationTypeException
+     * @see search
+     *
      */
     public function searchFrontend(SearchQueryInput $searchQueryInput, int $limit): array
     {
@@ -163,11 +166,12 @@ class SearchService
      * Searches all sources from the registered search result types in one single SQL query.
      * Also enriches the search results with their respective search result document URLs.
      *
-     * @see searchLimitPerResultType
-     *
      * @param SearchQueryInput $searchQueryInput
      * @param array $limitPerResultType
      * @return SearchResultFrontend[]
+     * @throws InvalidConfigurationTypeException
+     * @see searchLimitPerResultType
+     *
      */
     public function searchFrontendLimitPerResultType(SearchQueryInput $searchQueryInput, array $limitPerResultType): array
     {
@@ -248,7 +252,7 @@ class SearchService
         $defaultParameters = [
             SearchResult::SQL_QUERY_PARAM_QUERY => $searchTermParameterValue,
             SearchResult::SQL_QUERY_PARAM_NOW_TIME => $this->currentDateTimeProvider->getCurrentDateTime()->getTimestamp(),
-            SearchResult::SQL_QUERY_PARAM_LANGUAGE => $searchQueryInput->getLanguage() ?: $this->getDefaultLanguage($databaseType)
+            SearchResult::SQL_QUERY_PARAM_LANGUAGE => $searchQueryInput->getLanguage() ?: $this->getDefaultLanguageForDatabaseType($databaseType)
         ];
 
         // parameter initializer (different limit strategies)
@@ -281,18 +285,33 @@ class SearchService
     /**
      * @throws InvalidConfigurationTypeException
      */
-    private function getDefaultLanguage(DatabaseType $databaseType): ?string
+    private function getDefaultLanguageForDatabaseType(DatabaseType $databaseType): ?string
     {
         if ($databaseType !== DatabaseType::POSTGRES) {
             // for now, only postgres supports language-specific fulltext search
             return null;
         }
+        return $this->getPostgresDefaultLanguage();
+    }
+
+    /**
+     * @return string|null
+     * @throws InvalidConfigurationTypeException
+     */
+    private function getPostgresDefaultLanguage(): ?string {
         $searchConfiguration = PostgresFulltextSearchConfiguration::fromSettings($this->configurationManager);
         if ($searchConfiguration->getMode() === PostgresFulltextSearchMode::CONTENT_DIMENSION) {
             // For content dimension mode, there is no default value for the language. Users must set the language via API explicitly.
             throw new MissingLanguageException("No language set for postgres search query; no default language available for mode 'contentDimension'. Please specify the language via API.", 1708432220);
         }
         return $searchConfiguration->getDefaultTsConfig();
+    }
+
+    /**
+     * @throws InvalidConfigurationTypeException
+     */
+    public function getDefaultLanguage(): ?string {
+        return $this->getDefaultLanguageForDatabaseType(DatabaseType::detectDatabase($this->configurationManager));
     }
 
     /**

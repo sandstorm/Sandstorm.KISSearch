@@ -37,7 +37,16 @@ class PostgresSearchQueryBuilder
         $specialChars = str_split(self::SPECIAL_CHARACTERS);
         $sanitized = str_replace($specialChars, ' ', $sanitized);
 
-        return $sanitized;
+        $searchWords = explode(
+            ' ',
+            $sanitized
+        );
+
+        $searchWords = array_filter($searchWords, static fn (string $searchWord) => trim($searchWord) !== '');
+
+        $searchWordsFuzzy = array_map(static fn(string $searchWord) => '' . $searchWord . ':*', $searchWords);
+
+        return implode(' & ', $searchWordsFuzzy);
     }
 
     public static function searchQueryGlobalLimit(SearchQuery $searchQuery): string

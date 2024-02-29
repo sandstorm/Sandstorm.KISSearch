@@ -74,7 +74,7 @@ class KISSearchCommandController extends CommandController
         $requiredVersion = match ($databaseType) {
             DatabaseType::MARIADB => $hotfixDisableTimedHiddenBeforeAfter ? '10.5.0' : '10.6.0',
             DatabaseType::MYSQL => '8.0',
-            DatabaseType::POSTGRES => '15.0',
+            DatabaseType::POSTGRES => '13.0',
             default => throw new UnsupportedDatabaseException(
                 "Version check does not support database of type '$databaseType->name'",
                 1690118087

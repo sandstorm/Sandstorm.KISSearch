@@ -21,7 +21,7 @@ Supports:
 Next Steps:
 
 - migration tooling
-- PostgreSQL support
+- PostgreSQL support (first working draft)
 
 still early WIP phase, TODO more documentation!
 
@@ -334,6 +334,15 @@ TODO document additionalParameters!
 ### Fusion caching
 
 TODO document on how to use with Fusion caching
+
+### Search in Neos Backend
+
+Objects.yaml:
+```yaml
+'Neos\Neos\Domain\Service\NodeSearchServiceInterface':
+  className: 'Sandstorm\KISSearch\Service\KISSearchNodeSearchService'
+```
+
 
 ## how to extend
 
