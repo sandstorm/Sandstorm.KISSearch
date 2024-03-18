@@ -6,40 +6,36 @@ use ArrayObject;
 use Neos\Flow\Annotations\Proxy;
 
 #[Proxy(false)]
-class ResultMergingQueryParts extends ArrayObject
+class ResultMergingQueryParts
 {
+
+    private readonly array $values;
+    private readonly ?string $groupMetadataSelector;
+    private readonly ?string $groupBy;
 
     /**
      * @param ResultMergingQueryPartInterface[] $values
      */
-    private function __construct(array $values)
+    public function __construct(array $values, ?string $groupMetadataSelector, ?string $groupBy)
     {
-        parent::__construct($values);
+        $this->values = $values;
+        $this->groupMetadataSelector = $groupMetadataSelector;
+        $this->groupBy = $groupBy;
     }
 
-    public static function create(ResultMergingQueryPartInterface ...$values): ResultMergingQueryParts
+    public function getValues(): array
     {
-        return new ResultMergingQueryParts($values);
+        return $this->values;
     }
 
-    public static function singlePart(ResultMergingQueryPartInterface $value): ResultMergingQueryParts
+    public function getGroupMetadataSelector(): ?string
     {
-        return self::create($value);
+        return $this->groupMetadataSelector;
     }
 
-    /**
-     * @param ResultMergingQueryParts[] $arrayOfParts
-     * @return ResultMergingQueryParts
-     */
-    public static function merging(array $arrayOfParts): ResultMergingQueryParts
+    public function getGroupBy(): ?string
     {
-        $values = [];
-        foreach ($arrayOfParts as $parts) {
-            foreach ($parts as $part) {
-                $values[] = $part;
-            }
-        }
-        return new ResultMergingQueryParts($values);
+        return $this->groupBy;
     }
 
 }

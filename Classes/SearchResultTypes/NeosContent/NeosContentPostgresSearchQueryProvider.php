@@ -58,8 +58,8 @@ class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInter
 
         $scoreSelector = "(100 * n.score_bucket_critical) + (25 * n.score_bucket_major) + (5 * n.score_bucket_normal) + (n.score_bucket_minor)";
 
-        return ResultMergingQueryParts::singlePart(
-            new DefaultResultMergingQueryPart(
+        return new ResultMergingQueryParts(
+            [new DefaultResultMergingQueryPart(
                 NeosContentSearchResultType::name(),
                 'nd.document_id',
                 'nd.document_title',
@@ -72,19 +72,11 @@ class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInter
                     ))
                 SQL,
                 <<<SQL
-                    jsonb_build_object(
-                        'primaryDomain', (select
-                                           (case when d.scheme is not null then d.scheme || ':' else '' end) ||
-                                           '//' || d.hostname ||
-                                           (case when d.port is not null then ':' || d.port else '' end)
-                                   from neos_neos_domain_model_domain d
-                                   where d.persistence_object_identifier = s.primarydomain
-                                   and d.active),
-                        'documentNodeType', nd.document_nodetype,
-                        'siteNodeName', nd.site_nodename,
-                        'dimensionsHash', nd.dimensionshash,
-                        'dimensionValues', nd.dimensionvalues
-                    )
+                    s.primarydomain as primarydomain,
+                    nd.document_nodetype as document_nodetype,
+                    nd.site_nodename as site_nodename,
+                    nd.dimensionshash as dimensionshash,
+                    nd.dimensionvalues as dimensionvalues
                 SQL,
                 <<<SQL
                     -- for all nodes matching search terms, we have to find the corresponding document node
@@ -120,9 +112,23 @@ class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInter
                         and (
                             cast(:$paramNameNodeType as jsonb) is null or cast(:$paramNameNodeType as jsonb) ??| nd.super_nodetypes
                         )
+                SQL)],
+                <<<SQL
+                    jsonb_build_object(
+                        'primaryDomain', (select
+                                           (case when d.scheme is not null then d.scheme || ':' else '' end) ||
+                                           '//' || d.hostname ||
+                                           (case when d.port is not null then ':' || d.port else '' end)
+                                   from neos_neos_domain_model_domain d
+                                   where d.persistence_object_identifier = s.primarydomain
+                                   and d.active),
+                        'documentNodeType', nd.document_nodetype,
+                        'siteNodeName', nd.site_nodename,
+                        'dimensionsHash', nd.dimensionshash,
+                        'dimensionValues', nd.dimensionvalues
+                    )
                 SQL,
                 'nd.document_id, nd.document_title, nd.document_nodetype, nd.site_nodename, nd.dimensionshash, nd.dimensionvalues, s.primarydomain'
-            )
         );
     }
 

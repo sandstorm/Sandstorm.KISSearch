@@ -155,18 +155,43 @@ class MySQLSearchQueryBuilder
 
     private static function buildSearchQueryWithoutLimit(SearchQuery $searchQuery): string
     {
-        // searching part
-        $searchingQueryPartsSql = implode(",\n", $searchQuery->getSearchingQueryPartsAsString());
-        // merging part
+        // searching part (CTEs, comma-separated)
+        $searchingQueryPartsAsStrings = [];
+        /** @var ResultSearchingQueryPartInterface $searchingQueryPart */
+        foreach ($searchQuery->getSearchingQueryParts() as $searchingQueryPart) {
+            $searchingQueryPartsAsStrings[] = $searchingQueryPart->getSearchingQueryPart();
+        }
+        $searchingQueryPartsSql = implode(",\n", $searchingQueryPartsAsStrings);
+
+        // merging part (one CTE with all merging parts combined via UNION)
         $mergingParts = [];
-        foreach ($searchQuery->getMergingQueryPartsAsString() as $searchResultTypeName => $mergingSql) {
+        foreach ($searchQuery->getMergingQueryParts() as $searchResultTypeName => $mergingQueryPartsForResultType) {
+            // The merging query parts for each result type are combined using SQL 'union'.
+            // Also they are enclosed in parentheses, this can be used to apply a search result
+            // type specific limit later.
             $limitParamName = SearchQuery::buildSearchResultTypeSpecificLimitQueryParameterNameFromString($searchResultTypeName);
-            $mergingParts[] = <<<SQL
-                (
-                    $mergingSql
-                    order by score desc
-                    limit :$limitParamName
-                )
+            $partsAsString = [];
+            foreach ($mergingQueryPartsForResultType->getValues() as $part) {
+                $partsAsString[] = $part->getMergingQueryPart();
+            }
+            $mergingPartsForType = implode(' union ', $partsAsString);
+            $groupMetadataSelector = $mergingQueryPartsForResultType->getGroupMetadataSelector();
+            if ($groupMetadataSelector === null) {
+                $groupMetadataSelector = 'null';
+            }
+            $mergingParts[$searchResultTypeName] = <<<SQL
+                (select
+                    r.result_id                             as result_id,
+                    r.result_title                          as result_title,
+                    r.result_type                           as result_type,
+                    max(r.score)                            as score,
+                    count(r.result_id)                      as match_count,
+                    json_arrayagg(r.aggregate_meta_data)    as aggregate_meta_data,
+                    $groupMetadataSelector                  as group_meta_data
+                from ($mergingPartsForType) r
+                group by r.result_id
+                order by r.score desc
+                limit :$limitParamName)
             SQL;
         }
         $mergingQueryPartsSql = implode(" union \n", $mergingParts);

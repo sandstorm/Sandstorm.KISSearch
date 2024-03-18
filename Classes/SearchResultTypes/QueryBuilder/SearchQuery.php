@@ -31,42 +31,19 @@ class SearchQuery
         $this->mergingQueryParts = $mergingQueryParts;
     }
 
-    /**
-     * @return string[]
-     */
-    public function getSearchingQueryPartsAsString(): array
-    {
-        $result = [];
-        /** @var ResultSearchingQueryPartInterface $searchingQueryPart */
-        foreach ($this->searchingQueryParts as $searchingQueryPart) {
-            $result[] = $searchingQueryPart->getSearchingQueryPart();
-        }
-        return $result;
-    }
-
-    /**
-     * @return string[] key is: search result type name
-     */
-    public function getMergingQueryPartsAsString(): array
-    {
-        $result = [];
-        /** @var ResultMergingQueryPartInterface[] $mergingQueryPartsForResultType */
-        foreach ($this->mergingQueryParts as $searchResultTypeName => $mergingQueryPartsForResultType) {
-            // The merging query parts for each result type are combined using SQL 'union'.
-            // Also they are enclosed in parentheses, this can be used to apply a search result
-            // type specific limit later.
-            $partsAsString = [];
-            foreach ($mergingQueryPartsForResultType as $part) {
-                $partsAsString[] = $part->getMergingQueryPart();
-            }
-            $result[$searchResultTypeName] = sprintf('(%s)', implode(' union ', $partsAsString));
-        }
-        return $result;
-    }
-
     public static function buildSearchResultTypeSpecificLimitQueryParameterNameFromString(string $searchResultTypeName): string
     {
         return sprintf("limit_%s", $searchResultTypeName);
+    }
+
+    public function getSearchingQueryParts(): ResultSearchingQueryParts
+    {
+        return $this->searchingQueryParts;
+    }
+
+    public function getMergingQueryParts(): array
+    {
+        return $this->mergingQueryParts;
     }
 
 }

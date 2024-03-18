@@ -53,8 +53,8 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
 
         $scoreSelector = '(20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)';
 
-        return ResultMergingQueryParts::singlePart(
-            new DefaultResultMergingQueryPart(
+        return new ResultMergingQueryParts(
+            [new DefaultResultMergingQueryPart(
                 NeosContentSearchResultType::name(),
                 'nd.document_id',
                 'nd.document_title',
@@ -67,21 +67,11 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                     )
                 SQL,
                 <<<SQL
-                    json_arrayagg(json_object(
-                        'primaryDomain', (select
-                                       concat(
-                                           if(d.scheme is not null, concat(d.scheme, ':'), ''),
-                                           '//', d.hostname,
-                                           if(d.port is not null, concat(':', d.port), '')
-                                       )
-                                   from neos_neos_domain_model_domain d
-                                   where d.persistence_object_identifier = s.primarydomain
-                                   and d.active = 1),
-                        'documentNodeType', nd.document_nodetype,
-                        'siteNodeName', nd.site_nodename,
-                        'dimensionsHash', nd.dimensionshash,
-                        'dimensionValues', nd.dimensionvalues
-                    ))
+                    s.primarydomain as primarydomain,
+                    nd.document_nodetype as document_nodetype,
+                    nd.site_nodename as site_nodename,
+                    nd.dimensionshash as dimensionshash,
+                    nd.dimensionvalues as dimensionvalues
                 SQL,
                 <<<SQL
                     -- for all nodes matching search terms, we have to find the corresponding document node
@@ -114,7 +104,25 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                             )
                         )
                 SQL
-            )
+            )],
+            <<<SQL
+                json_object(
+                    'primaryDomain', (select
+                                   concat(
+                                       if(d.scheme is not null, concat(d.scheme, ':'), ''),
+                                       '//', d.hostname,
+                                       if(d.port is not null, concat(':', d.port), '')
+                                   )
+                               from neos_neos_domain_model_domain d
+                               where d.persistence_object_identifier = r.primarydomain
+                               and d.active = 1),
+                    'documentNodeType', r.document_nodetype,
+                    'siteNodeName', r.site_nodename,
+                    'dimensionsHash', r.dimensionshash,
+                    'dimensionValues', r.dimensionvalues
+                )
+            SQL,
+            null
         );
     }
 
@@ -124,9 +132,13 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     public function getAdditionalQueryParameters(): AdditionalQueryParameterDefinitions
     {
         return AdditionalQueryParameterDefinitions::create(
-            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function($value) {return NeosContentAdditionalParameters::nodeNameMapper($value);}),
-            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::EXCLUDED_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function($value) {return NeosContentAdditionalParameters::nodeNameMapper($value);}),
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::DIMENSION_VALUES, NeosContentSearchResultType::name(), function($valueAsArray) {
+            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function ($value) {
+                return NeosContentAdditionalParameters::nodeNameMapper($value);
+            }),
+            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::EXCLUDED_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function ($value) {
+                return NeosContentAdditionalParameters::nodeNameMapper($value);
+            }),
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::DIMENSION_VALUES, NeosContentSearchResultType::name(), function ($valueAsArray) {
                 return new ContentDimensionValuesFilter($valueAsArray);
             })
         );

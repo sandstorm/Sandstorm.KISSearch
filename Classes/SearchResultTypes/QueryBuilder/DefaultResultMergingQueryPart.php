@@ -13,9 +13,11 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
     private readonly string $resultTitleSelector;
     private readonly string $scoreSelector;
     private readonly ?string $resultMetaDataSelector;
-    private readonly ?string $groupMetaDataSelector;
+    private readonly ?string $additionalSelectors;
+
     private readonly string $querySource;
     private readonly ?string $groupBy;
+
 
     /**
      * @param SearchResultTypeName $resultTypeName
@@ -23,7 +25,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
      * @param string $resultTitleSelector
      * @param string $scoreSelector
      * @param string|null $resultMetaDataSelector
-     * @param string|null $groupMetaDataSelector
+     * @param string|null $additionalSelectors
      * @param string $querySource
      * @param string|null $groupBy
      */
@@ -33,19 +35,16 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         string               $resultTitleSelector,
         string               $scoreSelector,
         ?string              $resultMetaDataSelector,
-        ?string              $groupMetaDataSelector,
-        string               $querySource,
-        ?string              $groupBy = null
-    )
+        ?string              $additionalSelectors,
+        string               $querySource)
     {
         $this->resultTypeName = $resultTypeName;
         $this->resultIdentifierSelector = $resultIdentifierSelector;
         $this->resultTitleSelector = $resultTitleSelector;
         $this->scoreSelector = $scoreSelector;
         $this->resultMetaDataSelector = $resultMetaDataSelector;
-        $this->groupMetaDataSelector = $groupMetaDataSelector;
+        $this->additionalSelectors = $additionalSelectors;
         $this->querySource = $querySource;
-        $this->groupBy = $groupBy;
     }
 
     function getMergingQueryPart(): string
@@ -56,24 +55,21 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         $aliasScore = SearchQuery::ALIAS_SCORE;
         $aliasMatchCount = SearchQuery::ALIAS_MATCH_COUNT;
         $aliasAggregateMetaData = SearchQuery::ALIAS_AGGREGATE_META_DATA;
-        $aliasGroupMetaData = SearchQuery::ALIAS_GROUP_META_DATA;
 
         $resultMetaDataSelector = $this->resultMetaDataSelector !== null ? $this->resultMetaDataSelector : 'null';
-        $groupMetaDataSelector = $this->groupMetaDataSelector !== null ? $this->groupMetaDataSelector : 'null';
 
-        $groupBy = $this->groupBy !== null ? $this->groupBy : $this->resultIdentifierSelector;
+        $additionalSelectorsSql = $this->additionalSelectors != null ? ($this->additionalSelectors . ',') : '';
 
         return <<<SQL
             select
                 $this->resultIdentifierSelector as $aliasResultIdentifier,
                 $this->resultTitleSelector as $aliasResultTitle,
                 '$this->resultTypeName' as $aliasResultType,
-                max($this->scoreSelector) as $aliasScore,
-                count($this->resultIdentifierSelector) as $aliasMatchCount,
-                $resultMetaDataSelector as $aliasAggregateMetaData,
-                $groupMetaDataSelector as $aliasGroupMetaData
+                $additionalSelectorsSql
+                $this->scoreSelector as $aliasScore,
+                $this->resultIdentifierSelector as $aliasMatchCount,
+                $resultMetaDataSelector as $aliasAggregateMetaData
             $this->querySource
-            group by $groupBy
         SQL;
     }
 }
