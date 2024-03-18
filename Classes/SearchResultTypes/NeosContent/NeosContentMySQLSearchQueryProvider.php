@@ -53,25 +53,8 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
 
         $scoreSelector = '(20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)';
 
-        return ResultMergingQueryParts::singlePartWithGroupMetadata(
-            <<<SQL
-                json_object(
-                    'primaryDomain', (select
-                                   concat(
-                                       if(d.scheme is not null, concat(d.scheme, ':'), ''),
-                                       '//', d.hostname,
-                                       if(d.port is not null, concat(':', d.port), '')
-                                   )
-                               from neos_neos_domain_model_domain d
-                               where d.persistence_object_identifier = r.primarydomain
-                               and d.active = 1),
-                    'documentNodeType', r.document_nodetype,
-                    'siteNodeName', r.site_nodename,
-                    'dimensionsHash', r.dimensionshash,
-                    'dimensionValues', r.dimensionvalues
-                )
-            SQL,
-            new DefaultResultMergingQueryPart(
+        return new ResultMergingQueryParts(
+            [new DefaultResultMergingQueryPart(
                 NeosContentSearchResultType::name(),
                 'nd.document_id',
                 'nd.document_title',
@@ -121,7 +104,25 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                             )
                         )
                 SQL
-            )
+            )],
+            <<<SQL
+                json_object(
+                    'primaryDomain', (select
+                                   concat(
+                                       if(d.scheme is not null, concat(d.scheme, ':'), ''),
+                                       '//', d.hostname,
+                                       if(d.port is not null, concat(':', d.port), '')
+                                   )
+                               from neos_neos_domain_model_domain d
+                               where d.persistence_object_identifier = r.primarydomain
+                               and d.active = 1),
+                    'documentNodeType', r.document_nodetype,
+                    'siteNodeName', r.site_nodename,
+                    'dimensionsHash', r.dimensionshash,
+                    'dimensionValues', r.dimensionvalues
+                )
+            SQL,
+            null
         );
     }
 
@@ -131,9 +132,13 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     public function getAdditionalQueryParameters(): AdditionalQueryParameterDefinitions
     {
         return AdditionalQueryParameterDefinitions::create(
-            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function($value) {return NeosContentAdditionalParameters::nodeNameMapper($value);}),
-            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function($value) {return NeosContentAdditionalParameters::nodeNameMapper($value);}),
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES, NeosContentSearchResultType::name(), function($valueAsArray) {
+            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function ($value) {
+                return NeosContentAdditionalParameters::nodeNameMapper($value);
+            }),
+            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function ($value) {
+                return NeosContentAdditionalParameters::nodeNameMapper($value);
+            }),
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES, NeosContentSearchResultType::name(), function ($valueAsArray) {
                 return new ContentDimensionValuesFilter($valueAsArray);
             })
         );
