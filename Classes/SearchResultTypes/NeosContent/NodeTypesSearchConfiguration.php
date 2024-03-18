@@ -12,6 +12,8 @@ class NodeTypesSearchConfiguration
 
     private readonly array $contentNodeTypeNames;
 
+    private readonly array $nodeTypeInheritance;
+
     // key: node type name, value: array of NodePropertyFulltextExtraction
 
     private readonly array $extractorsForCritical;
@@ -22,15 +24,25 @@ class NodeTypesSearchConfiguration
     /**
      * @param array $documentNodeTypeNames
      * @param array $contentNodeTypeNames
+     * @param array $nodeTypeInheritance
      * @param array $extractorsForCritical
      * @param array $extractorsForMajor
      * @param array $extractorsForNormal
      * @param array $extractorsForMinor
      */
-    public function __construct(array $documentNodeTypeNames, array $contentNodeTypeNames, array $extractorsForCritical, array $extractorsForMajor, array $extractorsForNormal, array $extractorsForMinor)
+    public function __construct(
+        array $documentNodeTypeNames,
+        array $contentNodeTypeNames,
+        array $nodeTypeInheritance,
+        array $extractorsForCritical,
+        array $extractorsForMajor,
+        array $extractorsForNormal,
+        array $extractorsForMinor
+    )
     {
         $this->documentNodeTypeNames = $documentNodeTypeNames;
         $this->contentNodeTypeNames = $contentNodeTypeNames;
+        $this->nodeTypeInheritance = $nodeTypeInheritance;
         $this->extractorsForCritical = $extractorsForCritical;
         $this->extractorsForMajor = $extractorsForMajor;
         $this->extractorsForNormal = $extractorsForNormal;
@@ -51,6 +63,14 @@ class NodeTypesSearchConfiguration
     public function getContentNodeTypeNames(): array
     {
         return $this->contentNodeTypeNames;
+    }
+
+    /**
+     * @return array
+     */
+    public function getNodeTypeInheritance(): array
+    {
+        return $this->nodeTypeInheritance;
     }
 
     /**

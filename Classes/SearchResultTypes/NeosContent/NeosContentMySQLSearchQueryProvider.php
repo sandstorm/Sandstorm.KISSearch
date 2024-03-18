@@ -46,9 +46,9 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     function getResultMergingQueryParts(): ResultMergingQueryParts
     {
         $queryParamNowTime = SearchResult::SQL_QUERY_PARAM_NOW_TIME;
-        $paramNameSiteNodeName = NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME;
-        $paramNameExcludeSiteNodeName = NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME;
-        $paramNameDimensionValues = NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES;
+        $paramNameSiteNodeName = NeosContentAdditionalParameters::SITE_NODE_NAME;
+        $paramNameExcludeSiteNodeName = NeosContentAdditionalParameters::EXCLUDED_SITE_NODE_NAME;
+        $paramNameDimensionValues = NeosContentAdditionalParameters::DIMENSION_VALUES;
         $cteAlias = self::CTE_ALIAS;
 
         $scoreSelector = '(20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)';
@@ -132,13 +132,13 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     public function getAdditionalQueryParameters(): AdditionalQueryParameterDefinitions
     {
         return AdditionalQueryParameterDefinitions::create(
-            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function ($value) {
+            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function ($value) {
                 return NeosContentAdditionalParameters::nodeNameMapper($value);
             }),
-            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function ($value) {
+            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::EXCLUDED_SITE_NODE_NAME, AdditionalQueryParameterDefinition::TYPE_STRING_ARRAY, NeosContentSearchResultType::name(), function ($value) {
                 return NeosContentAdditionalParameters::nodeNameMapper($value);
             }),
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES, NeosContentSearchResultType::name(), function ($valueAsArray) {
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::DIMENSION_VALUES, NeosContentSearchResultType::name(), function ($valueAsArray) {
                 return new ContentDimensionValuesFilter($valueAsArray);
             })
         );
