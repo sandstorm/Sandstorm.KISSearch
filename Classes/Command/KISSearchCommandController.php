@@ -11,6 +11,7 @@ use Neos\Flow\Http\BaseUriProvider;
 use Neos\Utility\ObjectAccess;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseType;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
+use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\PostgresSearchQueryBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypesRegistry;
 use Sandstorm\KISSearch\SearchResultTypes\UnsupportedDatabaseException;
 use Sandstorm\KISSearch\Service\SearchQueryInput;
@@ -73,14 +74,18 @@ class KISSearchCommandController extends CommandController
         $requiredVersion = match ($databaseType) {
             DatabaseType::MARIADB => $hotfixDisableTimedHiddenBeforeAfter ? '10.5.0' : '10.6.0',
             DatabaseType::MYSQL => '8.0',
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
+            DatabaseType::POSTGRES => '13.0',
             default => throw new UnsupportedDatabaseException(
                 "Version check does not support database of type '$databaseType->name'",
                 1690118087
             )
         };
         $actualVersion = $this->getActualDatabaseVersion($databaseType);
-        $versionRequirementsFulfilled = version_compare($actualVersion, $requiredVersion, '>=');
+        $versionToCheck = match($databaseType) {
+            DatabaseType::POSTGRES => preg_replace('/^PostgreSQL /', '', $actualVersion),
+            default => $actualVersion
+        };
+        $versionRequirementsFulfilled = version_compare($versionToCheck, $requiredVersion, '>=');
         if ($versionRequirementsFulfilled) {
             if ($printSuccess) {
                 $this->outputLine('<success>Minimal version requirements for %s database fulfilled, have fun with KISSearch!</success>', [$databaseType->value]);
@@ -97,7 +102,7 @@ class KISSearchCommandController extends CommandController
     {
         $sql = match ($databaseType) {
             DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::buildDatabaseVersionQuery(),
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
+            DatabaseType::POSTGRES => PostgresSearchQueryBuilder::buildDatabaseVersionQuery(),
             default => throw new UnsupportedDatabaseException(
                 "Version check does not support database of type '$databaseType->name'",
                 1690118078
@@ -189,7 +194,7 @@ class KISSearchCommandController extends CommandController
     {
         return match ($databaseType) {
             DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLSearchQueryBuilder::buildInsertOrUpdateVersionHashQuery($searchResultTypeName, $versionHash),
-            DatabaseType::POSTGRES => throw new UnsupportedDatabaseException('Postgres will be supported soon <3', 1690063470),
+            DatabaseType::POSTGRES => PostgresSearchQueryBuilder::buildInsertOrUpdateVersionHashQuery($searchResultTypeName, $versionHash),
             default => throw new UnsupportedDatabaseException(
                 "Migration does not support database of type '$databaseType->name'",
                 1690063479
@@ -304,43 +309,43 @@ class KISSearchCommandController extends CommandController
         $this->output->outputLine();
     }
 
-    public function searchCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
+    public function searchCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false, ?string $language = null): void
     {
         $this->printGlobalLimit($limit);
-        $this->internalSearch($query, $additionalParams, $showMetaData, function(SearchQueryInput $input) use ($limit) {
+        $this->internalSearch($query, $additionalParams, $showMetaData, $language, function(SearchQueryInput $input) use ($limit) {
             return $this->searchService->search($input, $limit);
         });
     }
 
-    public function searchLimitPerResultTypeCommand(string $query, string $limit = '{"neos_content": 50}', ?string $additionalParams = null, bool $showMetaData = false): void
+    public function searchLimitPerResultTypeCommand(string $query, string $limit = '{"neos_content": 50}', ?string $additionalParams = null, bool $showMetaData = false, ?string $language = null): void
     {
         $limitPerSearchResultTypeArray = json_decode($limit, true);
         $this->printResultSpecificLimits($limitPerSearchResultTypeArray);
-        $this->internalSearch($query, $additionalParams, $showMetaData, function(SearchQueryInput $input) use ($limitPerSearchResultTypeArray) {
+        $this->internalSearch($query, $additionalParams, $showMetaData, $language, function(SearchQueryInput $input) use ($limitPerSearchResultTypeArray) {
             return $this->searchService->searchLimitPerResultType($input, $limitPerSearchResultTypeArray);
         });
     }
 
-    public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false): void
+    public function searchFrontendCommand(string $query, int $limit = 50, ?string $additionalParams = null, bool $showMetaData = false, ?string $language = null): void
     {
         $this->printGlobalLimit($limit);
-        $this->internalSearchFrontend($query, $additionalParams, $showMetaData, function(SearchQueryInput $input) use ($limit) {
+        $this->internalSearchFrontend($query, $additionalParams, $showMetaData, $language, function(SearchQueryInput $input) use ($limit) {
             return $this->searchService->searchFrontend($input, $limit);
         });
     }
 
-    public function searchFrontendLimitByResultTypeCommand(string $query, string $limit = '{"neos_content": 50}', ?string $additionalParams = null, bool $showMetaData = false): void
+    public function searchFrontendLimitByResultTypeCommand(string $query, string $limit = '{"neos_content": 50}', ?string $additionalParams = null, bool $showMetaData = false, ?string $language = null): void
     {
         $limitPerSearchResultTypeArray = json_decode($limit, true);
         $this->printResultSpecificLimits($limitPerSearchResultTypeArray);
-        $this->internalSearchFrontend($query, $additionalParams, $showMetaData, function(SearchQueryInput $input) use ($limitPerSearchResultTypeArray) {
+        $this->internalSearchFrontend($query, $additionalParams, $showMetaData, $language, function(SearchQueryInput $input) use ($limitPerSearchResultTypeArray) {
             return $this->searchService->searchFrontendLimitPerResultType($input, $limitPerSearchResultTypeArray);
         });
     }
 
-    private function internalSearch(string $query, ?string $additionalParams, bool $showMetaData, \Closure $serviceCall): void
+    private function internalSearch(string $query, ?string $additionalParams, bool $showMetaData, ?string $language, \Closure $serviceCall): void
     {
-        $this->searchAndPrintResults($query, $additionalParams, $showMetaData, $serviceCall, [
+        $this->searchAndPrintResults($query, $additionalParams, $showMetaData, $language, $serviceCall, [
             'identifier' => 'Result Identifier',
             'type' => 'Result Type',
             'title' => 'Result Title',
@@ -349,9 +354,9 @@ class KISSearchCommandController extends CommandController
         ]);
     }
 
-    private function internalSearchFrontend(string $query, ?string $additionalParams, bool $showMetaData, \Closure $serviceCall): void
+    private function internalSearchFrontend(string $query, ?string $additionalParams, bool $showMetaData, ?string $language, \Closure $serviceCall): void
     {
-        $this->searchAndPrintResults($query, $additionalParams, $showMetaData, $serviceCall, [
+        $this->searchAndPrintResults($query, $additionalParams, $showMetaData, $language, $serviceCall, [
             'identifier' => 'Result Identifier',
             'type' => 'Result Type',
             'title' => 'Result Title',
@@ -361,7 +366,7 @@ class KISSearchCommandController extends CommandController
         ]);
     }
 
-    private function searchAndPrintResults(string $query, ?string $additionalParams, bool $showMetaData, \Closure $serviceCall, array $headers): void
+    private function searchAndPrintResults(string $query, ?string $additionalParams, bool $showMetaData, ?string $language, \Closure $serviceCall, array $headers): void
     {
         if ($additionalParams !== null) {
             try {
@@ -375,7 +380,7 @@ class KISSearchCommandController extends CommandController
         } else {
             $additionalParamsArray = null;
         }
-        $input = new SearchQueryInput($query, $additionalParamsArray);
+        $input = new SearchQueryInput($query, $additionalParamsArray, $language);
         $this->printSearchQueryInput($input);
         $startTime = microtime(true);
         $results = $serviceCall($input);

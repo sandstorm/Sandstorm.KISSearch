@@ -1,12 +1,12 @@
 <?php
 
-namespace Sandstorm\KISSearch\SearchResultTypes;
+namespace Sandstorm\KISSearch\Service;
 
 use Neos\Flow\Annotations\Proxy;
 use RuntimeException;
 
 #[Proxy(false)]
-class InvalidConfigurationException extends RuntimeException
+class MissingLanguageException extends RuntimeException
 {
     public function __construct(string $message, int $code)
     {

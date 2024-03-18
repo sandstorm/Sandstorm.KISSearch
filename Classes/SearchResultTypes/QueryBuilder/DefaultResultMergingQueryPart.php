@@ -16,6 +16,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
     private readonly ?string $additionalSelectors;
 
     private readonly string $querySource;
+    private readonly ?string $groupBy;
 
 
     /**
@@ -26,6 +27,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
      * @param string|null $resultMetaDataSelector
      * @param string|null $additionalSelectors
      * @param string $querySource
+     * @param string|null $groupBy
      */
     public function __construct(
         SearchResultTypeName $resultTypeName,

@@ -27,3 +27,65 @@ Sandstorm:
       baseDocumentNodeType: 'Neos.Neos:Document'
       # only content node types that extends this get indexed
       baseContentNodeType: 'Neos.Neos:Content'
+
+    # Fulltext search configuration for Postgres database type
+    postgres:
+      # The default postgres text search configuration that is used for fulltext extraction and search queries.
+      # The value must be supported in your postgres installation.
+      # Postgres 15 supports the following languages by default:
+      #   - simple
+      #   - arabic
+      #   - armenian
+      #   - basque
+      #   - catalan
+      #   - danish
+      #   - dutch
+      #   - english
+      #   - finnish
+      #   - french
+      #   - german
+      #   - greek
+      #   - hindi
+      #   - hungarian
+      #   - indonesian
+      #   - irish
+      #   - italian
+      #   - lithuanian
+      #   - nepali
+      #   - norwegian
+      #   - portuguese
+      #   - romanian
+      #   - russian
+      #   - serbian
+      #   - spanish
+      #   - swedish
+      #   - tamil
+      #   - turkish
+      #   - yiddish
+      defaultTsConfig: 'simple'
+      # Fulltext extraction language mode. Possible values:
+      #
+      #   'default' =>
+      #       The language that is used for fulltext extraction is configured in the Settings.yaml file with
+      #       the 'defaultLanguage' setting. All nodes get fulltext extracted using the default language,
+      #       independently of their content dimensions.
+      #
+      #   'contentDimension' =>
+      #       The language that is used for fulltext extraction is determined by the language content dimension
+      #       of each individual node. Also see Settings documentation for 'contentDimension'
+      #
+      mode: 'default'
+      # Sub-configurations for the language mode 'contentDimension'
+      contentDimension:
+        # The name of the content dimension, that specifies the language. Usually that
+        # content dimension is named 'language'.
+        dimensionName: 'language'
+        # Mapping from content dimension value to postgres language mode.
+        dimensionValueMapping:
+          de: 'german'
+          de_DE: 'german'
+          en: 'english'
+          en_US: 'english'
+          en_UK: 'english'
+          # TODO add more default mappings
+

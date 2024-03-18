@@ -11,14 +11,18 @@ class SearchQueryInput
 
     private readonly ?array $searchTypeSpecificAdditionalParameters;
 
+    private readonly ?string $language;
+
     /**
      * @param string $query the search terms
      * @param array|null $searchTypeSpecificAdditionalParameters
+     * @param string|null $language
      */
-    public function __construct(string $query, ?array $searchTypeSpecificAdditionalParameters = null)
+    public function __construct(string $query, ?array $searchTypeSpecificAdditionalParameters = null, ?string $language = null)
     {
         $this->query = $query;
         $this->searchTypeSpecificAdditionalParameters = $searchTypeSpecificAdditionalParameters;
+        $this->language = $language;
     }
 
     /**
@@ -35,6 +39,14 @@ class SearchQueryInput
     public function getSearchTypeSpecificAdditionalParameters(): ?array
     {
         return $this->searchTypeSpecificAdditionalParameters;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getLanguage(): ?string
+    {
+        return $this->language;
     }
 
 }

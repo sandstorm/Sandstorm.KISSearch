@@ -18,7 +18,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      FLOW_CONTEXT: 'Development/Docker/MariaDB'
+      FLOW_CONTEXT: 'Development/Docker/Postgres'
+      #FLOW_CONTEXT: 'Development/Docker/MariaDB'
       COMPOSER_CACHE_DIR: '/composer_cache'
       # DB connection
       MARIA_DB_NEOS_HOST: 'maria-db'
@@ -74,7 +75,7 @@ services:
   #####
   # Postgres DB
   postgres-db:
-    image: postgres:14.8-alpine
+    image: postgres:15.3
     restart: always
     environment:
       POSTGRES_PASSWORD: neos
@@ -82,10 +83,8 @@ services:
       POSTGRES_USER: neos
     ports:
       - 15432:5432
-
-    #volumes:
-      #  - db-data:/var/lib/postgresql/data:rw
-      #- ./sql/:/docker-entrypoint-initdb.d/
+    networks:
+      - kissearch-test-distribution
 
 networks:
   # we need to use a custom network here to ensure that all services see each other; and that during prerendering, we can connect to this network (to reach the service facade)

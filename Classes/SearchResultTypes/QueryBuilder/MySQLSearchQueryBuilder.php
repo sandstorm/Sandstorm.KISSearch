@@ -98,7 +98,7 @@ class MySQLSearchQueryBuilder
     public static function fulltextExtractHtmlTagContents(string $valueSql, string ...$tagNames): string
     {
         $tagNamesPattern = sprintf('(%s)', implode('|', $tagNames));
-        $pattern = "(^.*?<$tagNamesPattern>)|(<\\\\\\\\?/$tagNamesPattern>.*?<$tagNamesPattern>)|(<\\\\\\\\?/$tagNamesPattern>.*?$)";
+        $pattern = "(^.*?<$tagNamesPattern.*?>)|(<\\\\\\\\?/$tagNamesPattern.*?>.*?<$tagNamesPattern.*?>)|(<\\\\\\\\?/$tagNamesPattern.*?>.*?$)";
 
         return self::sanitizeFulltextExtractionResult(<<<SQL
             -- remove everything between closing and opening tags
@@ -263,7 +263,7 @@ class MySQLSearchQueryBuilder
     public static function buildDatabaseVersionQuery(): string
     {
         return <<<SQL
-            SELECT @@version as version;
+            select @@version as version;
         SQL;
     }
 

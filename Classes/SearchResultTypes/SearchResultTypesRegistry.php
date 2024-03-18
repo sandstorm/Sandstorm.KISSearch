@@ -6,6 +6,7 @@ namespace Sandstorm\KISSearch\SearchResultTypes;
 use Neos\Flow\Annotations\InjectConfiguration;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
+use Sandstorm\KISSearch\InvalidConfigurationException;
 
 #[Scope('singleton')]
 class SearchResultTypesRegistry
