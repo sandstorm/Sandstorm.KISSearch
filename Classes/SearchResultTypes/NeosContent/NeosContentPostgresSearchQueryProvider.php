@@ -50,9 +50,10 @@ class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInter
     function getResultMergingQueryParts(): ResultMergingQueryParts
     {
         $queryParamNowTime = SearchResult::SQL_QUERY_PARAM_NOW_TIME;
-        $paramNameSiteNodeName = NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME;
-        $paramNameExcludeSiteNodeName = NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME;
-        $paramNameDimensionValues = NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES;
+        $paramNameSiteNodeName = NeosContentAdditionalParameters::SITE_NODE_NAME;
+        $paramNameNodeType = NeosContentAdditionalParameters::DOCUMENT_NODE_TYPES;
+        $paramNameExcludeSiteNodeName = NeosContentAdditionalParameters::EXCLUDED_SITE_NODE_NAME;
+        $paramNameDimensionValues = NeosContentAdditionalParameters::DIMENSION_VALUES;
         $cteAlias = self::CTE_ALIAS;
 
         $scoreSelector = "(100 * n.score_bucket_critical) + (25 * n.score_bucket_major) + (5 * n.score_bucket_normal) + (n.score_bucket_minor)";
@@ -115,6 +116,10 @@ class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInter
                                     nd.dimensionvalues
                             )
                         )
+                        -- node types filter
+                        and (
+                            cast(:$paramNameNodeType as jsonb) is null or cast(:$paramNameNodeType as jsonb) ??| nd.super_nodetypes
+                        )
                 SQL,
                 'nd.document_id, nd.document_title, nd.document_nodetype, nd.site_nodename, nd.dimensionshash, nd.dimensionvalues, s.primarydomain'
             )
@@ -127,14 +132,17 @@ class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInter
     public function getAdditionalQueryParameters(): AdditionalQueryParameterDefinitions
     {
         return AdditionalQueryParameterDefinitions::create(
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_SITE_NODE_NAME, NeosContentSearchResultType::name(), function ($value) {
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::SITE_NODE_NAME, NeosContentSearchResultType::name(), function ($value) {
                 return NeosContentAdditionalParameters::nodeNameMapper($value);
             }),
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_EXCLUDED_SITE_NODE_NAME, NeosContentSearchResultType::name(), function ($value) {
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::EXCLUDED_SITE_NODE_NAME, NeosContentSearchResultType::name(), function ($value) {
                 return NeosContentAdditionalParameters::nodeNameMapper($value);
             }),
-            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::ADDITIONAL_QUERY_PARAM_NAME_DIMENSION_VALUES, NeosContentSearchResultType::name(), function ($valueAsArray) {
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::DIMENSION_VALUES, NeosContentSearchResultType::name(), function ($valueAsArray) {
                 return new ContentDimensionValuesFilter($valueAsArray);
+            }),
+            AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::DOCUMENT_NODE_TYPES, NeosContentSearchResultType::name(), function($values) {
+                return $values;
             })
         );
     }

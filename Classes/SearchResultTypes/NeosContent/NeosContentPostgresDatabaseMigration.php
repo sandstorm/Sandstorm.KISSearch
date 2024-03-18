@@ -252,6 +252,37 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
                                   parallel safe;
         SQL;
 
+        $inheritanceFunctionCaseSql = <<<SQL
+            case sandstorm_kissearch_get_super_types.nodetype
+        SQL;
+        foreach ($this->nodeTypesSearchConfiguration->getNodeTypeInheritance() as $nodeTypeName => $allAssignableTypes) {
+            $allAssignableTypesSql = implode(',', array_map(function (string $type) {
+                return sprintf("'%s'", $type);
+            }, $allAssignableTypes));
+            $inheritanceFunctionCaseSql .= <<<SQL
+                when '$nodeTypeName' then
+                    return array[$allAssignableTypesSql];
+            SQL;
+        }
+        $inheritanceFunctionCaseSql .= <<<SQL
+            else
+                return array[];
+            end case;
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            create or replace function sandstorm_kissearch_get_super_types(
+              nodetype text
+            ) returns text[]
+            as
+            $$
+            begin
+              $inheritanceFunctionCaseSql
+            end;
+            $$ language 'plpgsql' immutable
+                                              parallel safe;
+        SQL;
+
         $sqlQueries[] = <<<SQL
             create materialized view if not exists sandstorm_kissearch_nodes_and_their_documents as
             with recursive nodes_and_their_documents as
@@ -330,7 +361,9 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
                    case
                      when jsonb_array_length(nd.timed_hidden) > 0 then
                        nd.timed_hidden
-                     end                            as timed_hidden
+                     end                            as timed_hidden,
+                   sandstorm_kissearch_get_super_types(nd.document_nodetype)
+                                                    as super_nodetypes
             from nodes_and_their_documents nd
             where nd.site_nodename is not null
               and nd.not_hidden
@@ -441,6 +474,7 @@ class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
             drop function if exists sandstorm_kissearch_any_timed_hidden(jsonb, timestamptz);
             drop function if exists sandstorm_kissearch_is_document(text);
             drop function if exists sandstorm_kissearch_is_content(text);
+            drop function if exists sandstorm_kissearch_get_super_types(text);
         SQL;
 
         return implode("\n", $sqlQueries);
