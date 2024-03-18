@@ -13,8 +13,10 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
     private readonly string $resultTitleSelector;
     private readonly string $scoreSelector;
     private readonly ?string $resultMetaDataSelector;
-    private readonly ?string $groupMetaDataSelector;
+    private readonly ?string $additionalSelectors;
+
     private readonly string $querySource;
+
 
     /**
      * @param SearchResultTypeName $resultTypeName
@@ -22,7 +24,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
      * @param string $resultTitleSelector
      * @param string $scoreSelector
      * @param string|null $resultMetaDataSelector
-     * @param string|null $groupMetaDataSelector
+     * @param string|null $additionalSelectors
      * @param string $querySource
      */
     public function __construct(
@@ -31,7 +33,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         string               $resultTitleSelector,
         string               $scoreSelector,
         ?string              $resultMetaDataSelector,
-        ?string              $groupMetaDataSelector,
+        ?string              $additionalSelectors,
         string               $querySource)
     {
         $this->resultTypeName = $resultTypeName;
@@ -39,7 +41,7 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         $this->resultTitleSelector = $resultTitleSelector;
         $this->scoreSelector = $scoreSelector;
         $this->resultMetaDataSelector = $resultMetaDataSelector;
-        $this->groupMetaDataSelector = $groupMetaDataSelector;
+        $this->additionalSelectors = $additionalSelectors;
         $this->querySource = $querySource;
     }
 
@@ -51,22 +53,21 @@ class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
         $aliasScore = SearchQuery::ALIAS_SCORE;
         $aliasMatchCount = SearchQuery::ALIAS_MATCH_COUNT;
         $aliasAggregateMetaData = SearchQuery::ALIAS_AGGREGATE_META_DATA;
-        $aliasGroupMetaData = SearchQuery::ALIAS_GROUP_META_DATA;
 
         $resultMetaDataSelector = $this->resultMetaDataSelector !== null ? $this->resultMetaDataSelector : 'null';
-        $groupMetaDataSelector = $this->groupMetaDataSelector !== null ? $this->groupMetaDataSelector : 'null';
+
+        $additionalSelectorsSql = $this->additionalSelectors != null ? ($this->additionalSelectors . ',') : '';
 
         return <<<SQL
             select
                 $this->resultIdentifierSelector as $aliasResultIdentifier,
                 $this->resultTitleSelector as $aliasResultTitle,
                 '$this->resultTypeName' as $aliasResultType,
-                max($this->scoreSelector) as $aliasScore,
-                count($this->resultIdentifierSelector) as $aliasMatchCount,
-                json_arrayagg($resultMetaDataSelector) as $aliasAggregateMetaData,
-                $groupMetaDataSelector as $aliasGroupMetaData
+                $additionalSelectorsSql
+                $this->scoreSelector as $aliasScore,
+                $this->resultIdentifierSelector as $aliasMatchCount,
+                $resultMetaDataSelector as $aliasAggregateMetaData
             $this->querySource
-            group by $this->resultIdentifierSelector
         SQL;
     }
 }
