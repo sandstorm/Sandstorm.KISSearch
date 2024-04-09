@@ -1,0 +1,82 @@
+Sandstorm.KISSearch.Backend.BackendSearchController.index = Sandstorm.KISSearch:Backend.Page.DefaultPage {
+  @context.styles = '
+    .neos td, tr {
+      padding: 5px;
+    }
+  '
+
+  body = afx`
+    <style>
+    {styles}
+    </style>
+    <div>
+      <div>
+        <h2>Registered Search Result Types</h2>
+        <ul>
+        <Neos.Fusion:Loop items={searchResultTypes}>
+          <li @path="itemRenderer">{item}</li>
+        </Neos.Fusion:Loop>
+        </ul>
+      </div>
+      <br />
+      <br />
+      <form>
+        <div>
+            <label for="search">Search Term</label>
+            <input id="search" type="search" name="searchTerm" value={searchTerm} required />
+        </div>
+        <div>
+            <label for="global-limit">Globales Limit</label>
+            <input id="global-limit" type="number" name="globalLimit" value={globalLimit} min="1" />
+        </div>
+        <div style="padding-top: 5px;">
+          <input type="submit" name="search" value="Global Limit" />
+        </div>
+        OR
+        <div>
+          <Neos.Fusion:Loop items={searchResultTypes}>
+            <div @path="itemRenderer">
+              <label for={'limit-' + item}>Limit for {item}</label>
+              <input id={'limit-' + item} type="number" name={'limit_' + item} value={limit[item]} min="1" />
+            </div>
+          </Neos.Fusion:Loop>
+        </div>
+        <div style="padding-top: 5px;">
+          <input type="submit" name="search" value="Limit Per Result Type" />
+        </div>
+      </form>
+      <div @if={searchResults != null}>
+        <table>
+          <thead>
+            <tr>
+            <td>ID</td>
+            <td>Title</td>
+            <td>Search Result Type</td>
+            <td>Score</td>
+            <td>Match Count</td>
+            <td>Group Meta Data</td>
+            <td>Aggregate Meta Data</td>
+            </tr>
+          </thead>
+          <tbody>
+          <Neos.Fusion:Loop items={searchResults}>
+            <tr>
+              <td>{item.identifier}</td>
+              <td>{item.title}</td>
+              <td>{item.resultTypeName}</td>
+              <td>{item.score}</td>
+              <td>{item.matchCount}</td>
+              <td>
+                <pre>{Json.stringify(item.groupMetaData, ['JSON_PRETTY_PRINT'])}</pre>
+              </td>
+              <td>
+                <pre>{Json.stringify(item.aggregateMetaData, ['JSON_PRETTY_PRINT'])}</pre>
+              </td>
+            </tr>
+          </Neos.Fusion:Loop>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}

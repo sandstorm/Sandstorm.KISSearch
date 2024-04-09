@@ -1,0 +1,13 @@
+prototype(Sandstorm.KISSearch:Backend.Page.DefaultPage) < prototype(Sandstorm.KISSearch:Backend.Page.AbstractPage) {
+    head {
+        headTags = Neos.Fusion:Component {
+            renderer = afx`
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+                <meta http-equiv="x-ua-compatible" content="ie=edge"/>
+            `
+        }
+        stylesheets {
+            app = null
+        }
+    }
+}

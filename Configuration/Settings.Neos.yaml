@@ -1,8 +1,19 @@
 Neos:
   Neos:
+    modules:
+      management:
+        submodules:
+
+          kissearch:
+            controller: Sandstorm\KISSearch\Controller\Backend\BackendSearchController
+            label: KISSearch
+            description: Debug your search queries
+            icon: fas fa-search
+
     fusion:
       autoInclude:
         "Sandstorm.KISSearch": true
   Fusion:
     defaultContext:
       "KISSearch": Sandstorm\KISSearch\Eel\SearchHelper
+

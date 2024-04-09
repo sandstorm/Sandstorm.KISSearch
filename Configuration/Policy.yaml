@@ -1,0 +1,13 @@
+privilegeTargets:
+
+  'Neos\Flow\Security\Authorization\Privilege\Method\MethodPrivilege':
+
+    'Sandstorm.KISSearch:BackendSearchController':
+      matcher: 'method(Sandstorm\KISSearch\Controller\Backend\BackendSearchController->(.*)Action())'
+
+roles:
+  'Neos.Neos:AbstractEditor':
+    privileges:
+      - privilegeTarget: 'Sandstorm.KISSearch:BackendSearchController'
+        permission: GRANT
+
