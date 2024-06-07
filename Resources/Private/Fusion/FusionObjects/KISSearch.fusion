@@ -6,11 +6,12 @@ prototype(Sandstorm.KISSearch:Search) {
   additionalParameters = Neos.Fusion:DataStructure
 }
 
-prototype(Sandstorm.KISSearch:SearchFrontend) {
-  @class = 'Sandstorm\\KISSearch\\FusionObjects\\SearchFrontendImplementation'
+prototype(Sandstorm.KISSearch:SearchLimitPerResultType) {
+  @class = 'Sandstorm\\KISSearch\\FusionObjects\\SearchLimitPerResultTypeImplementation'
 
   query = ''
-  limit = 50
+  limit = Neos.Fusion:DataStructure {
+    neos_content = 50
+  }
   additionalParameters = Neos.Fusion:DataStructure
 }
-

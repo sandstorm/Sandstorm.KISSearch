@@ -4,30 +4,34 @@ namespace Sandstorm\KISSearch\FusionObjects;
 
 use Neos\Flow\Annotations\Inject;
 use Neos\Flow\Annotations\Scope;
+use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
 use Sandstorm\KISSearch\Service\SearchQueryInput;
 use Sandstorm\KISSearch\Service\SearchService;
 
 #[Scope('singleton')]
-class SearchImplementation extends AbstractSearchImplementation
+class SearchLimitPerResultTypeImplementation extends AbstractSearchImplementation
 {
 
     #[Inject]
     protected SearchService $searchService;
 
-    public function evaluate(): array
+    /**
+     * @throws InvalidConfigurationTypeException
+     */
+    public function evaluate()
     {
         $query = $this->getQuery();
         if ($query === null) {
             // no query, no results! it's that simple ;)
             return [];
         }
-        $limit = $this->getLimit();
+        $limit = $this->getLimitPerResultType();
         $searchQuery = new SearchQueryInput(
             $query,
             $this->getAdditionalParameters(),
             $this->getLanguage()
         );
-        return $this->searchService->search($searchQuery, $limit);
+        return $this->searchService->searchLimitPerResultType($searchQuery, $limit);
     }
 
 }
