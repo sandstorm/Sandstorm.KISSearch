@@ -21,7 +21,7 @@ use Throwable;
 class KISSearchCommandController extends CommandController
 {
 
-    private const MIGRATION_NOT_JET_APPLIED = 0;
+    private const MIGRATION_NOT_YET_APPLIED = 0;
     private const MIGRATION_STATUS_UP_TO_DATE = 1;
     private const MIGRATION_OUTDATED = 2;
 
@@ -144,7 +144,7 @@ class KISSearchCommandController extends CommandController
             // migration hash logic to prevent migration for up-to-date databases
             $actualVersionHash = $databaseMigration->versionHash();
             $migrationStatus = $this->getMigrationStatus($searchResultTypeName, $actualVersionHash);
-            if ($migrationStatus === self::MIGRATION_NOT_JET_APPLIED || $migrationStatus === self::MIGRATION_OUTDATED) {
+            if ($migrationStatus === self::MIGRATION_NOT_YET_APPLIED || $migrationStatus === self::MIGRATION_OUTDATED) {
                 // SQL comment
                 $migrationScripts[] = '-- #####################################################################';
                 if ($migrationStatus === self::MIGRATION_OUTDATED) {
@@ -152,7 +152,7 @@ class KISSearchCommandController extends CommandController
                     $migrationScripts[] = sprintf('-- removing outdated schema for search result type: %s', $searchResultTypeName);
                     $migrationScripts[] = $databaseMigration->down();
                 } else {
-                    $this->printIfEnabled(!$silent, '  - type %s is not jet applied; perform migration', [$searchResultTypeName]);
+                    $this->printIfEnabled(!$silent, '  - type %s is not yet applied; perform migration', [$searchResultTypeName]);
                 }
                 $migrationScripts[] = sprintf('-- migration (up) for search result type: %s', $searchResultTypeName);
                 $migrationScripts[] = sprintf('--   version hash: %s', $actualVersionHash);
@@ -236,7 +236,7 @@ class KISSearchCommandController extends CommandController
         ]);
         $result = $query->getOneOrNullResult();
         if (empty($result)) {
-            return self::MIGRATION_NOT_JET_APPLIED;
+            return self::MIGRATION_NOT_YET_APPLIED;
         } else if ($result[0] === true) {
             return self::MIGRATION_STATUS_UP_TO_DATE;
         } else {
