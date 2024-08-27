@@ -25,6 +25,10 @@ Sandstorm.KISSearch.Backend.BackendSearchController.index = Sandstorm.KISSearch:
             <label for="search">Search Term</label>
             <input id="search" type="search" name="searchTerm" value={searchTerm} required />
         </div>
+         <div>
+            <label for="locale">Locale</label>
+            <input id="locale" type="text" name="locale" value={locale} />
+        </div>
         <div>
             <label for="global-limit">Globales Limit</label>
             <input id="global-limit" type="number" name="globalLimit" value={globalLimit} min="1" />

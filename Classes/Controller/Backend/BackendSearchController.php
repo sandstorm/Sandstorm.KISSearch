@@ -47,6 +47,7 @@ class BackendSearchController extends AbstractModuleController
 
         if ($isSearchRequest) {
             $searchMode = $this->request->getMainRequest()->getArgument('search');
+            $locale = $this->request->getMainRequest()->getArgument('locale');
             $searchTerm = $this->request->getMainRequest()->getArgument('searchTerm');
             $globalLimit = intval($this->request->getMainRequest()->getArgument('globalLimit'));
             $limitPerResultType = [];
@@ -54,7 +55,7 @@ class BackendSearchController extends AbstractModuleController
                 $limitPerResultType[$type] = intval($this->request->getMainRequest()->getArgument('limit_' . $type));
             }
 
-            $input = new SearchQueryInput($searchTerm, []);
+            $input = new SearchQueryInput($searchTerm, [], $locale);
             if ($searchMode === 'Global Limit') {
                 $searchResults = $this->searchService->search($input, $globalLimit);
             } else {
@@ -63,6 +64,7 @@ class BackendSearchController extends AbstractModuleController
 
             $fusionVars['globalLimit'] = $globalLimit;
             $fusionVars['limit'] = $limitPerResultType;
+            $fusionVars['locale'] = $locale;
             $fusionVars['searchTerm'] = $searchTerm;
             $fusionVars['searchResults'] = $searchResults;
         }
