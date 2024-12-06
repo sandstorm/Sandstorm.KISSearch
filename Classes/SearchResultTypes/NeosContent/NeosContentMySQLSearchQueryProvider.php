@@ -47,6 +47,7 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
     {
         $queryParamNowTime = SearchResult::SQL_QUERY_PARAM_NOW_TIME;
         $paramNameSiteNodeName = NeosContentAdditionalParameters::SITE_NODE_NAME;
+        $paramNameNodeType = NeosContentAdditionalParameters::DOCUMENT_NODE_TYPES;
         $paramNameExcludeSiteNodeName = NeosContentAdditionalParameters::EXCLUDED_SITE_NODE_NAME;
         $paramNameDimensionValues = NeosContentAdditionalParameters::DIMENSION_VALUES;
         $cteAlias = self::CTE_ALIAS;
@@ -103,6 +104,10 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
                                     nd.dimensionvalues
                             )
                         )
+                        and (
+                            :$paramNameNodeType is null
+                            or nd.document_nodetype = :$paramNameNodeType
+                        )
                 SQL
             )],
             <<<SQL
@@ -140,7 +145,8 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
             }),
             AdditionalQueryParameterDefinition::optionalJson(NeosContentAdditionalParameters::DIMENSION_VALUES, NeosContentSearchResultType::name(), function ($valueAsArray) {
                 return new ContentDimensionValuesFilter($valueAsArray);
-            })
+            }),
+            AdditionalQueryParameterDefinition::optional(NeosContentAdditionalParameters::DOCUMENT_NODE_TYPES, AdditionalQueryParameterDefinition::TYPE_STRING, NeosContentSearchResultType::name()),
         );
     }
 
