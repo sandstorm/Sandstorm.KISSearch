@@ -5,6 +5,8 @@ Sandstorm.KISSearch.Backend.BackendSearchController.index = Sandstorm.KISSearch:
     }
   '
 
+  @context.additionalParametersForm = ""
+
   body = afx`
     <style>
     {styles}
@@ -22,16 +24,17 @@ Sandstorm.KISSearch.Backend.BackendSearchController.index = Sandstorm.KISSearch:
       <br />
       <form>
         <div>
-            <label for="search">Search Term</label>
-            <input id="search" type="search" name="searchTerm" value={searchTerm} required />
-        </div>
-         <div>
-            <label for="locale">Locale</label>
-            <input id="locale" type="text" name="locale" value={locale} />
+          <label for="search">Search Term</label>
+          <input id="search" type="search" name="searchTerm" value={searchTerm} required />
         </div>
         <div>
+          <label for="locale">Locale</label>
+          <input id="locale" type="text" name="locale" value={locale} />
+        </div>
+        {additionalParametersForm}
+        <div>
             <label for="global-limit">Globales Limit</label>
-            <input id="global-limit" type="number" name="globalLimit" value={globalLimit} min="1" />
+            <input id="global-limit" type="number" name="globalLimit" value={globalLimit > 0 ? globalLimit : ''} min="1" />
         </div>
         <div style="padding-top: 5px;">
           <input type="submit" name="search" value="Global Limit" />
@@ -41,7 +44,7 @@ Sandstorm.KISSearch.Backend.BackendSearchController.index = Sandstorm.KISSearch:
           <Neos.Fusion:Loop items={searchResultTypes}>
             <div @path="itemRenderer">
               <label for={'limit-' + item}>Limit for {item}</label>
-              <input id={'limit-' + item} type="number" name={'limit_' + item} value={limit[item]} min="1" />
+              <input id={'limit-' + item} type="number" name={'limit_' + item} value={limit[item] > 0 ? limit[item] : ''} min="1" />
             </div>
           </Neos.Fusion:Loop>
         </div>

@@ -89,3 +89,9 @@ Sandstorm:
           en_UK: 'english'
           # TODO add more default mappings
 
+    backendModule:
+      # If you want to extend the backend module fusion, this is the place to add your package.
+      # The keys have no meaning. Only the values are used to initialize the FusionView for the
+      # backend controller.
+      fusionPathPatterns:
+        kissearchFusion: 'resource://@package/Private/Fusion'
