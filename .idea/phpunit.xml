@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PHPUnit">
+    <option name="directories">
+      <list>
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-mediatypes/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-schema/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-arrays/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/mikey179/vfsstream/src/test" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-unicode/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-objecthandling/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/eventstore-doctrineadapter/tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-files/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/cache/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/error-messages/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/eventstore/tests" />
+      </list>
+    </option>
+  </component>
+</project>

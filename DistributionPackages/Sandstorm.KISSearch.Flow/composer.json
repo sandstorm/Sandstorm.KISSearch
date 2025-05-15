@@ -1,0 +1,24 @@
+{
+    "description": "Sandstorm KISSearch - Neos extension - search your content",
+    "type": "neos-package",
+    "require": {
+        "neos/flow": "~9.0",
+        "sandstorm/kissearch-api": "@dev"
+    },
+    "license": "MIT",
+    "name": "sandstorm/kissearch-flow",
+    "autoload": {
+        "psr-4": {
+            "Sandstorm\\KISSearch\\Flow\\": "Classes/"
+        }
+    },
+    "archive": {
+        "exclude": [
+        ]
+    },
+    "extra": {
+        "neos": {
+            "package-key": "Sandstorm.KISSearch.Flow"
+        }
+    }
+}
