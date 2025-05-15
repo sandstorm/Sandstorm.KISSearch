@@ -1,0 +1,13 @@
+Sandstorm:
+  KISSearch:
+
+    sources:
+      'neos-content':
+        class: \Sandstorm\KISSearch\Neos\Query\MySQL\NeosContentMySQLSearchSource
+
+    endpoints:
+
+      # endpoint ID
+      'default':
+
+

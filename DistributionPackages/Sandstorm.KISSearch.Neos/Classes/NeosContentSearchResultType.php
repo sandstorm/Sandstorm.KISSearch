@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sandstorm\KISSearch\Neos;
+
+class NeosContentSearchResultType
+{
+
+    public const BUCKET_COLUMN_CRITICAL = 'search_bucket_critical';
+    public const BUCKET_COLUMN_MAJOR = 'search_bucket_major';
+    public const BUCKET_COLUMN_NORMAL = 'search_bucket_normal';
+    public const BUCKET_COLUMN_MINOR = 'search_bucket_minor';
+
+}

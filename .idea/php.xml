@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MessDetector">
+    <phpmd_settings>
+      <phpmd_by_interpreter asDefaultInterpreter="true" interpreter_id="960eab02-5657-4b9c-8278-b7f5c42b0e37" timeout="30000" />
+    </phpmd_settings>
+  </component>
+  <component name="PhpCodeSniffer">
+    <phpcs_settings>
+      <phpcs_by_interpreter asDefaultInterpreter="true" interpreter_id="960eab02-5657-4b9c-8278-b7f5c42b0e37" timeout="30000" />
+    </phpcs_settings>
+  </component>
+  <component name="PhpIncludePathManager">
+    <include_path>
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/eventstore" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/composer-plugin" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-mediatypes" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/contentrepository-core" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-opcodecache" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/contentrepository-nodemigration" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-pdo" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/flow-log" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/contentrepository-structureadjustment" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/eventstore-doctrineadapter" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-unicode" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-schema" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-objecthandling" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/brick/math" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/nikic/php-parser" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/react/promise" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/league/mime-type-detection" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/seld/phar-utils" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/seld/jsonlint" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/seld/signal-handler" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/behat/transliterator" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-arrays" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/contentrepository-export" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/phpunit/php-text-template" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/phpunit/php-code-coverage" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/phpunit/php-invoker" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/phpunit/php-file-iterator" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/phar-io/manifest" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/phar-io/version" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/phpunit/php-timer" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/phpunit/phpunit" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/egulias/email-validator" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/imagine/imagine" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/laminas/laminas-code" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/myclabs/deep-copy" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/league/flysystem-local" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/league/flysystem" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/ramsey/collection" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/ramsey/uuid" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/string" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/deprecation-contracts" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/service-contracts" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/property-info" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/finder" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/polyfill-php84" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/stopwatch" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/yaml" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/polyfill-intl-idn" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/polyfill-intl-normalizer" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/dom-crawler" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/property-access" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/serializer" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/polyfill-ctype" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/polyfill-php81" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/filesystem" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/polyfill-intl-grapheme" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/theseer/tokenizer" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/type-info" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/var-exporter" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/process" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/symfony/console" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sandstorm/kissearch-api" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/deprecations" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/mikey179/vfsstream" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/enshrined/svg-sanitize" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/marc-mabe/php-enum" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/instantiator" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/orm" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/event-manager" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/collections" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/inflector" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/annotations" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/common" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/persistence" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/migrations" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/cache" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/lexer" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/doctrine/dbal" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/cli-parser" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/code-unit" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/environment" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/exporter" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/recursion-context" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/lines-of-code" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/type" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/version" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/object-reflector" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/complexity" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/code-unit-reverse-lookup" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/diff" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/ralouphie/getallheaders" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/comparator" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/global-state" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/object-enumerator" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/guzzlehttp/guzzle" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/typo3fluid/fluid" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/masterminds/html5" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/justinrainbow/json-schema" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/sebastian/resource-operations" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/webmozart/assert" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/guzzlehttp/promises" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/guzzlehttp/psr7" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/composer" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/cache" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/http-server-handler" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/http-server-middleware" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/cache" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-files" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/contentgraph-doctrinedbaladapter" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/error-messages" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/simple-cache" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/clock" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/http-factory" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/http-message" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/container" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/http-client" />
+      <path value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/psr/log" />
+    </include_path>
+  </component>
+  <component name="PhpInterpreters">
+    <interpreters>
+      <interpreter id="960eab02-5657-4b9c-8278-b7f5c42b0e37" name="KISSearch Local Dev Neos (docker compose)" home="docker-compose://DATA" auto="false" debugger_id="php.debugger.XDebug">
+        <remote_data INTERPRETER_PATH="php" HELPERS_PATH="/opt/.phpstorm_helpers" VALID="true" RUN_AS_ROOT_VIA_SUDO="false" DOCKER_ACCOUNT_NAME="Docker" DOCKER_COMPOSE_SERVICE_NAME="neos" DOCKER_REMOTE_PROJECT_PATH="/opt/project">
+          <type_data command="EXEC" />
+          <dockerComposeConfigurationPaths>
+            <item value="$PROJECT_DIR$/local-dev/docker-compose.yml" />
+          </dockerComposeConfigurationPaths>
+          <envs />
+        </remote_data>
+      </interpreter>
+    </interpreters>
+  </component>
+  <component name="PhpInterpretersPhpInfoCache">
+    <phpInfoCache>
+      <interpreter name="KISSearch Local Dev Neos (docker compose)">
+        <phpinfo binary_type="PHP" php_cgi="/usr/local/bin/php-cgi" php_cli="/usr/local/bin/php" path_separator=":" version="8.2.28">
+          <additional_php_ini>/usr/local/etc/php/conf.d/docker-php-ext-gmagick.ini, /usr/local/etc/php/conf.d/docker-php-ext-intl.ini, /usr/local/etc/php/conf.d/docker-php-ext-pdo_mysql.ini, /usr/local/etc/php/conf.d/docker-php-ext-pdo_pgsql.ini, /usr/local/etc/php/conf.d/docker-php-ext-redis.ini, /usr/local/etc/php/conf.d/docker-php-ext-sodium.ini</additional_php_ini>
+          <configuration_file />
+          <configuration_options>
+            <configuration_option name="include_path" value=".:/usr/local/lib/php" />
+          </configuration_options>
+          <debuggers />
+          <loaded_extensions>
+            <extension name="Core" />
+            <extension name="PDO" />
+            <extension name="Phar" />
+            <extension name="Reflection" />
+            <extension name="SPL" />
+            <extension name="SimpleXML" />
+            <extension name="ctype" />
+            <extension name="curl" />
+            <extension name="date" />
+            <extension name="dom" />
+            <extension name="fileinfo" />
+            <extension name="filter" />
+            <extension name="gmagick" />
+            <extension name="hash" />
+            <extension name="iconv" />
+            <extension name="intl" />
+            <extension name="json" />
+            <extension name="libxml" />
+            <extension name="mbstring" />
+            <extension name="mysqlnd" />
+            <extension name="openssl" />
+            <extension name="pcre" />
+            <extension name="pdo_mysql" />
+            <extension name="pdo_pgsql" />
+            <extension name="pdo_sqlite" />
+            <extension name="posix" />
+            <extension name="random" />
+            <extension name="readline" />
+            <extension name="redis" />
+            <extension name="session" />
+            <extension name="sodium" />
+            <extension name="sqlite3" />
+            <extension name="standard" />
+            <extension name="tokenizer" />
+            <extension name="xml" />
+            <extension name="xmlreader" />
+            <extension name="xmlwriter" />
+            <extension name="zlib" />
+          </loaded_extensions>
+        </phpinfo>
+      </interpreter>
+    </phpInfoCache>
+  </component>
+  <component name="PhpProjectSharedConfiguration" php_language_level="8.2" />
+  <component name="PhpUnit">
+    <phpunit_settings>
+      <PhpUnitSettings custom_loader_path="$PROJECT_DIR$/local-dev-app/Packages/Libraries/autoload.php" />
+      <phpunit_by_interpreter interpreter_id="960eab02-5657-4b9c-8278-b7f5c42b0e37" bootstrap_file_path="/app/Packages/Libraries/autoload.php" configuration_file_path="/app/Build/BuildEssentials/PhpUnit/UnitTests.xml" custom_loader_path="/app/bin/phpunit" phpunit_phar_path="" use_configuration_file="true" />
+    </phpunit_settings>
+  </component>
+  <component name="Psalm">
+    <Psalm_settings>
+      <psalm_fixer_by_interpreter asDefaultInterpreter="true" interpreter_id="cb839b91-6939-49f0-81d6-ad29f8a3ba3d" timeout="60000" />
+    </Psalm_settings>
+  </component>
+</project>

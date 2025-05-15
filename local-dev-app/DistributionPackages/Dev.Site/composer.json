@@ -1,0 +1,18 @@
+{
+    "description": "",
+    "type": "neos-site",
+    "require": {
+        "neos/neos": "*"
+    },
+    "name": "dev/site",
+    "autoload": {
+        "psr-4": {
+            "Dev\\Site\\": "Classes/"
+        }
+    },
+    "extra": {
+        "neos": {
+            "package-key": "Dev.Site"
+        }
+    }
+}
