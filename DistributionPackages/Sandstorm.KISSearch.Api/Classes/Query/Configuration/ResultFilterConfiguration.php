@@ -12,7 +12,7 @@ readonly class ResultFilterConfiguration
      * @param string $filterIdentifier
      * @param string $resultFilterReference
      * @param SearchResultTypeName $resultType
-     * @param array $defaultParameters
+     * @param array<string, mixed> $defaultParameters
      * @param array<string> $requiredSources
      */
     public function __construct(
@@ -35,7 +35,7 @@ readonly class ResultFilterConfiguration
         if (!is_string($resultTypeString) || strlen(trim($resultTypeString)) === 0) {
             throw new \RuntimeException("Invalid search endpoint filters configuration '...filters.$filterIdentifier.resultType'; value must be a string but was: " . gettype($resultTypeString));
         }
-        $defaultParameters = $filterConfiguration['defaultParameters'] ?? null;
+        $defaultParameters = $filterConfiguration['defaultParameters'] ?? [];
         if (!is_array($defaultParameters)) {
             throw new \RuntimeException("Invalid search endpoint filters configuration '...filters.$filterIdentifier.defaultParameters'; value must be an array but was: " . gettype($defaultParameters));
         }
@@ -67,6 +67,9 @@ readonly class ResultFilterConfiguration
         return $this->resultType;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getDefaultParameters(): array
     {
         return $this->defaultParameters;

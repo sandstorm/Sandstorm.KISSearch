@@ -22,7 +22,6 @@ class SchemaTool
             '-- ###   create KISSearch schema   ###',
             '-- ###################################',
             "--  * database type: $databaseType->value",
-            '-- START OF SCHEMA LOOP'
         ];
 
         $schemaInstancesByClassName = [];
@@ -51,7 +50,6 @@ class SchemaTool
             '-- ###    drop KISSearch schema    ###',
             '-- ###################################',
             "--  * database type: $databaseType->value",
-            '-- START OF SCHEMA LOOP'
         ];
 
         $schemaInstancesByClassName = [];

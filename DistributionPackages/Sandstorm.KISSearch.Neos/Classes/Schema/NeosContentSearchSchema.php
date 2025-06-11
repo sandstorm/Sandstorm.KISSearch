@@ -24,7 +24,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
 
     function createSchema(DatabaseType $databaseType): array
     {
-        //$documentNodeTypes = $this->nodeTypeManager->
+        // TODO postgres
         $nodeTypesSearchConfiguration = $this->schemaConfiguration->getNodeTypesSearchConfiguration();
 
         return [
@@ -40,8 +40,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface
             self::mariaDB_create_functionPopulateNodesAndTheirDocuments(),
             self::mariaDB_create_functionAllDimensionValuesMatch(),
 
-            // data update
-            self::mariaDB_call_functionPopulateNodesAndTheirDocuments()
+            // move to data update command
+            //self::mariaDB_call_functionPopulateNodesAndTheirDocuments()
         ];
     }
 
@@ -51,6 +51,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         return [
             self::mariaDB_drop_generatedSearchBucketColumns(),
             self::mariaDB_drop_tableNodesAndTheirDocuments(),
+            self::mariaDB_drop_functionIsDocumentNodeType(),
+            self::mariaDB_drop_functionIsContentNodeType(),
             self::mariaDB_drop_functionPopulateNodesAndTheirDocuments(),
             self::mariaDB_drop_functionAllDimensionValuesMatch(),
         ];
@@ -216,10 +218,10 @@ class NeosContentSearchSchema implements SearchSchemaInterface
 
         return <<<SQL
             create or replace function sandstorm_kissearch_neos_is_document(
-                nodetypename string
+                nodetypename varchar(255)
             ) returns boolean
             begin
-                return sandstorm_kissearch_neos_is_document.nodetypename in ($documentNodeTypesCommaSeparated);
+                return nodetypename in ($documentNodeTypesCommaSeparated);
             end;
         SQL;
     }
@@ -237,10 +239,10 @@ class NeosContentSearchSchema implements SearchSchemaInterface
 
         return <<<SQL
             create or replace function sandstorm_kissearch_neos_is_content(
-                nodetypename string
+                nodetypename varchar(255)
             ) returns boolean
             begin
-                return sandstorm_kissearch_neos_is_document.nodetypename in ($contentNodeTypesCommaSeparated);
+                return nodetypename in ($contentNodeTypesCommaSeparated);
             end;
         SQL;
     }
@@ -258,6 +260,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface
     {
         return <<<SQL
             create table if not exists sandstorm_kissearch_nodes_and_their_documents (
+                relationanchorpoint             bigint         not null,
+                contentstreamid                 varbinary(36)  not null,
                 node_id                         varchar(64)    not null,
                 document_id                     varchar(64)    not null,
                 document_title                  longtext,
@@ -266,8 +270,9 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                 dimensionshash                  varchar(32)     not null,
                 dimensionvalues                 json            not null,
                 site_nodename                   varchar(255)    not null,
-                timed_hidden                    json
+                document_uri_path               varchar(4000)
             );
+            -- TODO indices
         SQL;
     }
 
@@ -290,80 +295,70 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                 truncate table sandstorm_kissearch_nodes_and_their_documents;
                 insert into sandstorm_kissearch_nodes_and_their_documents
                     with recursive nodes_and_their_documents as
-                           (select n.relationanchorpoint,
-                                   n.nodeaggregateid as node_id,
-                                   n.nodetypename                              as nodetype,
-                                   cast(null as varchar(32))
-                                       collate utf8mb4_unicode_ci              as dimensionshash,
-                                   cast(null as varchar(10000000))
-                                       collate utf8mb4_unicode_ci              as dimensionvalues,
-                                   cast(null as varchar(255))
-                                       collate utf8mb4_unicode_ci              as site_nodename,
-                                   n.nodeaggregateid                           as document_id,
-                                   json_value(n.properties, '$.title.value')   as document_title,
-                                   n.nodetypename                              as document_nodetype
-                                   -- n.hidden = 0                                as not_hidden,
-                                   -- n.removed = 0                               as not_removed,
-                                   -- cast(if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
-                                   --       json_array(json_object(
-                                   --                'before', n.hiddenbeforedatetime,
-                                   --                'after', n.hiddenafterdatetime
-                                   --            )),
-                                   --        json_array()) as varchar(10000000)) as timed_hidden
-                            from cr_default_p_graph_node n
-                            where n.nodetypename = 'Neos.Neos:Sites'
-                            union
-                            select n.relationanchorpoint,
-                                   n.nodeaggregateid as node_id,
-                                   n.nodetypename as nodetype,
-                                   n.origindimensionspacepointhash as dimensionshash,
-                                   d.dimensionspacepoint as dimensionvalues,
-                                   'foo'                as site_nodename,
-                                   if(sandstorm_kissearch_neos_is_document(n.nodetypename),
-                                      n.nodeaggregateid,
-                                      r.document_id)               as document_id,
-                                   if(sandstorm_kissearch_neos_is_document(n.nodetypename),
-                                      json_value(n.properties, '$.title.value'),
-                                      r.document_title)            as document_title,
-                                   if(sandstorm_kissearch_neos_is_document(n.nodetypename),
-                                      n.nodetypename,
-                                      r.document_nodetype)         as document_nodetype
-                                   -- n.hidden = 0 and r.not_hidden   as not_hidden,
-                                   -- n.removed = 0 and r.not_removed as not_removed,
-                                   -- if(n.hiddenbeforedatetime is not null or n.hiddenafterdatetime is not null,
-                                   --   json_array_append(r.timed_hidden, '$', json_object(
-                                   --           'before', n.hiddenbeforedatetime,
-                                   --           'after', n.hiddenafterdatetime
-                                   --       )),
-                                   --   r.timed_hidden)              as timed_hidden
-                            from cr_default_p_graph_node n
-                                left join cr_default_p_graph_hierarchyrelation h
-                                     on h.parentnodeanchor = n.relationanchorpoint
-                                left join cr_default_p_graph_dimensionspacepoints d
-                                     on d.hash = n.origindimensionspacepointhash
-                                , nodes_and_their_documents r
-                            where h.parentnodeanchor = n.relationanchorpoint
-                              -- and n.contentstreamid = r.contentstreamid
-                              and (r.dimensionshash is null or n.origindimensionspacepointhash = r.dimensionshash))
-                    select
-                           nd.node_id                       as identifier,
-                           nd.document_id                   as document_id,
-                           nd.document_title                as document_title,
-                           nd.document_nodetype             as document_nodetype,
-                           nd.nodetype                      as nodetype,
-                           nd.dimensionshash                as dimensionshash,
-                           nd.dimensionvalues               as dimensionvalues,
-                           nd.site_nodename                 as site_nodename,
-                           null                             as timed_hidden
-                           -- if(json_length(nd.timed_hidden) > 0,
-                           --   nd.timed_hidden,
-                           --   null)                         as timed_hidden
+                                       (select sn.relationanchorpoint,
+                                               h.contentstreamid,
+                                               sn.nodeaggregateid                         as node_id,
+                                               sn.nodetypename                            as nodetype,
+                                               h.dimensionspacepointhash                  as dimensionshash,
+                                               cast(null as varchar(10000000))            as dimensionvalues,
+                                               cast(null as varchar(255))                 as site_nodename,
+                                               sn.nodeaggregateid                         as document_id,
+                                               json_value(sn.properties, '$.title.value') as document_title,
+                                               sn.nodetypename                            as document_nodetype,
+                                               (json_value(h.subtreetags, '$.disabled') is null
+                                                   or json_value(h.subtreetags, '$.disabled') = false)
+                                                                                          as is_not_hidden
+                                        from cr_default_p_graph_node sn
+                                                 left join cr_default_p_graph_hierarchyrelation h
+                                                           on h.childnodeanchor = sn.relationanchorpoint
+                                        where sn.nodetypename = 'Neos.Neos:Sites'
+                                        union
+                                        select cn.relationanchorpoint,
+                                               h.contentstreamid,
+                                               cn.nodeaggregateid                                             as node_id,
+                                               cn.nodetypename                                                as nodetype,
+                                               cn.origindimensionspacepointhash                               as dimensionshash,
+                                               d.dimensionspacepoint                                          as dimensionvalues,
+                                               if(pn.nodetype = 'Neos.Neos:Sites', cn.name, pn.site_nodename) as site_nodename,
+                                               if(sandstorm_kissearch_neos_is_document(cn.nodetypename),
+                                                  cn.nodeaggregateid,
+                                                  pn.document_id)                                             as document_id,
+                                               if(sandstorm_kissearch_neos_is_document(cn.nodetypename),
+                                                  json_value(cn.properties, '$.title.value'),
+                                                  pn.document_title)                                          as document_title,
+                                               if(sandstorm_kissearch_neos_is_document(cn.nodetypename),
+                                                  cn.nodetypename,
+                                                  pn.document_nodetype)                                       as document_nodetype,
+                                               (json_value(h.subtreetags, '$.disabled') is null
+                                                   or json_value(h.subtreetags, '$.disabled') = false)
+                                                                                                              as is_not_hidden
+                                        from nodes_and_their_documents pn
+                                                 left join cr_default_p_graph_hierarchyrelation h
+                                                           on h.parentnodeanchor = pn.relationanchorpoint
+                                                               and h.contentstreamid = pn.contentstreamid
+                                                 left join cr_default_p_graph_node cn
+                                                           on cn.relationanchorpoint = h.childnodeanchor
+                                                 left join cr_default_p_graph_dimensionspacepoints d
+                                                           on d.hash = cn.origindimensionspacepointhash)
+                    select nd.relationanchorpoint,
+                           nd.contentstreamid,
+                           nd.node_id,
+                           nd.document_id,
+                           nd.document_title,
+                           nd.document_nodetype,
+                           nd.nodetype,
+                           nd.dimensionshash,
+                           nd.dimensionvalues,
+                           nd.site_nodename,
+                           du.uripath as document_uri_path
                     from nodes_and_their_documents nd
+                        left join cr_default_p_neos_documenturipath_uri du
+                            on du.nodeaggregateid = nd.node_id
+                           and du.dimensionspacepointhash = nd.dimensionshash
                     where nd.site_nodename is not null
-                      and (
-                                sandstorm_kissearch_neos_is_document(nd.nodetype)
-                            or sandstorm_kissearch_neos_is_content(nd.nodetype)
-                        );
+                      and nd.is_not_hidden
+                      and (sandstorm_kissearch_neos_is_document(nd.nodetype)
+                        or sandstorm_kissearch_neos_is_content(nd.nodetype));
                 commit;
             end;
         SQL;

@@ -11,21 +11,15 @@ use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
  */
 class MySQLHelper
 {
-    public static function searchQueryGlobalLimit(SearchQuery $searchQuery): string
+    public static function buildSearchQuerySql(SearchQuery $searchQuery): string
     {
-        $limitParamName = SearchQuery::buildGlobalParameterName(SearchQuery::SQL_QUERY_PARAM_GLOBAL_LIMIT);
+        // limit is a global parameter
+        $limitParamName = SearchQuery::SQL_QUERY_PARAM_GLOBAL_LIMIT;
         $sql = self::buildSearchQueryWithoutLimit($searchQuery);
         $sql .= <<<SQL
             -- global limit
             limit $limitParamName;
         SQL;
-        return $sql;
-    }
-
-    public static function searchQueryLimitPerResultType(SearchQuery $searchQuery): string
-    {
-        $sql = self::buildSearchQueryWithoutLimit($searchQuery);
-        $sql .= ';';
         return $sql;
     }
 
@@ -56,6 +50,7 @@ class MySQLHelper
                 a.result_id as result_id,
                 a.result_type as result_type,
                 a.result_title as result_title,
+                a.result_url as result_url,
                 a.score as score,
                 a.match_count as match_count,
                 a.group_meta_data as group_meta_data,
@@ -96,6 +91,7 @@ class MySQLHelper
                     r.result_type                           as result_type,
                     r.result_id                             as result_id,
                     r.result_title                          as result_title,
+                    r.result_url                            as result_url,
                     max(r.score)                            as score,
                     count(r.result_id)                      as match_count,
                     json_arrayagg(r.meta_data)              as meta_data,
@@ -103,7 +99,7 @@ class MySQLHelper
                 from ($mergingPartsForTypeUnion) r
                 group by r.result_id
                 order by r.score desc
-                limit $limitParamName)
+                limit :$limitParamName)
             SQL;
     }
 
