@@ -31,7 +31,7 @@ readonly class SearchEndpointConfiguration
             throw new \RuntimeException("Invalid search endpoint configuration '$endpointIdentifier'; settings must be an array but was: " . gettype($endpointConfig));
         }
 
-        $filtersConfig = $endpoints['filters'] ?? null;
+        $filtersConfig = $endpointConfig['filters'] ?? null;
         if (!is_array($filtersConfig)) {
             throw new \RuntimeException("Invalid search endpoint filters configuration '$endpointIdentifier.filters'; value must be an array but was: " . gettype($filtersConfig));
         }
@@ -47,7 +47,7 @@ readonly class SearchEndpointConfiguration
             $filters[$filterIdentifier] = ResultFilterConfiguration::fromConfigurationArray($filterIdentifier, $filterConfig);
         }
 
-        $typeAggregatorsConfig = $endpoints['typeAggregators'] ?? null;
+        $typeAggregatorsConfig = $endpointConfig['typeAggregators'] ?? null;
         if (!is_array($typeAggregatorsConfig)) {
             throw new \RuntimeException("Invalid search endpoint filters configuration '$endpointIdentifier.typeAggregators'; value must be an array but was: " . gettype($typeAggregatorsConfig));
         }

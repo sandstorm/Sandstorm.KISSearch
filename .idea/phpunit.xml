@@ -3,17 +3,18 @@
   <component name="PHPUnit">
     <option name="directories">
       <list>
+        <option value="$PROJECT_DIR$/tests" />
         <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-mediatypes/Tests" />
-        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-schema/Tests" />
-        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-arrays/Tests" />
-        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/mikey179/vfsstream/src/test" />
-        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-unicode/Tests" />
-        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-objecthandling/Tests" />
-        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/eventstore-doctrineadapter/tests" />
-        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-files/Tests" />
         <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/cache/Tests" />
-        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/error-messages/Tests" />
         <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/eventstore/tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/mikey179/vfsstream/src/test" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/error-messages/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-schema/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-files/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-objecthandling/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-arrays/Tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/eventstore-doctrineadapter/tests" />
+        <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-unicode/Tests" />
       </list>
     </option>
   </component>

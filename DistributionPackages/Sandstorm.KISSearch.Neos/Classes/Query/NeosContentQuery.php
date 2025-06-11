@@ -41,13 +41,13 @@ class NeosContentQuery implements SearchSourceInterface, ResultFilterInterface, 
         // this is the MySQL/MariaDB variant
         return <<<SQL
             $cteName as
-                (select *,
+                (select n.*,
                     match ($columnNameBucketCritical) against ( :$paramNameQuery in boolean mode ) as score_bucket_critical,
                     match ($columnNameBucketMajor) against ( :$paramNameQuery in boolean mode ) as score_bucket_major,
                     match ($columnNameBucketNormal) against ( :$paramNameQuery in boolean mode ) as score_bucket_normal,
                     match ($columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ) as score_bucket_minor
-                from neos_contentrepository_domain_model_nodedata
-                where match ($columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ))
+                from cr_default_p_graph_node n
+                where match (n.$columnNameBucketCritical, n.$columnNameBucketMajor, n.$columnNameBucketNormal, n.$columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ))
             SQL;
     }
 
@@ -65,7 +65,9 @@ class NeosContentQuery implements SearchSourceInterface, ResultFilterInterface, 
         $scoreSelector = '(20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)';
 
         // filter parameters
-        $queryParamNowTime = SearchQuery::buildGlobalParameterName(self::PARAM_NAME_NOW_TIME);
+        // now time is a global parameter
+        // TODO implement timed hidden when package is installed
+        //$queryParamNowTime = self::PARAM_NAME_NOW_TIME;
         $paramNameSiteNodeName = SearchQuery::buildFilterSpecificParameterName($resultFilterIdentifier, self::PARAM_NAME_SITE_NODE_NAME);
         $paramNameExcludeSiteNodeName = SearchQuery::buildFilterSpecificParameterName($resultFilterIdentifier, self::PARAM_NAME_EXCLUDE_SITE_NODE_NAME);
         $paramNameDimensionValues = SearchQuery::buildFilterSpecificParameterName($resultFilterIdentifier, self::PARAM_NAME_DIMENSION_VALUES);
@@ -76,6 +78,7 @@ class NeosContentQuery implements SearchSourceInterface, ResultFilterInterface, 
                 '$resultTypeName' as result_type,
                 nd.document_id as result_id,
                 nd.document_title as result_title,
+                nd.document_uri_path as result_url,
                 $scoreSelector as score,
                 json_object(
                     'score', $scoreSelector,
@@ -93,33 +96,30 @@ class NeosContentQuery implements SearchSourceInterface, ResultFilterInterface, 
             from $cteAlias n
                 -- inner join filters hidden and deleted nodes
                 inner join sandstorm_kissearch_nodes_and_their_documents nd
-                    on nd.persistence_object_identifier = n.persistence_object_identifier
+                    on nd.relationanchorpoint = n.relationanchorpoint
                 inner join neos_neos_domain_model_site s
                     on s.nodename = nd.site_nodename
             where
-                -- filter timed hidden before/after nodes
-                not sandstorm_kissearch_any_timed_hidden(nd.timed_hidden, from_unixtime($queryParamNowTime))
-                -- filter deactivated sites
+                -- filter deactivated sites TODO
                 and s.state = 1
                 -- additional query parameters
                 and (
                     -- site node name (optional, if null all sites are searched)
-                    json_value(json_array($paramNameSiteNodeName), '$[0]') is null or nd.site_nodename in ($paramNameSiteNodeName)
+                    json_value(json_array(:$paramNameSiteNodeName), '$[0]') is null or nd.site_nodename in (:$paramNameSiteNodeName)
                 )
                 and (
-                    json_value(json_array($paramNameExcludeSiteNodeName), '$[0]') is null or nd.site_nodename not in ($paramNameExcludeSiteNodeName)
+                    json_value(json_array(:$paramNameExcludeSiteNodeName), '$[0]') is null or nd.site_nodename not in (:$paramNameExcludeSiteNodeName)
                 )
                 and (
                     -- content dimension values (optional, if null all dimensions are searched)
-                    $paramNameDimensionValues is null
+                    :$paramNameDimensionValues is null
                     or sandstorm_kissearch_all_dimension_values_match(
-                            $paramNameDimensionValues,
+                            :$paramNameDimensionValues,
                             nd.dimensionvalues
                     )
                 )
         SQL;
     }
-
 
     // ---- ResultAggregatorInterface
 

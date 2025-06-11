@@ -17,28 +17,34 @@ readonly class SearchQuery
 
     public static function buildAggregatorLimitParameterName(string $searchResultTypeName): string
     {
-        return sprintf(':limit_%s', str_replace(['-'], '_', $searchResultTypeName));
+        return sprintf('limit_%s', str_replace(['-'], '_', $searchResultTypeName));
     }
 
-    public static function buildGlobalParameterName(string $parameterName): string
-    {
-        return sprintf(':%s', $parameterName);
-    }
-
+    /**
+     * includes the ':' prefix.
+     *
+     * @param string $resultFilterIdentifier
+     * @param string $parameterName
+     * @return string
+     */
     public static function buildFilterSpecificParameterName(
         string $resultFilterIdentifier,
         string $parameterName
     ): string {
-        return sprintf(':%s__%s', $resultFilterIdentifier, $parameterName);
+        return sprintf('%s__%s', $resultFilterIdentifier, $parameterName);
     }
 
     /**
+     * @param array<SearchResultTypeName> $searchResultTypes
      * @param array<string> $searchingQueryParts
      * @param array<string> $mergingQueryParts
+     * @param array<string, mixed> $defaultParameters
      */
-    public function __construct(
+    private function __construct(
+        private array $searchResultTypes,
         private array $searchingQueryParts,
-        private array $mergingQueryParts
+        private array $mergingQueryParts,
+        private array $defaultParameters
     ) {
     }
 
@@ -52,6 +58,8 @@ readonly class SearchQuery
         // group each result provider configuration by its returning "search result type"
         $resultProvidersByType = [];
         $searchingQueryParts = [];
+        $defaultParameters = [];
+        $resultTypeNames = [];
         /** @var $resultProvidersInstances array<string, ResultFilterInterface> */
         $resultProvidersInstances = [];
         /** @var $typeAggregatorInstances array<string, TypeAggregatorInterface> */
@@ -77,6 +85,7 @@ readonly class SearchQuery
             $resultTypeName = $resultFilterConfiguration->getResultType()->getName();
             if (!array_key_exists($resultTypeName, $resultProvidersByType)) {
                 $resultProvidersByType[$resultTypeName] = [];
+                $resultTypeNames[] = SearchResultTypeName::create($resultTypeName);
                 // also initialize type aggregator (there is exactly one aggregator per result type)
                 $typeAggregatorReference = $endpointConfiguration->getTypeAggregators()[$resultTypeName] ?? null;
                 if ($typeAggregatorReference === null) {
@@ -85,6 +94,15 @@ readonly class SearchQuery
                 $typeAggregatorInstances[$resultTypeName] = $instanceProvider->getTypeAggregatorInstance(
                     $typeAggregatorReference
                 );
+            }
+
+            // here, the parameter names are expected NOT to be prefixed with the result filter identifier
+            foreach ($resultFilterConfiguration->getDefaultParameters() as $defaultParameterName => $defaultParameterValue) {
+                $fullyQualifiedParameterName = SearchQuery::buildFilterSpecificParameterName($resultFilterConfiguration->getFilterIdentifier(), $defaultParameterName);
+                if (array_key_exists($fullyQualifiedParameterName, $defaultParameters)) {
+                    throw new \RuntimeException("duplicate default parameter '$fullyQualifiedParameterName' for endpoint {$endpointConfiguration->getEndpointIdentifier()}");
+                }
+                $defaultParameters[$fullyQualifiedParameterName] = $defaultParameterValue;
             }
 
             $resultProvidersByType[$resultTypeName][] = $resultProvider->getFilterQueryPart(
@@ -117,7 +135,12 @@ readonly class SearchQuery
             );
         }
 
-        return new SearchQuery($searchingQueryParts, $mergingQueryParts);
+        return new SearchQuery($resultTypeNames, $searchingQueryParts, $mergingQueryParts, $defaultParameters);
+    }
+
+    public function getSearchResultTypes(): array
+    {
+        return $this->searchResultTypes;
     }
 
     /**
@@ -134,6 +157,14 @@ readonly class SearchQuery
     public function getMergingQueryParts(): array
     {
         return $this->mergingQueryParts;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getDefaultParameters(): array
+    {
+        return $this->defaultParameters;
     }
 
 }
