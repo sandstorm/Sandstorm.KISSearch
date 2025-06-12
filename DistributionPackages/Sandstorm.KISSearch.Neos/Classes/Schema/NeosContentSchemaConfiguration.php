@@ -40,11 +40,11 @@ class NeosContentSchemaConfiguration
         if ($this->contentRepository === null) {
             $contentRepositoryIdConfig = $this->configurationManager->getConfiguration(
                 ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
-                'Sandstorm.KISSearch.contentRepositoryId'
+                'Sandstorm.KISSearch.Neos.contentRepositoryId'
             );
             if (!is_string($contentRepositoryIdConfig) || strlen(trim($contentRepositoryIdConfig)) === 0) {
                 throw new InvalidConfigurationException(
-                    "No content repository ID configured. Set the value via 'Sandstorm.KISSearch.contentRepositoryId'"
+                    "No content repository ID configured. Set the value via 'Sandstorm.KISSearch.Neos.contentRepositoryId'"
                 );
             }
             $contentRepositoryId = ContentRepositoryId::fromString($contentRepositoryIdConfig);

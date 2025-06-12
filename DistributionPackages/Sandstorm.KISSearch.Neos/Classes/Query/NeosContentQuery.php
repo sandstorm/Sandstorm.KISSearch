@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sandstorm\KISSearch\Neos\Query;
 
+use Neos\Flow\Annotations\InjectConfiguration;
 use Neos\Flow\Annotations\Scope;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\DBAbstraction\MySQLHelper;
@@ -19,10 +20,20 @@ class NeosContentQuery implements SearchSourceInterface, ResultFilterInterface, 
 
     public const CTE_SOURCE = 'source__neos_content';
 
-    public const PARAM_NAME_NOW_TIME = 'now_time';
     public const PARAM_NAME_SITE_NODE_NAME = 'site_node';
     public const PARAM_NAME_EXCLUDE_SITE_NODE_NAME = 'exclude_site_node';
     public const PARAM_NAME_DIMENSION_VALUES = 'dimension_values';
+
+    #[InjectConfiguration(path: 'Neos.contentRepositoryId', package: 'Sandstorm.KISSearch')]
+    protected string $contentRepositoryId;
+
+
+    public static function createInstance(string $contentRepositoryId): self
+    {
+        $instance = new NeosContentQuery();
+        $instance->contentRepositoryId = $contentRepositoryId;
+        return $instance;
+    }
 
     // ---- SearchSourceInterface
 
@@ -35,9 +46,11 @@ class NeosContentQuery implements SearchSourceInterface, ResultFilterInterface, 
 
         $paramNameQuery = SearchQuery::SQL_QUERY_PARAM_QUERY;
         $cteName = self::CTE_SOURCE;
+
+        $tableName = NeosContentSearchResultType::buildCRTableName_nodes($this->contentRepositoryId);
+
         // TODO database type
 
-        // FIXME use projection table
         // this is the MySQL/MariaDB variant
         return <<<SQL
             $cteName as
@@ -46,7 +59,7 @@ class NeosContentQuery implements SearchSourceInterface, ResultFilterInterface, 
                     match ($columnNameBucketMajor) against ( :$paramNameQuery in boolean mode ) as score_bucket_major,
                     match ($columnNameBucketNormal) against ( :$paramNameQuery in boolean mode ) as score_bucket_normal,
                     match ($columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ) as score_bucket_minor
-                from cr_default_p_graph_node n
+                from $tableName n
                 where match (n.$columnNameBucketCritical, n.$columnNameBucketMajor, n.$columnNameBucketNormal, n.$columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ))
             SQL;
     }

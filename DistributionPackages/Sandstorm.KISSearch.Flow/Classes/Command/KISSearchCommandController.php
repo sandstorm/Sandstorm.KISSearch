@@ -8,7 +8,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Neos\Flow\Annotations\Inject;
 use Neos\Flow\Cli\CommandController;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
-use Sandstorm\KISSearch\Api\Query\Model\LimitMode;
 use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
 use Sandstorm\KISSearch\Api\QueryTool;
 use Sandstorm\KISSearch\Api\SchemaTool;
@@ -155,7 +154,7 @@ class KISSearchCommandController extends CommandController
          */
     }
 
-    public function printSearchQueryCommand(string $endpoint, ?string $database = null, ?string $limitMode = null): void
+    public function printSearchQueryCommand(string $endpoint, ?string $database = null): void
     {
         $searchEndpointConfiguration = $this->searchEndpoints->getEndpointConfiguration($endpoint);
 
@@ -168,16 +167,10 @@ class KISSearchCommandController extends CommandController
             $this->outputLine("-- explicit database type: $databaseType->value");
         }
 
-        if ($limitMode === null) {
-            $limitModeValue = LimitMode::GLOBAL_LIMIT;
-        } else {
-            $limitModeValue = LimitMode::from($limitMode);
-        }
-        $this->outputLine("-- limit mode: $limitModeValue->value");
         $this->outputLine("-- START OF QUERY");
 
         $query = SearchQuery::create($databaseType, $searchEndpointConfiguration, $this->instanceProvider);
-        $sql = QueryTool::createSearchQuerySQL($databaseType, $query, $limitModeValue);
+        $sql = QueryTool::createSearchQuerySQL($databaseType, $query);
         $this->outputLine($sql);
         $this->outputLine("-- END OF QUERY");
     }

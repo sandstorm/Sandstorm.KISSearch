@@ -81,7 +81,6 @@
   <component name="PhpUnit">
     <phpunit_settings>
       <phpunit_by_interpreter interpreter_id="960eab02-5657-4b9c-8278-b7f5c42b0e37" bootstrap_file_path="/app/Packages/Libraries/autoload.php" configuration_file_path="/app/Build/BuildEssentials/PhpUnit/UnitTests.xml" custom_loader_path="/app/bin/phpunit" phpunit_phar_path="" use_configuration_file="true" />
-      <PhpUnitSettings custom_loader_path="$PROJECT_DIR$/local-dev-app/Packages/Libraries/autoload.php" phpunit_phar_path="" />
     </phpunit_settings>
   </component>
   <component name="Psalm">

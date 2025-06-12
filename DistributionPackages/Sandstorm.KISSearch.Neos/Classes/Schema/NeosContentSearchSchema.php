@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sandstorm\KISSearch\Neos\Schema;
 
 use Neos\Flow\Annotations\Inject;
+use Neos\Flow\Annotations\InjectConfiguration;
 use Neos\Flow\Annotations\Scope;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\DBAbstraction\MySQLHelper;
@@ -12,9 +13,9 @@ use Sandstorm\KISSearch\Api\Schema\SearchSchemaInterface;
 use Sandstorm\KISSearch\Neos\NeosContentSearchResultType;
 use Sandstorm\KISSearch\Neos\Schema\Model\FulltextExtractionMode;
 use Sandstorm\KISSearch\Neos\Schema\Model\NodePropertyFulltextExtraction;
+use Sandstorm\KISSearch\Neos\Schema\Model\NodeTypesSearchConfiguration;
 use Sandstorm\KISSearch\Neos\SearchBucket;
 
-// TODO content repository ID for dynamic table name
 #[Scope('singleton')]
 class NeosContentSearchSchema implements SearchSchemaInterface
 {
@@ -22,22 +23,38 @@ class NeosContentSearchSchema implements SearchSchemaInterface
     #[Inject]
     protected NeosContentSchemaConfiguration $schemaConfiguration;
 
+    #[InjectConfiguration(path: 'Neos.contentRepositoryId', package: 'Sandstorm.KISSearch')]
+    protected string $contentRepositoryId;
+
+    protected ?NodeTypesSearchConfiguration $nodeTypesSearchConfiguration = null;
+
+    public static function createInstance(NodeTypesSearchConfiguration $nodeTypesSearchConfiguration, string $contentRepositoryId): self
+    {
+        $instance = new NeosContentSearchSchema();
+        $instance->nodeTypesSearchConfiguration = $nodeTypesSearchConfiguration;
+        $instance->contentRepositoryId = $contentRepositoryId;
+        return $instance;
+    }
+
     function createSchema(DatabaseType $databaseType): array
     {
         // TODO postgres
-        $nodeTypesSearchConfiguration = $this->schemaConfiguration->getNodeTypesSearchConfiguration();
+        if ($this->nodeTypesSearchConfiguration === null) {
+            $nodeTypesSearchConfiguration = $this->schemaConfiguration->getNodeTypesSearchConfiguration();
+        }
 
         return [
             self::mariaDB_create_generatedSearchBucketColumns(
-                $nodeTypesSearchConfiguration->getExtractorsForCritical(),
-                $nodeTypesSearchConfiguration->getExtractorsForMajor(),
-                $nodeTypesSearchConfiguration->getExtractorsForNormal(),
-                $nodeTypesSearchConfiguration->getExtractorsForMinor()
+                $this->nodeTypesSearchConfiguration->getExtractorsForCritical(),
+                $this->nodeTypesSearchConfiguration->getExtractorsForMajor(),
+                $this->nodeTypesSearchConfiguration->getExtractorsForNormal(),
+                $this->nodeTypesSearchConfiguration->getExtractorsForMinor(),
+                $this->contentRepositoryId
             ),
             self::mariaDB_create_tableNodesAndTheirDocuments(),
-            self::mariaDB_create_functionIsDocumentNodeType($nodeTypesSearchConfiguration->getDocumentNodeTypeNames()),
-            self::mariaDB_create_functionIsContentNodeType($nodeTypesSearchConfiguration->getContentNodeTypeNames()),
-            self::mariaDB_create_functionPopulateNodesAndTheirDocuments(),
+            self::mariaDB_create_functionIsDocumentNodeType($this->nodeTypesSearchConfiguration->getDocumentNodeTypeNames()),
+            self::mariaDB_create_functionIsContentNodeType($this->nodeTypesSearchConfiguration->getContentNodeTypeNames()),
+            self::mariaDB_create_functionPopulateNodesAndTheirDocuments($this->contentRepositoryId),
             self::mariaDB_create_functionAllDimensionValuesMatch(),
 
             // move to data update command
@@ -49,7 +66,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
     {
         // TODO postgres
         return [
-            self::mariaDB_drop_generatedSearchBucketColumns(),
+            self::mariaDB_drop_generatedSearchBucketColumns($this->contentRepositoryId),
             self::mariaDB_drop_tableNodesAndTheirDocuments(),
             self::mariaDB_drop_functionIsDocumentNodeType(),
             self::mariaDB_drop_functionIsContentNodeType(),
@@ -65,6 +82,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         array $extractorsForMajor,
         array $extractorsForNormal,
         array $extractorsForMinor,
+        string $contentRepositoryId
     ): string {
         $columnNameBucketCritical = NeosContentSearchResultType::BUCKET_COLUMN_CRITICAL;
         $columnNameBucketMajor = NeosContentSearchResultType::BUCKET_COLUMN_MAJOR;
@@ -88,8 +106,10 @@ class NeosContentSearchSchema implements SearchSchemaInterface
             SearchBucket::MINOR
         );
 
+        $tableName = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
+
         return <<<SQL
-                alter table cr_default_p_graph_node
+                alter table $tableName
                     add $columnNameBucketCritical text generated always as (
                         $fulltextExtractorsByNodeTypeForCritical
                     ) stored,
@@ -102,28 +122,30 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                     add $columnNameBucketMinor text generated always as (
                         $fulltextExtractorsByNodeTypeForMinor
                     ) stored;
-                create fulltext index idx_neos_content_all_buckets on cr_default_p_graph_node ($columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor);
-                create fulltext index idx_neos_content_bucket_critical on cr_default_p_graph_node ($columnNameBucketCritical);
-                create fulltext index idx_neos_content_bucket_major on cr_default_p_graph_node ($columnNameBucketMajor);
-                create fulltext index idx_neos_content_bucket_normal on cr_default_p_graph_node ($columnNameBucketNormal);
-                create fulltext index idx_neos_content_bucket_minor on cr_default_p_graph_node ($columnNameBucketMinor);
+                create fulltext index idx_neos_content_all_buckets on $tableName ($columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor);
+                create fulltext index idx_neos_content_bucket_critical on $tableName ($columnNameBucketCritical);
+                create fulltext index idx_neos_content_bucket_major on $tableName ($columnNameBucketMajor);
+                create fulltext index idx_neos_content_bucket_normal on $tableName ($columnNameBucketNormal);
+                create fulltext index idx_neos_content_bucket_minor on $tableName ($columnNameBucketMinor);
         SQL;
     }
 
-    private static function mariaDB_drop_generatedSearchBucketColumns(): string
+    private static function mariaDB_drop_generatedSearchBucketColumns(string $contentRepositoryId): string
     {
         $columnNameBucketCritical = NeosContentSearchResultType::BUCKET_COLUMN_CRITICAL;
         $columnNameBucketMajor = NeosContentSearchResultType::BUCKET_COLUMN_MAJOR;
         $columnNameBucketNormal = NeosContentSearchResultType::BUCKET_COLUMN_NORMAL;
         $columnNameBucketMinor = NeosContentSearchResultType::BUCKET_COLUMN_MINOR;
 
+        $tableName = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
+
         return <<<SQL
-            drop index if exists idx_neos_content_all_buckets on cr_default_p_graph_node;
-            drop index if exists idx_neos_content_bucket_critical on cr_default_p_graph_node;
-            drop index if exists idx_neos_content_bucket_major on cr_default_p_graph_node;
-            drop index if exists idx_neos_content_bucket_normal on cr_default_p_graph_node;
-            drop index if exists idx_neos_content_bucket_minor on cr_default_p_graph_node;
-            alter table cr_default_p_graph_node
+            drop index if exists idx_neos_content_all_buckets on $tableName;
+            drop index if exists idx_neos_content_bucket_critical on $tableName;
+            drop index if exists idx_neos_content_bucket_major on $tableName;
+            drop index if exists idx_neos_content_bucket_normal on $tableName;
+            drop index if exists idx_neos_content_bucket_minor on $tableName;
+            alter table $tableName
                 drop column if exists $columnNameBucketCritical,
                 drop column if exists $columnNameBucketMajor,
                 drop column if exists $columnNameBucketNormal,
@@ -169,8 +191,10 @@ class NeosContentSearchSchema implements SearchSchemaInterface
      * @param SearchBucket $targetBucket
      * @return string
      */
-    private static function buildMySQLFulltextExtractionForBucket(array $extractorsByNodeType, SearchBucket $targetBucket): string
-    {
+    private static function buildMySQLFulltextExtractionForBucket(
+        array $extractorsByNodeType,
+        SearchBucket $targetBucket
+    ): string {
         $sqlCases = [];
 
         /** @var array $propertyExtractions */
@@ -179,13 +203,34 @@ class NeosContentSearchSchema implements SearchSchemaInterface
             $thenSql = [];
             /** @var NodePropertyFulltextExtraction $propertyExtraction */
             foreach ($propertyExtractions as $propertyExtraction) {
-                $jsonExtractor = MySQLHelper::extractNormalizedFulltextFromJson('properties', $propertyExtraction->getPropertyName());
+                $jsonExtractor = MySQLHelper::extractNormalizedFulltextFromJson(
+                    'properties',
+                    $propertyExtraction->getPropertyName()
+                );
                 $bucketExtractor = match ($propertyExtraction->getMode()) {
                     FulltextExtractionMode::EXTRACT_INTO_SINGLE_BUCKET => MySQLHelper::extractAllText($jsonExtractor),
                     FulltextExtractionMode::EXTRACT_HTML_TAGS => match ($targetBucket) {
-                        SearchBucket::CRITICAL => MySQLHelper::fulltextExtractHtmlTagContents($jsonExtractor, 'h1', 'h2'),
-                        SearchBucket::MAJOR => MySQLHelper::fulltextExtractHtmlTagContents($jsonExtractor, 'h3', 'h4', 'h5', 'h6'),
-                        SearchBucket::NORMAL, SearchBucket::MINOR => MySQLHelper::fulltextExtractHtmlTextContent($jsonExtractor, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'),
+                        SearchBucket::CRITICAL => MySQLHelper::fulltextExtractHtmlTagContents(
+                            $jsonExtractor,
+                            'h1',
+                            'h2'
+                        ),
+                        SearchBucket::MAJOR => MySQLHelper::fulltextExtractHtmlTagContents(
+                            $jsonExtractor,
+                            'h3',
+                            'h4',
+                            'h5',
+                            'h6'
+                        ),
+                        SearchBucket::NORMAL, SearchBucket::MINOR => MySQLHelper::fulltextExtractHtmlTextContent(
+                            $jsonExtractor,
+                            'h1',
+                            'h2',
+                            'h3',
+                            'h4',
+                            'h5',
+                            'h6'
+                        ),
                     }
                 };
                 // fallback null to empty string
@@ -194,12 +239,14 @@ class NeosContentSearchSchema implements SearchSchemaInterface
             if (count($thenSql) === 1) {
                 // only one property for node type
                 $sql .= $thenSql[0];
-            } else if (count($thenSql) > 1) {
-                // multiple properties for node type are string concatenated in fulltext extraction
-                $sql .= sprintf('concat(%s)', implode(", ' ', ", $thenSql));
             } else {
-                // null, in case that no property is configured (this shouldn't happen by regular uses of the API)
-                $sql .= 'null';
+                if (count($thenSql) > 1) {
+                    // multiple properties for node type are string concatenated in fulltext extraction
+                    $sql .= sprintf('concat(%s)', implode(", ' ', ", $thenSql));
+                } else {
+                    // null, in case that no property is configured (this shouldn't happen by regular uses of the API)
+                    $sql .= 'null';
+                }
             }
             $sqlCases[] = $sql;
         }
@@ -285,8 +332,15 @@ class NeosContentSearchSchema implements SearchSchemaInterface
 
     // update function
 
-    private static function mariaDB_create_functionPopulateNodesAndTheirDocuments(): string
+    private static function mariaDB_create_functionPopulateNodesAndTheirDocuments(string $contentRepositoryId): string
     {
+        $tableNameNode = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
+        $tableNameGraphHierarchy = NeosContentSearchResultType::buildCRTableName_graphHierarchy($contentRepositoryId);
+        $tableNameDimensionSpacePoint = NeosContentSearchResultType::buildCRTableName_dimensionSpacePoints(
+            $contentRepositoryId
+        );
+        $tableNameDocumentUriPath = NeosContentSearchResultType::buildCRTableName_documentUriPath($contentRepositoryId);
+
         return <<<SQL
             create procedure sandstorm_kissearch_populate_nodes_and_their_documents()
             modifies sql data
@@ -308,8 +362,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                                                (json_value(h.subtreetags, '$.disabled') is null
                                                    or json_value(h.subtreetags, '$.disabled') = false)
                                                                                           as is_not_hidden
-                                        from cr_default_p_graph_node sn
-                                                 left join cr_default_p_graph_hierarchyrelation h
+                                        from $tableNameNode sn
+                                                 left join $tableNameGraphHierarchy h
                                                            on h.childnodeanchor = sn.relationanchorpoint
                                         where sn.nodetypename = 'Neos.Neos:Sites'
                                         union
@@ -333,12 +387,12 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                                                    or json_value(h.subtreetags, '$.disabled') = false)
                                                                                                               as is_not_hidden
                                         from nodes_and_their_documents pn
-                                                 left join cr_default_p_graph_hierarchyrelation h
+                                                 left join $tableNameGraphHierarchy h
                                                            on h.parentnodeanchor = pn.relationanchorpoint
                                                                and h.contentstreamid = pn.contentstreamid
-                                                 left join cr_default_p_graph_node cn
+                                                 left join $tableNameNode cn
                                                            on cn.relationanchorpoint = h.childnodeanchor
-                                                 left join cr_default_p_graph_dimensionspacepoints d
+                                                 left join $tableNameDimensionSpacePoint d
                                                            on d.hash = cn.origindimensionspacepointhash)
                     select nd.relationanchorpoint,
                            nd.contentstreamid,
@@ -352,7 +406,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                            nd.site_nodename,
                            du.uripath as document_uri_path
                     from nodes_and_their_documents nd
-                        left join cr_default_p_neos_documenturipath_uri du
+                        left join $tableNameDocumentUriPath du
                             on du.nodeaggregateid = nd.node_id
                            and du.dimensionspacepointhash = nd.dimensionshash
                     where nd.site_nodename is not null
@@ -450,10 +504,12 @@ class NeosContentSearchSchema implements SearchSchemaInterface
 
     private static function toCommaSeparatedStringList(array $values): string
     {
-        return implode(',',
+        return implode(
+            ',',
             array_map(function ($value) {
                 return sprintf("'%s'", $value);
-            }, $values));
+            }, $values)
+        );
     }
 
 }

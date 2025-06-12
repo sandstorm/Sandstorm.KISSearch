@@ -6,7 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/DistributionPackages/Sandstorm.KISSearch.Api/Classes" isTestSource="false" packagePrefix="Sandstorm\KISSearch\Api\" />
       <sourceFolder url="file://$MODULE_DIR$/DistributionPackages/Sandstorm.KISSearch.Flow/Classes" isTestSource="false" packagePrefix="Sandstorm\KISSearch\Flow\" />
       <sourceFolder url="file://$MODULE_DIR$/DistributionPackages/Sandstorm.KISSearch.Neos/Classes" isTestSource="false" packagePrefix="Sandstorm\KISSearch\Neos\" />
-      <sourceFolder url="file://$MODULE_DIR$/DistributionPackages/Sandstorm.KISSearch.Neos/Tests" isTestSource="true" packagePrefix="Sandstorm\KISSearch\Neos\\Tests\" />
+      <sourceFolder url="file://$MODULE_DIR$/DistributionPackages/Sandstorm.KISSearch.Neos/Tests" isTestSource="true" packagePrefix="Sandstorm\KISSearch\Neos\Tests\" />
       <sourceFolder url="file://$MODULE_DIR$/local-dev-app/DistributionPackages/Dev.Site/Classes" isTestSource="false" packagePrefix="Dev\Site\" />
       <sourceFolder url="file://$MODULE_DIR$/local-dev-app/Packages/Application/Neos.ContentRepository.NodeAccess/Classes" isTestSource="false" packagePrefix="Neos\ContentRepository\NodeAccess\" />
       <sourceFolder url="file://$MODULE_DIR$/local-dev-app/Packages/Application/Neos.ContentRepository.NodeAccess/Tests" isTestSource="true" packagePrefix="Neos\ContentRepository\NodeAccess\Tests\" />

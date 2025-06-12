@@ -1,7 +1,5 @@
 Sandstorm:
   KISSearch:
-    # TODO support multiple?
-    contentRepositoryId: 'default'
 
     # write-side / SQL migrations
     schemas:
@@ -30,3 +28,6 @@ Sandstorm:
           typeAggregators:
             neos-document: neos-document-type-aggregator
 
+    Neos:
+      # TODO support multiple content repositories
+      contentRepositoryId: 'default'

@@ -8,7 +8,6 @@ use Neos\Flow\Tests\UnitTestCase;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\Query\Configuration\ResultFilterConfiguration;
 use Sandstorm\KISSearch\Api\Query\Configuration\SearchEndpointConfiguration;
-use Sandstorm\KISSearch\Api\Query\Model\LimitMode;
 use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
 use Sandstorm\KISSearch\Api\Query\Model\SearchResultTypeName;
 use Sandstorm\KISSearch\Api\QueryTool;
@@ -19,7 +18,7 @@ class NeosContentQueryTest extends UnitTestCase
 {
     public function test_createDefaultQuery_MariaDB_globalLimit(): void
     {
-        $objectProvider = new NeosContentStandaloneInstanceQuery(new NeosContentQuery());
+        $objectProvider = new NeosContentStandaloneInstanceQuery(NeosContentQuery::createInstance('default'));
         $endpoint = new SearchEndpointConfiguration(
             'testEndpoint',
             [
@@ -36,7 +35,7 @@ class NeosContentQueryTest extends UnitTestCase
 
         $searchQuery = SearchQuery::create(DatabaseType::MARIADB, $endpoint, $objectProvider);
 
-        $sql = QueryTool::createSearchQuerySQL(DatabaseType::MARIADB, $searchQuery, LimitMode::GLOBAL_LIMIT);
+        $sql = QueryTool::createSearchQuerySQL(DatabaseType::MARIADB, $searchQuery);
 
         var_dump($sql);
     }

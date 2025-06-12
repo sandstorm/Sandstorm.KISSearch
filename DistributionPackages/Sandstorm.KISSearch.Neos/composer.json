@@ -15,7 +15,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Sandstorm\\KISSearch\\Neos\\\\Tests\\": "Tests/"
+            "Sandstorm\\KISSearch\\Neos\\Tests\\": "Tests/"
         }
     },
     "archive": {
