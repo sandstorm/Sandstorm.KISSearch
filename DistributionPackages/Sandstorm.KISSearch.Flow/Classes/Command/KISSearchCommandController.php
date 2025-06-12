@@ -8,13 +8,16 @@ use Doctrine\ORM\EntityManagerInterface;
 use Neos\Flow\Annotations\Inject;
 use Neos\Flow\Cli\CommandController;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
+use Sandstorm\KISSearch\Api\Query\Model\SearchInput;
 use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
 use Sandstorm\KISSearch\Api\QueryTool;
 use Sandstorm\KISSearch\Api\SchemaTool;
+use Sandstorm\KISSearch\Flow\DatabaseAdapter\DoctrineSearchQueryDatabaseAdapter;
 use Sandstorm\KISSearch\Flow\DatabaseTypeDetector;
 use Sandstorm\KISSearch\Flow\FlowCDIObjectInstanceProvider;
 use Sandstorm\KISSearch\Flow\FlowSearchEndpoints;
 use Sandstorm\KISSearch\Flow\FlowSearchSchemas;
+use Sandstorm\KISSearch\Neos\Schema\NeosContentSearchSchema;
 
 class KISSearchCommandController extends CommandController
 {
@@ -33,6 +36,9 @@ class KISSearchCommandController extends CommandController
 
     #[Inject]
     protected EntityManagerInterface $entityManager;
+
+    #[Inject]
+    protected DoctrineSearchQueryDatabaseAdapter $databaseAdapter;
 
     /**
      * Prints out the SQL CREATE schema for all configured SearchSchemaInterfaces.
@@ -173,6 +179,134 @@ class KISSearchCommandController extends CommandController
         $sql = QueryTool::createSearchQuerySQL($databaseType, $query);
         $this->outputLine($sql);
         $this->outputLine("-- END OF QUERY");
+    }
+
+    public function refreshNodesAndTheirDocumentsCommand(): void
+    {
+        $databaseType = $this->databaseTypeDetector->detectDatabase();
+        switch ($databaseType) {
+            case DatabaseType::MYSQL:
+            case DatabaseType::MARIADB:
+                $this->executeSqlInTransaction(
+                    NeosContentSearchSchema::mariaDB_call_functionPopulateNodesAndTheirDocuments()
+                );
+                break;
+            case DatabaseType::POSTGRES:
+                throw new \Exception('Postgres not supported for now.');
+        }
+    }
+
+    # Search API
+
+    public function queryCommand(string $endpoint, string $query, string $resultLimits, ?string $params = null, ?int $limit = null, bool $showMetaData = false): void
+    {
+        if ($params !== null) {
+            try {
+                $paramsArray = json_decode($params, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\Throwable $jsonError) {
+                $this->outputLine('invalid --params value; cause: %s', [$jsonError->getMessage()]);
+                $this->outputLine('Example usage: --params \'{"neosContentDimensionValues": {"language": ["en_US"]}, "neosContentSiteNodeName": "neosdemo"}\'');
+                $this->sendAndExit(1);
+            }
+        } else {
+            $paramsArray = [];
+        }
+
+        try {
+            $resultLimitsArray = json_decode($resultLimits, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $jsonError) {
+            $this->outputLine('invalid --result-limits value; cause: %s', [$jsonError->getMessage()]);
+            $this->outputLine('Example usage: --result-limits \'{"neos-content": 20, "foo": 10}\'');
+            $this->sendAndExit(1);
+        }
+
+        $input = new SearchInput(
+            $query,
+            $paramsArray,
+            $resultLimitsArray,
+            $limit
+        );
+
+        $searchEndpointConfiguration = $this->searchEndpoints->getEndpointConfiguration($endpoint);
+        $databaseType = $this->databaseTypeDetector->detectDatabase();
+        $searchQuery = SearchQuery::create(
+            $databaseType,
+            $searchEndpointConfiguration,
+            $this->instanceProvider
+        );
+
+        $results = QueryTool::executeSearchQuery(
+            $databaseType,
+            $searchQuery,
+            $input,
+            $this->databaseAdapter
+        );
+
+        $this->outputSearchResultsTable($results, $query, $showMetaData);
+    }
+
+    private function outputSearchResultsTable(array $results, string $query, bool $showMetaData): void
+    {
+        $headers = [
+            'identifier' => 'Result Identifier',
+            'type' => 'Result Type',
+            'title' => 'Result Title',
+            'url' => 'Result URL',
+            'score' => 'Score',
+            'matchCount' => 'Match Count'
+        ];
+        $tableRows = array_map(function (\JsonSerializable $result) use ($showMetaData) {
+            $serialized = $result->jsonSerialize();
+            if ($showMetaData) {
+                $serialized['combinedMetaData'] = self::formatMetaData($serialized['groupMetaData'], $serialized['metaData']);
+            }
+            unset($serialized['groupMetaData']);
+            unset($serialized['metaData']);
+            return $serialized;
+        }, $results);
+
+        if ($showMetaData) {
+            $headers['combinedMetaData'] = 'Meta Data';
+        }
+
+        $this->output->outputTable(
+            $tableRows,
+            $headers,
+            "Search Results for '$query'"
+        );
+    }
+
+    private static function formatMetaData(array $groupMetaData, array $metaData): string
+    {
+        $groupString = '';
+        foreach ($groupMetaData as $key => $value) {
+            $groupString .= self::formatMetaDataValue($key, $value, 2);
+        }
+        $aggString = '';
+        foreach ($metaData as $key => $value) {
+            $aggString .= self::formatMetaDataValue($key, $value, 2);
+        }
+        return "Group:\n" . $groupString . "\n" .
+            "Aggregate:\n" . $aggString;
+    }
+
+    private static function formatMetaDataValue(string|int $key, mixed $value, int $indent): string
+    {
+        $prefix = str_repeat(' ', $indent) . $key . ': ';
+        if ($value === null) {
+            return $prefix . "null\n";
+        }
+        if (is_string($value)) {
+            return $prefix . $value . "\n";
+        }
+        if (is_array($value)) {
+            $out = $prefix . "\n";
+            foreach ($value as $keyInner => $valueInner) {
+                $out .= self::formatMetaDataValue($keyInner, $valueInner, $indent + 2);
+            }
+            return $out;
+        }
+        return $prefix . ((string) $value) . "\n";
     }
 
 }

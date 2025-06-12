@@ -20,7 +20,7 @@ Sandstorm:
       endpoints:
         'default':
           filters:
-            'default':
+            'neos':
               filter: neos-content-filter
               resultType: neos-document
               sources:

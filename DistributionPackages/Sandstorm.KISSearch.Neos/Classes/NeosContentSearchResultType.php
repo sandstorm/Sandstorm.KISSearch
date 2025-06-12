@@ -32,4 +32,9 @@ class NeosContentSearchResultType
         return sprintf('cr_%s_p_neos_documenturipath_uri', $contentRepositoryId);
     }
 
+    public static function buildCRTableName_workspace(string $contentRepositoryId): string
+    {
+        return sprintf('cr_%s_p_graph_workspace', $contentRepositoryId);
+    }
+
 }

@@ -46,10 +46,30 @@ class QueryTool
         SearchQueryDatabaseAdapterInterface $databaseAdapter
     ): array
     {
+        $queryParameterMappers = $searchQuery->getParameterMapper();
         $sql = self::createSearchQuerySQL($databaseType, $searchQuery);
         $mergedParameters = self::mergeWithDefaultParameters($searchQuery, $searchInput);
 
-        return $databaseAdapter->executeSearchQuery($sql, $mergedParameters);
+        // call parameter mappers
+        $mappedParameters = [];
+        foreach ($queryParameterMappers as $parameterName => $mapper) {
+            $parameterValue = $mergedParameters[$parameterName] ?? null;
+            if ($mapper === null || $parameterValue === null) {
+                // no mapping -> just take the raw value
+                $mappedParameters[$parameterName] = $parameterValue;
+            } else {
+                $mappedParameters[$parameterName] = $mapper($parameterValue);
+            }
+        }
+
+        // global default parameters
+        $mappedParameters[SearchQuery::SQL_QUERY_PARAM_QUERY] = $searchInput->getSearchQuery();
+        $mappedParameters[SearchQuery::SQL_QUERY_PARAM_GLOBAL_LIMIT] = $searchInput->getGlobalLimit();
+        foreach ($searchInput->getResultTypeLimits() as $searchResultTypeName => $limit) {
+            $mappedParameters[SearchQuery::buildAggregatorLimitParameterName($searchResultTypeName)] = $limit;
+        }
+
+        return $databaseAdapter->executeSearchQuery($sql, $mappedParameters);
     }
 
 }

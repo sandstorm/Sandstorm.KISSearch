@@ -7,6 +7,7 @@ namespace Sandstorm\KISSearch\Api\Query\Model;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\FrameworkAbstraction\QueryObjectInstanceProvider;
 use Sandstorm\KISSearch\Api\Query\Configuration\SearchEndpointConfiguration;
+use Sandstorm\KISSearch\Api\Query\QueryParameterMapper;
 use Sandstorm\KISSearch\Api\Query\ResultFilterInterface;
 use Sandstorm\KISSearch\Api\Query\TypeAggregatorInterface;
 
@@ -44,7 +45,8 @@ readonly class SearchQuery
         private array $searchResultTypes,
         private array $searchingQueryParts,
         private array $mergingQueryParts,
-        private array $defaultParameters
+        private array $defaultParameters,
+        private QueryParameterMapper $parameterMapper
     ) {
     }
 
@@ -60,8 +62,9 @@ readonly class SearchQuery
         $searchingQueryParts = [];
         $defaultParameters = [];
         $resultTypeNames = [];
-        /** @var $resultProvidersInstances array<string, ResultFilterInterface> */
-        $resultProvidersInstances = [];
+        $parameterMappers = [];
+        /** @var $resultFilterInstances array<string, ResultFilterInterface> */
+        $resultFilterInstances = [];
         /** @var $typeAggregatorInstances array<string, TypeAggregatorInterface> */
         $typeAggregatorInstances = [];
         foreach ($endpointConfiguration->getFilters() as $resultFilterConfiguration) {
@@ -75,13 +78,13 @@ readonly class SearchQuery
                 }
             }
             // result filters
-            $resultProviderReference = $resultFilterConfiguration->getResultFilterReference();
-            if (!array_key_exists($resultProviderReference, $resultProvidersInstances)) {
-                $resultProvidersInstances[$resultProviderReference] = $instanceProvider->getResultFilterInstance(
-                    $resultProviderReference
+            $resultFilterReference = $resultFilterConfiguration->getResultFilterReference();
+            if (!array_key_exists($resultFilterReference, $resultFilterInstances)) {
+                $resultFilterInstances[$resultFilterReference] = $instanceProvider->getResultFilterInstance(
+                    $resultFilterReference
                 );
             }
-            $resultProvider = $resultProvidersInstances[$resultProviderReference];
+            $resultFilter = $resultFilterInstances[$resultFilterReference];
             $resultTypeName = $resultFilterConfiguration->getResultType()->getName();
             if (!array_key_exists($resultTypeName, $resultProvidersByType)) {
                 $resultProvidersByType[$resultTypeName] = [];
@@ -105,7 +108,9 @@ readonly class SearchQuery
                 $defaultParameters[$fullyQualifiedParameterName] = $defaultParameterValue;
             }
 
-            $resultProvidersByType[$resultTypeName][] = $resultProvider->getFilterQueryPart(
+            $parameterMappers[] = $resultFilter->getQueryParameterMapper($databaseType, $resultFilterConfiguration->getFilterIdentifier());
+
+            $resultProvidersByType[$resultTypeName][] = $resultFilter->getFilterQueryPart(
                 $databaseType,
                 $resultFilterConfiguration->getFilterIdentifier(),
                 $resultTypeName
@@ -135,7 +140,13 @@ readonly class SearchQuery
             );
         }
 
-        return new SearchQuery($resultTypeNames, $searchingQueryParts, $mergingQueryParts, $defaultParameters);
+        return new SearchQuery(
+            $resultTypeNames,
+            $searchingQueryParts,
+            $mergingQueryParts,
+            $defaultParameters,
+            QueryParameterMapper::combineMappers($parameterMappers)
+        );
     }
 
     public function getSearchResultTypes(): array
@@ -165,6 +176,14 @@ readonly class SearchQuery
     public function getDefaultParameters(): array
     {
         return $this->defaultParameters;
+    }
+
+    /**
+     * @return array<string, \Closure>
+     */
+    public function getParameterMapper(): array
+    {
+        return $this->parameterMapper->getParameterMappers();
     }
 
 }

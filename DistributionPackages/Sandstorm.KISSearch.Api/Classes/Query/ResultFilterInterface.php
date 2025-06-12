@@ -19,4 +19,6 @@ interface ResultFilterInterface
 
     function getFilterQueryPart(DatabaseType $databaseType, string $resultFilterIdentifier, string $resultTypeName): string;
 
+    function getQueryParameterMapper(DatabaseType $databaseType, string $resultFilterIdentifier): QueryParameterMapper;
+
 }

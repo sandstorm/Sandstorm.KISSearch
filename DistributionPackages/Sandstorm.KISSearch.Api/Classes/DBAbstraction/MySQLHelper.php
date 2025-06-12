@@ -18,7 +18,7 @@ class MySQLHelper
         $sql = self::buildSearchQueryWithoutLimit($searchQuery);
         $sql .= <<<SQL
             -- global limit
-            limit $limitParamName;
+            limit :$limitParamName;
         SQL;
         return $sql;
     }

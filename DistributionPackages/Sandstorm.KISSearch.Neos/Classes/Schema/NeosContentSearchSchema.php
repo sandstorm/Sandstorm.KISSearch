@@ -39,8 +39,10 @@ class NeosContentSearchSchema implements SearchSchemaInterface
     function createSchema(DatabaseType $databaseType): array
     {
         // TODO postgres
+
+        // ether explicitly set or calculated
         if ($this->nodeTypesSearchConfiguration === null) {
-            $nodeTypesSearchConfiguration = $this->schemaConfiguration->getNodeTypesSearchConfiguration();
+            $this->nodeTypesSearchConfiguration = $this->schemaConfiguration->getNodeTypesSearchConfiguration();
         }
 
         return [
@@ -51,12 +53,12 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                 $this->nodeTypesSearchConfiguration->getExtractorsForMinor(),
                 $this->contentRepositoryId
             ),
+            self::mariaDB_create_functionGetSupertypesOfNodeType($this->nodeTypesSearchConfiguration->getNodeTypeInheritance()),
             self::mariaDB_create_tableNodesAndTheirDocuments(),
             self::mariaDB_create_functionIsDocumentNodeType($this->nodeTypesSearchConfiguration->getDocumentNodeTypeNames()),
             self::mariaDB_create_functionIsContentNodeType($this->nodeTypesSearchConfiguration->getContentNodeTypeNames()),
             self::mariaDB_create_functionPopulateNodesAndTheirDocuments($this->contentRepositoryId),
             self::mariaDB_create_functionAllDimensionValuesMatch(),
-
             // move to data update command
             //self::mariaDB_call_functionPopulateNodesAndTheirDocuments()
         ];
@@ -72,6 +74,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
             self::mariaDB_drop_functionIsContentNodeType(),
             self::mariaDB_drop_functionPopulateNodesAndTheirDocuments(),
             self::mariaDB_drop_functionAllDimensionValuesMatch(),
+            self::mariaDB_drop_functionGetSupertypesOfNodeType()
         ];
     }
 
@@ -301,6 +304,36 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         SQL;
     }
 
+    private static function mariaDB_create_functionGetSupertypesOfNodeType(array $nodeTypeInheritance): string
+    {
+        $cases = [];
+        foreach ($nodeTypeInheritance as $nodeType => $supertypes) {
+            $commaSeparatedSupertypes = self::toCommaSeparatedStringList($supertypes);
+            $cases[] = <<<SQL
+                when nodetypename = '$nodeType' then json_array($commaSeparatedSupertypes)
+            SQL;
+        }
+        $casesSql = implode("\n", $cases);
+
+        return <<<SQL
+            create or replace function sandstorm_kissearch_get_super_types_of_nodetype(
+                nodetypename varchar(255)
+            ) returns json
+            begin
+                return case
+                    $casesSql
+                end;
+            end;
+        SQL;
+    }
+
+    private static function mariaDB_drop_functionGetSupertypesOfNodeType(): string
+    {
+        return <<<SQL
+            drop procedure if exists sandstorm_kissearch_get_super_types_of_nodetype;
+        SQL;
+    }
+
     // ## nodes and their documents relation
 
     private static function mariaDB_create_tableNodesAndTheirDocuments(): string
@@ -309,15 +342,19 @@ class NeosContentSearchSchema implements SearchSchemaInterface
             create table if not exists sandstorm_kissearch_nodes_and_their_documents (
                 relationanchorpoint             bigint         not null,
                 contentstreamid                 varbinary(36)  not null,
+                workspace_name                  varchar(36)    not null,
                 node_id                         varchar(64)    not null,
                 document_id                     varchar(64)    not null,
                 document_title                  longtext,
                 document_nodetype               varchar(255)    not null,
+                inherited_document_nodetypes    json            not null,
                 nodetype                        varchar(255)    not null,
+                inherited_nodetypes             json            not null,
                 dimensionshash                  varchar(32)     not null,
                 dimensionvalues                 json            not null,
                 site_nodename                   varchar(255)    not null,
-                document_uri_path               varchar(4000)
+                document_uri_path               varchar(4000),
+                parent_documents                json            not null
             );
             -- TODO indices
         SQL;
@@ -340,6 +377,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
             $contentRepositoryId
         );
         $tableNameDocumentUriPath = NeosContentSearchResultType::buildCRTableName_documentUriPath($contentRepositoryId);
+        $tableNameWorkspace = NeosContentSearchResultType::buildCRTableName_workspace($contentRepositoryId);
 
         return <<<SQL
             create procedure sandstorm_kissearch_populate_nodes_and_their_documents()
@@ -361,7 +399,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                                                sn.nodetypename                            as document_nodetype,
                                                (json_value(h.subtreetags, '$.disabled') is null
                                                    or json_value(h.subtreetags, '$.disabled') = false)
-                                                                                          as is_not_hidden
+                                                                                          as is_not_hidden,
+                                               cast('[]' as varchar(10000000))            as parent_documents
                                         from $tableNameNode sn
                                                  left join $tableNameGraphHierarchy h
                                                            on h.childnodeanchor = sn.relationanchorpoint
@@ -385,7 +424,11 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                                                   pn.document_nodetype)                                       as document_nodetype,
                                                (json_value(h.subtreetags, '$.disabled') is null
                                                    or json_value(h.subtreetags, '$.disabled') = false)
-                                                                                                              as is_not_hidden
+                                                                                                              as is_not_hidden,
+                                               if(sandstorm_kissearch_neos_is_document(cn.nodetypename),
+                                                  json_array_append(pn.parent_documents, '$', cn.nodeaggregateid),
+                                                  pn.parent_documents
+                                               )                                                              as parent_documents
                                         from nodes_and_their_documents pn
                                                  left join $tableNameGraphHierarchy h
                                                            on h.parentnodeanchor = pn.relationanchorpoint
@@ -396,19 +439,25 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                                                            on d.hash = cn.origindimensionspacepointhash)
                     select nd.relationanchorpoint,
                            nd.contentstreamid,
+                           ws.name as workspace_name,
                            nd.node_id,
                            nd.document_id,
                            nd.document_title,
                            nd.document_nodetype,
+                           sandstorm_kissearch_get_super_types_of_nodetype(nd.document_nodetype) as inherited_document_nodetypes,
                            nd.nodetype,
+                           sandstorm_kissearch_get_super_types_of_nodetype(nd.nodetype) as inherited_nodetypes,
                            nd.dimensionshash,
                            nd.dimensionvalues,
                            nd.site_nodename,
-                           du.uripath as document_uri_path
+                           du.uripath as document_uri_path,
+                           nd.parent_documents
                     from nodes_and_their_documents nd
                         left join $tableNameDocumentUriPath du
-                            on du.nodeaggregateid = nd.node_id
+                            on du.nodeaggregateid = nd.document_id
                            and du.dimensionspacepointhash = nd.dimensionshash
+                        left join $tableNameWorkspace ws
+                            on ws.currentContentStreamId = nd.contentstreamid
                     where nd.site_nodename is not null
                       and nd.is_not_hidden
                       and (sandstorm_kissearch_neos_is_document(nd.nodetype)
@@ -418,7 +467,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         SQL;
     }
 
-    private static function mariaDB_call_functionPopulateNodesAndTheirDocuments(): string
+    public static function mariaDB_call_functionPopulateNodesAndTheirDocuments(): string
     {
         return <<<SQL
             call sandstorm_kissearch_populate_nodes_and_their_documents();
