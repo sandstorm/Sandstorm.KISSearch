@@ -13,6 +13,7 @@ use Sandstorm\KISSearch\Api\FrameworkAbstraction\SchemaObjectInstanceProvider;
 use Sandstorm\KISSearch\Api\Query\ResultFilterInterface;
 use Sandstorm\KISSearch\Api\Query\SearchSourceInterface;
 use Sandstorm\KISSearch\Api\Query\TypeAggregatorInterface;
+use Sandstorm\KISSearch\Api\Schema\SearchDependencyRefresherInterface;
 use Sandstorm\KISSearch\Api\Schema\SearchSchemaInterface;
 use Sandstorm\KISSearch\Neos\Query\NeosContentQuery;
 
@@ -21,13 +22,13 @@ class FlowCDIObjectInstanceProvider implements QueryObjectInstanceProvider, Sche
 {
 
     #[InjectConfiguration(path: 'query.searchSources', package: 'Sandstorm.KISSearch')]
-    protected array $searchSources;
+    protected ?array $searchSources;
 
     #[InjectConfiguration(path: 'query.resultFilters', package: 'Sandstorm.KISSearch')]
-    protected array $resultFilters;
+    protected ?array $resultFilters;
 
     #[InjectConfiguration(path: 'query.typeAggregators', package: 'Sandstorm.KISSearch')]
-    protected array $typeAggregators;
+    protected ?array $typeAggregators;
 
     #[Inject]
     protected ObjectManagerInterface $objectManager;
@@ -56,8 +57,16 @@ class FlowCDIObjectInstanceProvider implements QueryObjectInstanceProvider, Sche
         return $this->objectManager->get($className);
     }
 
-    private static function getServiceClassName(string $identifier, array $configuration, string $errorDescription): string
+    function getDependencyRefresherInstance(string $className): SearchDependencyRefresherInterface
     {
+        return $this->objectManager->get($className);
+    }
+
+    private static function getServiceClassName(string $identifier, ?array $configuration, string $errorDescription): string
+    {
+        if ($configuration === null) {
+            throw new InvalidConfigurationException("Configuration key '$errorDescription' not found in KISSearch query configuration");
+        }
         if (!array_key_exists($identifier, $configuration)) {
             throw new InvalidConfigurationException("Configuration key '$errorDescription.$identifier' not found in KISSearch query configuration");
         }

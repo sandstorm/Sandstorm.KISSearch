@@ -46,7 +46,7 @@ class QueryTool
         SearchQueryDatabaseAdapterInterface $databaseAdapter
     ): array
     {
-        $queryParameterMappers = $searchQuery->getParameterMapper();
+        $queryParameterMappers = $searchQuery->getParameterMappers();
         $sql = self::createSearchQuerySQL($databaseType, $searchQuery);
         $mergedParameters = self::mergeWithDefaultParameters($searchQuery, $searchInput);
 

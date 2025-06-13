@@ -26,4 +26,12 @@ class FlowSearchEndpoints {
         }
     }
 
+    /**
+     * @return array<string>
+     */
+    public function getAllEndpointIds(): array
+    {
+        return array_keys($this->endpoints);
+    }
+
 }

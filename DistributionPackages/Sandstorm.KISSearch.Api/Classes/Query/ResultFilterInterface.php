@@ -7,18 +7,38 @@ namespace Sandstorm\KISSearch\Api\Query;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 
 /**
- * Core extensibility API.
- * Allows new search result providers to be defined.
+ * <b>Core extensibility API</b>
+ * <br/>
+ * Allows new search result filters to be defined.
  * This should be used to add mappers and filters to search sources.
  * It creates "merging" query parts.
  *
- * TODO add documentation reference to "big picture"
+ * The idea is, that the first query "action" a.k.a. the searching query part is separated from all
+ * other filters / where conditions. In other words:
+ * The search sources do the fulltext matching, the result filters do all other conditions.
+ * WHY?: MariaDB / MySQL does not support combining fulltext index lookups with other index lookups.
+ * WARNING: Combining fulltext matching with logical ANDs might end up executing a full table scan, what
+ * affects performance drastically!
+ *
+ * Implement your query parameters here! See Sandstorm.KISSearch.Neos for reference implementation.
  */
 interface ResultFilterInterface
 {
 
-    function getFilterQueryPart(DatabaseType $databaseType, string $resultFilterIdentifier, string $resultTypeName): string;
+    /**
+     * @param DatabaseType $databaseType
+     * @param string $resultFilterIdentifier
+     * @param string $resultTypeName
+     * @param array $queryOptions
+     * @return string
+     */
+    function getFilterQueryPart(DatabaseType $databaseType, string $resultFilterIdentifier, string $resultTypeName, array $queryOptions): string;
 
+    /**
+     * @param DatabaseType $databaseType
+     * @param string $resultFilterIdentifier
+     * @return QueryParameterMapper
+     */
     function getQueryParameterMapper(DatabaseType $databaseType, string $resultFilterIdentifier): QueryParameterMapper;
 
 }

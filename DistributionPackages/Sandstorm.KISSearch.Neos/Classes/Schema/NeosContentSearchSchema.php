@@ -5,44 +5,133 @@ declare(strict_types=1);
 namespace Sandstorm\KISSearch\Neos\Schema;
 
 use Neos\Flow\Annotations\Inject;
-use Neos\Flow\Annotations\InjectConfiguration;
 use Neos\Flow\Annotations\Scope;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\DBAbstraction\MySQLHelper;
+use Sandstorm\KISSearch\Api\Schema\SearchDependencyRefresherInterface;
 use Sandstorm\KISSearch\Api\Schema\SearchSchemaInterface;
+use Sandstorm\KISSearch\Flow\InvalidConfigurationException;
 use Sandstorm\KISSearch\Neos\NeosContentSearchResultType;
 use Sandstorm\KISSearch\Neos\Schema\Model\FulltextExtractionMode;
 use Sandstorm\KISSearch\Neos\Schema\Model\NodePropertyFulltextExtraction;
 use Sandstorm\KISSearch\Neos\Schema\Model\NodeTypesSearchConfiguration;
 use Sandstorm\KISSearch\Neos\SearchBucket;
 
+/**
+ * Creates (and drops) the KISSearch DB Schema.
+ *
+ * There is no point in this class being un-proxied, since is has complex dependencies to the NodeTypeManager etc.
+ * You probably won't use this class without booting Flow anyways. Also, there is no need for performance optimization
+ * during schema creation.
+ */
 #[Scope('singleton')]
-class NeosContentSearchSchema implements SearchSchemaInterface
+class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependencyRefresherInterface
 {
 
-    #[Inject]
-    protected NeosContentSchemaConfiguration $schemaConfiguration;
+    private const OPTION_CONTENT_REPOSITORY = 'contentRepository';
+    private const OPTION_EXCLUDED_NODE_TYPES = 'excludedNodeTypes';
+    private const OPTION_BASE_DOCUMENT_NODE_TYPE = 'baseDocumentNodeType';
+    private const OPTION_BASE_CONTENT_NODE_TYPE = 'baseContentNodeType';
 
-    #[InjectConfiguration(path: 'Neos.contentRepositoryId', package: 'Sandstorm.KISSearch')]
-    protected string $contentRepositoryId;
+    private const OPTION_DEFAULT_BASE_DOCUMENT_NODE_TYPE = 'Neos.Neos:Document';
+    private const OPTION_DEFAULT_BASE_CONTENT_NODE_TYPE = 'Neos.Neos:Content';
+
+    #[Inject]
+    protected NodeTypesSearchConfigurationProvider $schemaConfiguration;
 
     protected ?NodeTypesSearchConfiguration $nodeTypesSearchConfiguration = null;
 
-    public static function createInstance(NodeTypesSearchConfiguration $nodeTypesSearchConfiguration, string $contentRepositoryId): self
+    public static function createInstance(NodeTypesSearchConfiguration $nodeTypesSearchConfiguration): self
     {
         $instance = new NeosContentSearchSchema();
         $instance->nodeTypesSearchConfiguration = $nodeTypesSearchConfiguration;
-        $instance->contentRepositoryId = $contentRepositoryId;
         return $instance;
     }
 
-    function createSchema(DatabaseType $databaseType): array
+    private static function getContentRepositoryIdFromOptions(string $schemaIdentifier, array $options): string
     {
+        $contentRepositoryId = $options[self::OPTION_CONTENT_REPOSITORY] ??
+            throw new InvalidConfigurationException(
+                sprintf("No '%s' option set in schema configuration options.", self::OPTION_CONTENT_REPOSITORY)
+            );
+        if (!is_string($contentRepositoryId) || strlen(trim($contentRepositoryId)) === 0) {
+            throw new InvalidConfigurationException(
+                sprintf(
+                    "Invalid search schema configuration '...schemas.%s.options.%s'; value must be a non-empty string but was: %s",
+                    $schemaIdentifier,
+                    self::OPTION_CONTENT_REPOSITORY,
+                    gettype($contentRepositoryId)
+                )
+            );
+        }
+        return $contentRepositoryId;
+    }
+
+    private static function getExcludedNodeTypesFromOptions(string $schemaIdentifier, array $options): array
+    {
+        $value = $options[self::OPTION_EXCLUDED_NODE_TYPES] ?? [];
+        if (!is_array($value)) {
+            throw new InvalidConfigurationException(
+                sprintf(
+                    "Invalid search schema configuration '...schemas.%s.options.%s'; value must be an array but was: %s",
+                    $schemaIdentifier,
+                    self::OPTION_EXCLUDED_NODE_TYPES,
+                    gettype($value)
+                )
+            );
+        }
+        return $value;
+    }
+
+    private static function getBaseDocumentNodeTypeFromOptions(string $schemaIdentifier, array $options): string
+    {
+        $value = $options[self::OPTION_BASE_DOCUMENT_NODE_TYPE] ?? self::OPTION_DEFAULT_BASE_DOCUMENT_NODE_TYPE;
+        if (!is_string($value) || strlen(trim($value)) === 0) {
+            throw new InvalidConfigurationException(
+                sprintf(
+                    "Invalid search schema configuration '...schemas.%s.options.%s'; value must be a non-empty string but was: %s",
+                    $schemaIdentifier,
+                    self::OPTION_BASE_DOCUMENT_NODE_TYPE,
+                    gettype($value)
+                )
+            );
+        }
+        return $value;
+    }
+
+    private static function getBaseContentNodeTypeFromOptions(string $schemaIdentifier, array $options): string
+    {
+        $value = $options[self::OPTION_BASE_CONTENT_NODE_TYPE] ?? self::OPTION_DEFAULT_BASE_CONTENT_NODE_TYPE;
+        if (!is_string($value) || strlen(trim($value)) === 0) {
+            throw new InvalidConfigurationException(
+                sprintf(
+                    "Invalid search schema configuration '...schemas.%s.options.%s'; value must be a non-empty string but was: %s",
+                    $schemaIdentifier,
+                    self::OPTION_BASE_CONTENT_NODE_TYPE,
+                    gettype($value)
+                )
+            );
+        }
+        return $value;
+    }
+
+    function createSchema(DatabaseType $databaseType, string $schemaIdentifier, array $options): array
+    {
+        $contentRepositoryId = self::getContentRepositoryIdFromOptions($schemaIdentifier, $options);
+        $excludedNodeTypes = self::getExcludedNodeTypesFromOptions($schemaIdentifier, $options);
+        $baseDocumentNodeType = self::getBaseDocumentNodeTypeFromOptions($schemaIdentifier, $options);
+        $baseContentNodeType = self::getBaseContentNodeTypeFromOptions($schemaIdentifier, $options);
+
         // TODO postgres
 
-        // ether explicitly set or calculated
+        // ether explicitly set or calculated from the NodeTypeManager
         if ($this->nodeTypesSearchConfiguration === null) {
-            $this->nodeTypesSearchConfiguration = $this->schemaConfiguration->getNodeTypesSearchConfiguration();
+            $this->nodeTypesSearchConfiguration = $this->schemaConfiguration->getNodeTypesSearchConfiguration(
+                $contentRepositoryId,
+                $excludedNodeTypes,
+                $baseDocumentNodeType,
+                $baseContentNodeType
+            );
         }
 
         return [
@@ -51,30 +140,50 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                 $this->nodeTypesSearchConfiguration->getExtractorsForMajor(),
                 $this->nodeTypesSearchConfiguration->getExtractorsForNormal(),
                 $this->nodeTypesSearchConfiguration->getExtractorsForMinor(),
-                $this->contentRepositoryId
+                $contentRepositoryId
             ),
-            self::mariaDB_create_functionGetSupertypesOfNodeType($this->nodeTypesSearchConfiguration->getNodeTypeInheritance()),
-            self::mariaDB_create_tableNodesAndTheirDocuments(),
-            self::mariaDB_create_functionIsDocumentNodeType($this->nodeTypesSearchConfiguration->getDocumentNodeTypeNames()),
-            self::mariaDB_create_functionIsContentNodeType($this->nodeTypesSearchConfiguration->getContentNodeTypeNames()),
-            self::mariaDB_create_functionPopulateNodesAndTheirDocuments($this->contentRepositoryId),
+            self::mariaDB_create_functionGetSupertypesOfNodeType(
+                $contentRepositoryId,
+                $this->nodeTypesSearchConfiguration->getNodeTypeInheritance()
+            ),
+            self::mariaDB_create_tableNodesAndTheirDocuments($contentRepositoryId),
+            self::mariaDB_create_functionIsDocumentNodeType(
+                $contentRepositoryId,
+                $this->nodeTypesSearchConfiguration->getDocumentNodeTypeNames()
+            ),
+            self::mariaDB_create_functionIsContentNodeType(
+                $contentRepositoryId,
+                $this->nodeTypesSearchConfiguration->getContentNodeTypeNames()
+            ),
+            self::mariaDB_create_functionPopulateNodesAndTheirDocuments($contentRepositoryId),
             self::mariaDB_create_functionAllDimensionValuesMatch(),
             // move to data update command
             //self::mariaDB_call_functionPopulateNodesAndTheirDocuments()
         ];
     }
 
-    function dropSchema(DatabaseType $databaseType): array
+    function dropSchema(DatabaseType $databaseType, string $schemaIdentifier, array $options): array
     {
+        $contentRepositoryId = self::getContentRepositoryIdFromOptions($schemaIdentifier, $options);
+
         // TODO postgres
         return [
-            self::mariaDB_drop_generatedSearchBucketColumns($this->contentRepositoryId),
-            self::mariaDB_drop_tableNodesAndTheirDocuments(),
-            self::mariaDB_drop_functionIsDocumentNodeType(),
-            self::mariaDB_drop_functionIsContentNodeType(),
-            self::mariaDB_drop_functionPopulateNodesAndTheirDocuments(),
+            self::mariaDB_drop_generatedSearchBucketColumns($contentRepositoryId),
+            self::mariaDB_drop_tableNodesAndTheirDocuments($contentRepositoryId),
+            self::mariaDB_drop_functionIsDocumentNodeType($contentRepositoryId),
+            self::mariaDB_drop_functionIsContentNodeType($contentRepositoryId),
+            self::mariaDB_drop_functionPopulateNodesAndTheirDocuments($contentRepositoryId),
             self::mariaDB_drop_functionAllDimensionValuesMatch(),
-            self::mariaDB_drop_functionGetSupertypesOfNodeType()
+            self::mariaDB_drop_functionGetSupertypesOfNodeType($contentRepositoryId)
+        ];
+    }
+
+    function refreshSearchDependencies(DatabaseType $databaseType, string $schemaIdentifier, array $options): array
+    {
+        $contentRepositoryId = self::getContentRepositoryIdFromOptions($schemaIdentifier, $options);
+
+        return [
+            self::mariaDB_call_functionPopulateNodesAndTheirDocuments($contentRepositoryId)
         ];
     }
 
@@ -262,12 +371,12 @@ class NeosContentSearchSchema implements SearchSchemaInterface
     }
 
     // ## utility functions for document and content node types
-    private static function mariaDB_create_functionIsDocumentNodeType(array $documentNodeTypes): string
+    private static function mariaDB_create_functionIsDocumentNodeType(string $contentRepositoryId, array $documentNodeTypes): string
     {
         $documentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($documentNodeTypes);
 
         return <<<SQL
-            create or replace function sandstorm_kissearch_neos_is_document(
+            create or replace function sandstorm_kissearch_neos_is_document_$contentRepositoryId(
                 nodetypename varchar(255)
             ) returns boolean
             begin
@@ -276,19 +385,19 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         SQL;
     }
 
-    private static function mariaDB_drop_functionIsDocumentNodeType(): string
+    private static function mariaDB_drop_functionIsDocumentNodeType(string $contentRepositoryId): string
     {
         return <<<SQL
-            drop function if exists sandstorm_kissearch_neos_is_document;
+            drop function if exists sandstorm_kissearch_neos_is_document_$contentRepositoryId;
         SQL;
     }
 
-    private static function mariaDB_create_functionIsContentNodeType(array $contentNodeTypes): string
+    private static function mariaDB_create_functionIsContentNodeType(string $contentRepositoryId, array $contentNodeTypes): string
     {
         $contentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($contentNodeTypes);
 
         return <<<SQL
-            create or replace function sandstorm_kissearch_neos_is_content(
+            create or replace function sandstorm_kissearch_neos_is_content_$contentRepositoryId(
                 nodetypename varchar(255)
             ) returns boolean
             begin
@@ -297,14 +406,14 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         SQL;
     }
 
-    private static function mariaDB_drop_functionIsContentNodeType(): string
+    private static function mariaDB_drop_functionIsContentNodeType(string $contentRepositoryId): string
     {
         return <<<SQL
-            drop function if exists sandstorm_kissearch_neos_is_content;
+            drop function if exists sandstorm_kissearch_neos_is_content_$contentRepositoryId;
         SQL;
     }
 
-    private static function mariaDB_create_functionGetSupertypesOfNodeType(array $nodeTypeInheritance): string
+    private static function mariaDB_create_functionGetSupertypesOfNodeType(string $contentRepositoryId, array $nodeTypeInheritance): string
     {
         $cases = [];
         foreach ($nodeTypeInheritance as $nodeType => $supertypes) {
@@ -316,7 +425,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         $casesSql = implode("\n", $cases);
 
         return <<<SQL
-            create or replace function sandstorm_kissearch_get_super_types_of_nodetype(
+            create or replace function sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(
                 nodetypename varchar(255)
             ) returns json
             begin
@@ -327,19 +436,19 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         SQL;
     }
 
-    private static function mariaDB_drop_functionGetSupertypesOfNodeType(): string
+    private static function mariaDB_drop_functionGetSupertypesOfNodeType(string $contentRepositoryId): string
     {
         return <<<SQL
-            drop procedure if exists sandstorm_kissearch_get_super_types_of_nodetype;
+            drop function if exists sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId;
         SQL;
     }
 
     // ## nodes and their documents relation
 
-    private static function mariaDB_create_tableNodesAndTheirDocuments(): string
+    private static function mariaDB_create_tableNodesAndTheirDocuments(string $contentRepositoryId): string
     {
         return <<<SQL
-            create table if not exists sandstorm_kissearch_nodes_and_their_documents (
+            create table if not exists sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId (
                 relationanchorpoint             bigint         not null,
                 contentstreamid                 varbinary(36)  not null,
                 workspace_name                  varchar(36)    not null,
@@ -360,10 +469,10 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         SQL;
     }
 
-    private static function mariaDB_drop_tableNodesAndTheirDocuments(): string
+    private static function mariaDB_drop_tableNodesAndTheirDocuments(string $contentRepositoryId): string
     {
         return <<<SQL
-            drop table if exists sandstorm_kissearch_nodes_and_their_documents;
+            drop table if exists sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId;
         SQL;
     }
 
@@ -380,12 +489,12 @@ class NeosContentSearchSchema implements SearchSchemaInterface
         $tableNameWorkspace = NeosContentSearchResultType::buildCRTableName_workspace($contentRepositoryId);
 
         return <<<SQL
-            create procedure sandstorm_kissearch_populate_nodes_and_their_documents()
+            create procedure sandstorm_kissearch_populate_nodes_and_their_documents_$contentRepositoryId()
             modifies sql data
             begin
                 start transaction;
-                truncate table sandstorm_kissearch_nodes_and_their_documents;
-                insert into sandstorm_kissearch_nodes_and_their_documents
+                truncate table sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId;
+                insert into sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
                     with recursive nodes_and_their_documents as
                                        (select sn.relationanchorpoint,
                                                h.contentstreamid,
@@ -413,19 +522,19 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                                                cn.origindimensionspacepointhash                               as dimensionshash,
                                                d.dimensionspacepoint                                          as dimensionvalues,
                                                if(pn.nodetype = 'Neos.Neos:Sites', cn.name, pn.site_nodename) as site_nodename,
-                                               if(sandstorm_kissearch_neos_is_document(cn.nodetypename),
+                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   cn.nodeaggregateid,
                                                   pn.document_id)                                             as document_id,
-                                               if(sandstorm_kissearch_neos_is_document(cn.nodetypename),
+                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   json_value(cn.properties, '$.title.value'),
                                                   pn.document_title)                                          as document_title,
-                                               if(sandstorm_kissearch_neos_is_document(cn.nodetypename),
+                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   cn.nodetypename,
                                                   pn.document_nodetype)                                       as document_nodetype,
                                                (json_value(h.subtreetags, '$.disabled') is null
                                                    or json_value(h.subtreetags, '$.disabled') = false)
                                                                                                               as is_not_hidden,
-                                               if(sandstorm_kissearch_neos_is_document(cn.nodetypename),
+                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   json_array_append(pn.parent_documents, '$', cn.nodeaggregateid),
                                                   pn.parent_documents
                                                )                                                              as parent_documents
@@ -444,9 +553,9 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                            nd.document_id,
                            nd.document_title,
                            nd.document_nodetype,
-                           sandstorm_kissearch_get_super_types_of_nodetype(nd.document_nodetype) as inherited_document_nodetypes,
+                           sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(nd.document_nodetype) as inherited_document_nodetypes,
                            nd.nodetype,
-                           sandstorm_kissearch_get_super_types_of_nodetype(nd.nodetype) as inherited_nodetypes,
+                           sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(nd.nodetype) as inherited_nodetypes,
                            nd.dimensionshash,
                            nd.dimensionvalues,
                            nd.site_nodename,
@@ -460,28 +569,29 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                             on ws.currentContentStreamId = nd.contentstreamid
                     where nd.site_nodename is not null
                       and nd.is_not_hidden
-                      and (sandstorm_kissearch_neos_is_document(nd.nodetype)
-                        or sandstorm_kissearch_neos_is_content(nd.nodetype));
+                      and (sandstorm_kissearch_neos_is_document_$contentRepositoryId(nd.nodetype)
+                        or sandstorm_kissearch_neos_is_content_$contentRepositoryId(nd.nodetype));
                 commit;
             end;
         SQL;
     }
 
-    public static function mariaDB_call_functionPopulateNodesAndTheirDocuments(): string
+    public static function mariaDB_call_functionPopulateNodesAndTheirDocuments(string $contentRepositoryId): string
     {
         return <<<SQL
-            call sandstorm_kissearch_populate_nodes_and_their_documents();
+            call sandstorm_kissearch_populate_nodes_and_their_documents_$contentRepositoryId();
         SQL;
     }
 
-    private static function mariaDB_drop_functionPopulateNodesAndTheirDocuments(): string
+    private static function mariaDB_drop_functionPopulateNodesAndTheirDocuments(string $contentRepositoryId): string
     {
         return <<<SQL
-            drop procedure if exists sandstorm_kissearch_populate_nodes_and_their_documents;
+            drop procedure if exists sandstorm_kissearch_populate_nodes_and_their_documents_$contentRepositoryId;
         SQL;
     }
 
     // TODO timed visibility seems to be removed in Neos 9?
+    /*
     private static function mariaDB_create_functionAnyTimedHidden(): string
     {
         // function for checking hidden before and after datetime for a set of parent nodes, given by array
@@ -511,6 +621,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
             end;
         SQL;
     }
+    */
 
     private static function mariaDB_create_functionAllDimensionValuesMatch(): string
     {
@@ -526,7 +637,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                             json_contains(
                                 dimension_values,
                                 concat('"', expected_dimension_values.filter_value, '"'),
-                                concat('$.', expected_dimension_values.dimension_name, '.', expected_dimension_values.index_key)
+                                concat('$.', expected_dimension_values.dimension_name)
                             )
                         from json_table(
                             dimension_values_filter,
@@ -534,7 +645,6 @@ class NeosContentSearchSchema implements SearchSchemaInterface
                             columns
                             (
                                 dimension_name text path '$.dimension_name',
-                                index_key text path '$.index_key',
                                 filter_value text path '$.filter_value'
                             )
                         ) expected_dimension_values

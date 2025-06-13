@@ -13,7 +13,7 @@ use Sandstorm\KISSearch\Api\Query\TypeAggregatorInterface;
 class DefaultTypeAggregator implements TypeAggregatorInterface
 {
 
-    function getResultTypeAggregatorQueryPart(DatabaseType $databaseType, string $resultTypeName, array $mergingQueryParts): string
+    function getResultTypeAggregatorQueryPart(DatabaseType $databaseType, string $resultTypeName, array $mergingQueryParts, array $queryOptions): string
     {
         // TODO POSTGRES
         return MySQLHelper::buildDefaultResultTypeAggregator($resultTypeName, $mergingQueryParts);

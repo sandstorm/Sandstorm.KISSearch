@@ -1,13 +1,28 @@
 Sandstorm:
   KISSearch:
 
-    sources:
-      'neos-content':
-        class: \Sandstorm\KISSearch\Neos\Query\MySQL\NeosContentMySQLSearchSource
-
-    endpoints:
-
-      # endpoint ID
-      'default':
-
-
+    query:
+      endpoints:
+        # endpoint ID
+        'us-live':
+          queryOptions:
+            contentRepository: 'default'
+          filters:
+            'neos':
+              sources:
+                - neos-content-source
+              filter: neos-content-filter
+              resultType: neos-document
+              defaultParameters:
+                'workspace': 'live'
+                'site_node': 'neosdemo'
+                #'exclude_site_node': []
+                'dimension_values':
+                  'language': 'en_US'
+                #'content_node_types': []
+                #'document_node_types': []
+                #'root_node': '...'
+                #'inherited_document_node_type': ''
+                #'inherited_content_node_type': ''
+          typeAggregators:
+            neos-document: neos-document-type-aggregator

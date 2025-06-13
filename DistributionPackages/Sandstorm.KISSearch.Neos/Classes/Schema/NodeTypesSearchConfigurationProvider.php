@@ -6,13 +6,13 @@ namespace Sandstorm\KISSearch\Neos\Schema;
 
 use Neos\ContentRepository\Core\ContentRepository;
 use Neos\ContentRepository\Core\NodeType\NodeType;
+use Neos\ContentRepository\Core\NodeType\NodeTypeManager;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Eel\EelEvaluatorInterface;
 use Neos\Eel\Utility as EelUtility;
 use Neos\Flow\Annotations\Inject;
 use Neos\Flow\Annotations\Scope;
-use Neos\Flow\Configuration\ConfigurationManager;
 use Sandstorm\KISSearch\Flow\InvalidConfigurationException;
 use Sandstorm\KISSearch\Flow\InvalidNodeTypeSearchConfigurationException;
 use Sandstorm\KISSearch\Neos\Eel\IndexingHelper;
@@ -22,44 +22,88 @@ use Sandstorm\KISSearch\Neos\Schema\Model\NodePropertyFulltextExtraction;
 use Sandstorm\KISSearch\Neos\Schema\Model\NodeTypesSearchConfiguration;
 use Sandstorm\KISSearch\Neos\SearchBucket;
 
+/**
+ * Calculates the {@link NodeTypesSearchConfiguration} from the NodeTypes configuration for the given content repository.
+ *
+ * Implements downwards compatibility for the configuration format of `Neos.SearchPlugin`.
+ */
 #[Scope('singleton')]
-class NeosContentSchemaConfiguration
+class NodeTypesSearchConfigurationProvider
 {
 
-    #[Inject]
-    protected ConfigurationManager $configurationManager;
     #[Inject]
     protected EelEvaluatorInterface $eelEvaluator;
     #[Inject]
     protected ContentRepositoryRegistry $contentRepositoryRegistry;
 
-    protected ?ContentRepository $contentRepository = null;
+    protected array $contentRepositoryCache = [];
 
-    private function getContentRepository(): ContentRepository
+    private function getContentRepository(string $contentRepositoryId): ContentRepository
     {
-        if ($this->contentRepository === null) {
-            $contentRepositoryIdConfig = $this->configurationManager->getConfiguration(
-                ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
-                'Sandstorm.KISSearch.Neos.contentRepositoryId'
+        if (!array_key_exists($contentRepositoryId, $this->contentRepositoryCache)) {
+            $this->contentRepositoryCache[$contentRepositoryId] = $this->contentRepositoryRegistry->get(
+                ContentRepositoryId::fromString($contentRepositoryId)
             );
-            if (!is_string($contentRepositoryIdConfig) || strlen(trim($contentRepositoryIdConfig)) === 0) {
-                throw new InvalidConfigurationException(
-                    "No content repository ID configured. Set the value via 'Sandstorm.KISSearch.Neos.contentRepositoryId'"
-                );
-            }
-            $contentRepositoryId = ContentRepositoryId::fromString($contentRepositoryIdConfig);
-            $this->contentRepository = $this->contentRepositoryRegistry->get($contentRepositoryId);
         }
-        return $this->contentRepository;
+        return $this->contentRepositoryCache[$contentRepositoryId];
     }
 
-    public function getNodeTypesSearchConfiguration(): NodeTypesSearchConfiguration
+    private function validateExcludedNodeTypesConfiguration(NodeTypeManager $nodeTypeManager, array $config): void
     {
-        $excludedNodeTypes = $this->getExcludedNodeTypesConfiguration();
-        $baseDocumentNodeType = $this->getBaseDocumentNodeTypeConfiguration();
-        $baseContentNodeType = $this->getBaseContentNodeTypeConfiguration();
+        foreach ($config as $excludedNodeType) {
+            // check if configured node type exists
+            if (!$nodeTypeManager->hasNodeType($excludedNodeType)) {
+                throw new InvalidConfigurationException(
+                    sprintf(
+                        "Invalid search source option; excluded node type '%s' does not exist",
+                        $excludedNodeType
+                    ),
+                    1690071420
+                );
+            }
+        }
+    }
 
-        $nodeTypeManager = $this->getContentRepository()->getNodeTypeManager();
+    private function validateNodeTypeConfiguration(NodeTypeManager $nodeTypeManager, string $nodeTypeName, string $expectedSuperType): void
+    {
+        // check if configured node type exists
+        if (!$nodeTypeManager->hasNodeType($nodeTypeName)) {
+            throw new InvalidConfigurationException(
+                sprintf(
+                    "Invalid base node type configuration; node type '%s' does not exist",
+                    $nodeTypeName
+                ),
+                1690071560
+            );
+        }
+        // check if configured node type extends or is equal to the expected super type
+        $nodeType = $nodeTypeManager->getNodeType($nodeTypeName);
+        if (!$nodeType->isOfType($expectedSuperType)) {
+            throw new InvalidConfigurationException(
+                sprintf(
+                    "Invalid base node type configuration; configured node type '%s' must extend or be of type '%s'",
+                    $nodeType->name->value,
+                    $expectedSuperType
+                ),
+                1690071423
+            );
+        }
+    }
+
+    public function getNodeTypesSearchConfiguration(
+        string $contentRepositoryId,
+        array $excludedNodeTypes,
+        string $baseDocumentNodeType,
+        string $baseContentNodeType
+    ): NodeTypesSearchConfiguration
+    {
+        $contentRepository = $this->getContentRepository($contentRepositoryId);
+        $nodeTypeManager = $contentRepository->getNodeTypeManager();
+
+        $this->validateExcludedNodeTypesConfiguration($nodeTypeManager, $excludedNodeTypes);
+
+        $this->validateNodeTypeConfiguration($nodeTypeManager, $baseDocumentNodeType, 'Neos.Neos:Document');
+        $this->validateNodeTypeConfiguration($nodeTypeManager, $baseContentNodeType, 'Neos.Neos:Content');
 
         // filter excluded node types
         $exclusionFilter = function (NodeType $documentNodeType) use ($excludedNodeTypes) {
@@ -213,91 +257,6 @@ class NeosContentSchemaConfiguration
             $extractorsForNormal,
             $extractorsForMinor
         );
-    }
-
-    private function getExcludedNodeTypesConfiguration(): array
-    {
-        $excludedNodeTypes = $this->configurationManager->getConfiguration(
-            ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
-            'Sandstorm.KISSearch.neosContent.excludedNodeTypes'
-        );
-        if ($excludedNodeTypes === null) {
-            $excludedNodeTypes = [];
-        }
-        if (!is_array($excludedNodeTypes)) {
-            throw new InvalidConfigurationException(
-                sprintf(
-                    "Configuration 'Sandstorm.KISSearch.neosContent.excludedNodeTypes' must be an array; but was: %s",
-                    gettype($excludedNodeTypes)
-                ),
-                1690070843
-            );
-        }
-        return $excludedNodeTypes;
-    }
-
-    private function getBaseDocumentNodeTypeConfiguration(): string
-    {
-        return $this->getValidNodeTypeConfiguration(
-            'Sandstorm.KISSearch.neosContent.baseDocumentNodeType',
-            'Neos.Neos:Document'
-        );
-    }
-
-    private function getBaseContentNodeTypeConfiguration(): string
-    {
-        return $this->getValidNodeTypeConfiguration(
-            'Sandstorm.KISSearch.neosContent.baseContentNodeType',
-            'Neos.Neos:Content'
-        );
-    }
-
-    private function getValidNodeTypeConfiguration(string $configurationPath, string $defaultBaseNodeType): string
-    {
-        $nodeTypeManager = $this->getContentRepository()->getNodeTypeManager();
-        $baseNodeType = $this->configurationManager->getConfiguration(
-            ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
-            $configurationPath
-        );
-        if ($baseNodeType === null) {
-            return $defaultBaseNodeType;
-        }
-        if (!is_string($baseNodeType)) {
-            throw new InvalidConfigurationException(
-                sprintf(
-                    "Configuration '%s' must be a string; but was: %s",
-                    $configurationPath,
-                    gettype($baseNodeType)
-                ),
-                1690071148
-            );
-        }
-        // check if configured node type exists
-        if (!$nodeTypeManager->hasNodeType($baseNodeType)) {
-            throw new InvalidConfigurationException(
-                sprintf(
-                    "Invalid configuration '%s'; node type '%s' does not exist",
-                    $configurationPath,
-                    $baseNodeType
-                ),
-                1690071560
-            );
-        }
-        // check if configured node type extends or is equal to 'Neos.Neos:Document'
-        $nodeType = $nodeTypeManager->getNodeType($baseNodeType);
-        if (!$nodeType->isOfType($defaultBaseNodeType)) {
-            throw new InvalidConfigurationException(
-                sprintf(
-                    "Configuration '%s' must extend " .
-                    "or be of type '%s'; but was: %s",
-                    $configurationPath,
-                    $defaultBaseNodeType,
-                    $baseNodeType
-                ),
-                1690071423
-            );
-        }
-        return $baseNodeType;
     }
 
     private function addExtractionForBucket(

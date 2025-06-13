@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Sandstorm\KISSearch\Api\Query\Model;
 
+use Closure;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\FrameworkAbstraction\QueryObjectInstanceProvider;
 use Sandstorm\KISSearch\Api\Query\Configuration\SearchEndpointConfiguration;
+use Sandstorm\KISSearch\Api\Query\InvalidEndpointConfigurationException;
 use Sandstorm\KISSearch\Api\Query\QueryParameterMapper;
 use Sandstorm\KISSearch\Api\Query\ResultFilterInterface;
 use Sandstorm\KISSearch\Api\Query\TypeAggregatorInterface;
@@ -52,9 +54,17 @@ readonly class SearchQuery
 
     public static function create(
         DatabaseType $databaseType,
+        QueryObjectInstanceProvider $instanceProvider,
         SearchEndpointConfiguration $endpointConfiguration,
-        QueryObjectInstanceProvider $instanceProvider
+        array $queryOptionsOverride = []
     ): SearchQuery {
+
+        // merge query options from config with explicit overrides from API
+        $effectiveQueryOptions = $endpointConfiguration->getQueryOptions();
+        foreach ($queryOptionsOverride as $name => $value) {
+            $effectiveQueryOptions[$name] = $value;
+        }
+
         // collect all sources and result providers and prepare query builder instances
         // sources are only added once to the query
         // group each result provider configuration by its returning "search result type"
@@ -73,7 +83,9 @@ readonly class SearchQuery
                 if (!array_key_exists($sourceIdentifier, $searchingQueryParts)) {
                     $searchSourceInstance = $instanceProvider->getSearchSourceInstance($sourceIdentifier);
                     $searchingQueryParts[$sourceIdentifier] = $searchSourceInstance->getSearchingQueryPart(
-                        $databaseType
+                        $databaseType,
+                        $sourceIdentifier,
+                        $effectiveQueryOptions
                     );
                 }
             }
@@ -92,7 +104,7 @@ readonly class SearchQuery
                 // also initialize type aggregator (there is exactly one aggregator per result type)
                 $typeAggregatorReference = $endpointConfiguration->getTypeAggregators()[$resultTypeName] ?? null;
                 if ($typeAggregatorReference === null) {
-                    throw new \RuntimeException("no type aggregator for search result type $resultTypeName");
+                    throw new InvalidEndpointConfigurationException("no type aggregator for search result type $resultTypeName");
                 }
                 $typeAggregatorInstances[$resultTypeName] = $instanceProvider->getTypeAggregatorInstance(
                     $typeAggregatorReference
@@ -103,7 +115,7 @@ readonly class SearchQuery
             foreach ($resultFilterConfiguration->getDefaultParameters() as $defaultParameterName => $defaultParameterValue) {
                 $fullyQualifiedParameterName = SearchQuery::buildFilterSpecificParameterName($resultFilterConfiguration->getFilterIdentifier(), $defaultParameterName);
                 if (array_key_exists($fullyQualifiedParameterName, $defaultParameters)) {
-                    throw new \RuntimeException("duplicate default parameter '$fullyQualifiedParameterName' for endpoint {$endpointConfiguration->getEndpointIdentifier()}");
+                    throw new InvalidEndpointConfigurationException("duplicate default parameter '$fullyQualifiedParameterName' for endpoint {$endpointConfiguration->getEndpointIdentifier()}");
                 }
                 $defaultParameters[$fullyQualifiedParameterName] = $defaultParameterValue;
             }
@@ -113,20 +125,21 @@ readonly class SearchQuery
             $resultProvidersByType[$resultTypeName][] = $resultFilter->getFilterQueryPart(
                 $databaseType,
                 $resultFilterConfiguration->getFilterIdentifier(),
-                $resultTypeName
+                $resultTypeName,
+                $effectiveQueryOptions
             );
         }
 
         // some validation before we continue
         if (count($searchingQueryParts) === 0) {
-            throw new \RuntimeException("no search sources");
+            throw new InvalidEndpointConfigurationException("no search sources");
         }
         if (count($resultProvidersByType) === 0) {
-            throw new \RuntimeException("no result providers");
+            throw new InvalidEndpointConfigurationException("no result providers");
         }
         foreach ($resultProvidersByType as $resultTypeName => $providers) {
             if (count($providers) === 0) {
-                throw new \RuntimeException("no result providers for type $resultTypeName");
+                throw new InvalidEndpointConfigurationException("no result providers for type $resultTypeName");
             }
         }
 
@@ -136,7 +149,8 @@ readonly class SearchQuery
             $mergingQueryParts[] = $typeAggregatorInstances[$resultTypeName]->getResultTypeAggregatorQueryPart(
                 $databaseType,
                 $resultTypeName,
-                $filterQueryParts
+                $filterQueryParts,
+                $effectiveQueryOptions
             );
         }
 
@@ -179,9 +193,9 @@ readonly class SearchQuery
     }
 
     /**
-     * @return array<string, \Closure>
+     * @return array<string, Closure>
      */
-    public function getParameterMapper(): array
+    public function getParameterMappers(): array
     {
         return $this->parameterMapper->getParameterMappers();
     }

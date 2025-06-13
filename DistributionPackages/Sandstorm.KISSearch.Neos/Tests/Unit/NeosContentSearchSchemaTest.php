@@ -8,6 +8,7 @@ use Neos\Flow\Tests\UnitTestCase;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\FrameworkAbstraction\DefaultSchemaObjectInstanceProvider;
 use Sandstorm\KISSearch\Api\Schema\Configuration\SearchSchemaConfiguration;
+use Sandstorm\KISSearch\Api\Schema\Configuration\SearchSchemasConfiguration;
 use Sandstorm\KISSearch\Api\SchemaTool;
 use Sandstorm\KISSearch\Neos\Schema\Model\FulltextExtractionMode;
 use Sandstorm\KISSearch\Neos\Schema\Model\NodePropertyFulltextExtraction;
@@ -19,16 +20,21 @@ class NeosContentSearchSchemaTest extends UnitTestCase
 
     public function test_createDefaultSchema_MariaDB(): void
     {
-        $schemaConfig = new SearchSchemaConfiguration(
-            ['neos-content' => '\Sandstorm\KISSearch\Neos\Schema\NeosContentSearchSchema']
+        $schemaConfig = new SearchSchemasConfiguration(
+            ['neos-content' => new SearchSchemaConfiguration(
+                'neos-content',
+                '\Sandstorm\KISSearch\Neos\Schema\NeosContentSearchSchema',
+                [
+                    'contentRepository' => 'default'
+                ]
+            )]
         );
         $schemaSql = SchemaTool::createSchemaSql(
             DatabaseType::MARIADB,
             $schemaConfig,
             new DefaultSchemaObjectInstanceProvider([
                 '\Sandstorm\KISSearch\Neos\Schema\NeosContentSearchSchema' => NeosContentSearchSchema::createInstance(
-                    self::mockNodeTypeSearchConfiguration(),
-                    'default'
+                    self::mockNodeTypeSearchConfiguration()
                 )
             ])
         );

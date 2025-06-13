@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sandstorm\KISSearch\Flow\Command;
 
+use Closure;
 use Doctrine\ORM\EntityManagerInterface;
 use Neos\Flow\Annotations\Inject;
 use Neos\Flow\Cli\CommandController;
@@ -17,7 +18,6 @@ use Sandstorm\KISSearch\Flow\DatabaseTypeDetector;
 use Sandstorm\KISSearch\Flow\FlowCDIObjectInstanceProvider;
 use Sandstorm\KISSearch\Flow\FlowSearchEndpoints;
 use Sandstorm\KISSearch\Flow\FlowSearchSchemas;
-use Sandstorm\KISSearch\Neos\Schema\NeosContentSearchSchema;
 
 class KISSearchCommandController extends CommandController
 {
@@ -40,39 +40,107 @@ class KISSearchCommandController extends CommandController
     #[Inject]
     protected DoctrineSearchQueryDatabaseAdapter $databaseAdapter;
 
+    public function printSchemaCommand(string $schema): void
+    {
+        $schemaConfig = $this->searchSchemas->getSchemaConfiguration()->getSchemaConfigurations()[$schema] ?? null;
+        if ($schemaConfig === null) {
+            $this->outputLine("ERROR: schema $schema does not exist");
+            $this->sendAndExit(1);
+        }
+
+        $this->outputLine(sprintf('### Schema: %s', $schema));
+        $this->outputLine(sprintf('Schema class: %s', $schemaConfig->getSchemaClass()));
+        $this->outputLine(sprintf('Refresher class: %s', $schemaConfig->getRefresherClass()));
+        $this->outputLine(sprintf("Options:\n%s", json_encode($schemaConfig->getOptions(), JSON_PRETTY_PRINT)));
+    }
+
+    public function printEndpointCommand(string $endpoint): void
+    {
+        $endpointConfig = $this->searchEndpoints->getEndpointConfiguration($endpoint);
+
+        $this->outputLine(sprintf('### Endpoint: %s', $endpoint));
+        $this->outputLine(sprintf("Query options:\n%s", json_encode($endpointConfig->getQueryOptions(), JSON_PRETTY_PRINT)));
+        $this->outputLine(sprintf("Type aggregators:\n%s", json_encode($endpointConfig->getTypeAggregators(), JSON_PRETTY_PRINT)));
+        $this->outputLine('Filters:');
+        foreach ($endpointConfig->getFilters() as $filter) {
+            $this->outputLine(sprintf('  * Filter: %s', $filter->getFilterIdentifier()));
+            $this->outputLine(sprintf('     - Filter reference: %s', $filter->getResultFilterReference()));
+            $this->outputLine(sprintf('     - Result type: %s', $filter->getResultType()->getName()));
+            $this->outputLine(sprintf("     - Required sources:\n%s", json_encode($filter->getRequiredSources(), JSON_PRETTY_PRINT)));
+            $this->outputLine(sprintf("     - Default parameters:\n%s", json_encode($filter->getDefaultParameters(), JSON_PRETTY_PRINT)));
+        }
+    }
+
+    public function listEndpointsCommand(): void
+    {
+        $allEndpoints = $this->searchEndpoints->getAllEndpointIds();
+        if (count($allEndpoints) === 0) {
+            $this->outputLine("No KISSearch query endpoints configured!");
+        } else {
+            $this->outputLine("List KISSearch query endpoints:");
+            foreach ($allEndpoints as $endpoint) {
+                $this->outputLine(" - $endpoint");
+            }
+        }
+    }
+
     /**
      * Prints out the SQL CREATE schema for all configured SearchSchemaInterfaces.
      *
-     * @param string|null $databaseType autodetected, if not given
+     * @param string|null $database autodetected, if not given
      * @return void
      */
-    public function printSchemaCreateCommand(?string $databaseType = null): void
+    public function printSchemaCreateCommand(?string $database = null): void
     {
-        $this->outputLine('-- Printing KISSearch CREATE schema from CLI command');
-        if ($databaseType === null) {
-            $databaseType = $this->databaseTypeDetector->detectDatabase();
-            $this->outputLine("-- no explicit database type given, detected: $databaseType->value");
-        } else {
-            $databaseType = DatabaseType::from($databaseType);
-            $this->outputLine("-- explicit database type: $databaseType->value");
-        }
-        $this->outputLine('-- START SCRIPT');
-
-        $sql = SchemaTool::createSchemaSql($databaseType, $this->searchSchemas->getSchemaConfiguration(), $this->instanceProvider);
-        $this->outputLine($sql);
-
-        $this->outputLine('-- END SCRIPT');
+        $this->printScript($database, 'CREATE schema', function (DatabaseType $databaseType) {
+            SchemaTool::createSchemaSql(
+                $databaseType,
+                $this->searchSchemas->getSchemaConfiguration(),
+                $this->instanceProvider
+            );
+        });
     }
 
     /**
      * Prints out the SQL DROP schema for all configured SearchSchemaInterfaces.
      *
-     * @param string|null $databaseType autodetected, if not given
+     * @param string|null $database autodetected, if not given
      * @return void
      */
     public function printSchemaDropCommand(?string $database = null): void
     {
-        $this->outputLine('-- Printing KISSearch DROP schema from CLI command');
+        $this->printScript($database, 'DROP schema', function (DatabaseType $databaseType) {
+            return SchemaTool::dropSchemaSql(
+                $databaseType,
+                $this->searchSchemas->getSchemaConfiguration(),
+                $this->instanceProvider
+            );
+        });
+    }
+
+    /**
+     * Prints out the SQL REFRESH search dependencies for all configured SearchDependencyRefreshers.
+     *
+     * @param string|null $schema schema filter, refresh all if not given
+     * @param string|null $database autodetected, if not given
+     * @return void
+     */
+    public function printRefreshCommand(?string $schema = null, ?string $database = null): void
+    {
+        $this->printScript($database, 'REFRESH search dependencies', function (DatabaseType $databaseType) use ($schema
+        ) {
+            return SchemaTool::refreshSearchDependenciesSql(
+                $databaseType,
+                $this->searchSchemas->getSchemaConfiguration(),
+                $this->instanceProvider,
+                $schema
+            );
+        });
+    }
+
+    private function printScript(?string $database, string $scriptName, Closure $script): void
+    {
+        $this->outputLine("-- Printing KISSearch script $scriptName from CLI command");
         if ($database === null) {
             $databaseType = $this->databaseTypeDetector->detectDatabase();
             $this->outputLine("-- no explicit database type given, detected: $databaseType->value");
@@ -82,7 +150,7 @@ class KISSearchCommandController extends CommandController
         }
         $this->outputLine('-- START SCRIPT');
 
-        $sql = SchemaTool::dropSchemaSql($databaseType, $this->searchSchemas->getSchemaConfiguration(), $this->instanceProvider);
+        $sql = $script($databaseType);
         $this->outputLine($sql);
 
         $this->outputLine('-- END SCRIPT');
@@ -98,7 +166,11 @@ class KISSearchCommandController extends CommandController
         $databaseType = $this->databaseTypeDetector->detectDatabase();
         $this->outputLine("creating KISSearch schema for $databaseType->value database ...");
 
-        $sql = SchemaTool::createSchemaSql($databaseType, $this->searchSchemas->getSchemaConfiguration(), $this->instanceProvider);
+        $sql = SchemaTool::createSchemaSql(
+            $databaseType,
+            $this->searchSchemas->getSchemaConfiguration(),
+            $this->instanceProvider
+        );
         $this->executeSqlInTransaction($sql);
         $this->outputLine("done!");
     }
@@ -113,7 +185,11 @@ class KISSearchCommandController extends CommandController
         $databaseType = $this->databaseTypeDetector->detectDatabase();
         $this->outputLine("dropping KISSearch schema for $databaseType->value database ...");
 
-        $sql = SchemaTool::dropSchemaSql($databaseType, $this->searchSchemas->getSchemaConfiguration(), $this->instanceProvider);
+        $sql = SchemaTool::dropSchemaSql(
+            $databaseType,
+            $this->searchSchemas->getSchemaConfiguration(),
+            $this->instanceProvider
+        );
         $this->executeSqlInTransaction($sql);
         $this->outputLine("done!");
     }
@@ -128,10 +204,33 @@ class KISSearchCommandController extends CommandController
         $databaseType = $this->databaseTypeDetector->detectDatabase();
         $this->outputLine("resetting KISSearch schema for $databaseType->value database ...");
 
-        $dropSql = SchemaTool::dropSchemaSql($databaseType, $this->searchSchemas->getSchemaConfiguration(), $this->instanceProvider);
+        $dropSql = SchemaTool::dropSchemaSql(
+            $databaseType,
+            $this->searchSchemas->getSchemaConfiguration(),
+            $this->instanceProvider
+        );
         $this->executeSqlInTransaction($dropSql);
-        $createSql = SchemaTool::createSchemaSql($databaseType, $this->searchSchemas->getSchemaConfiguration(), $this->instanceProvider);
+        $createSql = SchemaTool::createSchemaSql(
+            $databaseType,
+            $this->searchSchemas->getSchemaConfiguration(),
+            $this->instanceProvider
+        );
         $this->executeSqlInTransaction($createSql);
+        $this->outputLine("done!");
+    }
+
+    public function refreshCommand(?string $schema = null): void
+    {
+        $databaseType = $this->databaseTypeDetector->detectDatabase();
+        $this->outputLine("refreshing KISSearch dependencies for $databaseType->value database ...");
+
+        $sql = SchemaTool::refreshSearchDependenciesSql(
+            $databaseType,
+            $this->searchSchemas->getSchemaConfiguration(),
+            $this->instanceProvider,
+            $schema
+        );
+        $this->executeSqlInTransaction($sql);
         $this->outputLine("done!");
     }
 
@@ -160,9 +259,14 @@ class KISSearchCommandController extends CommandController
          */
     }
 
-    public function printSearchQueryCommand(string $endpoint, ?string $database = null): void
+    public function printSearchQueryCommand(string $endpoint, ?string $options = null, ?string $database = null): void
     {
         $searchEndpointConfiguration = $this->searchEndpoints->getEndpointConfiguration($endpoint);
+
+        $queryOptionsArray = $this->parseJsonArgToArray(
+            $options,
+            'Example usage: --options \'{"contentRepository": "default"}}\''
+        );
 
         $this->outputLine("-- Printing KISSearch search query SQL for endpoint '$endpoint'");
         if ($database === null) {
@@ -173,52 +277,49 @@ class KISSearchCommandController extends CommandController
             $this->outputLine("-- explicit database type: $databaseType->value");
         }
 
-        $this->outputLine("-- START OF QUERY");
+        if (count($queryOptionsArray) > 0) {
+            $this->outputLine('-- override query options:');
+            $this->outputLine('-- ' . str_replace("\n", "\n-- ", json_encode($queryOptionsArray, JSON_PRETTY_PRINT)));
+        }
 
-        $query = SearchQuery::create($databaseType, $searchEndpointConfiguration, $this->instanceProvider);
+        $this->outputLine('-- START OF QUERY');
+
+        $query = SearchQuery::create(
+            $databaseType,
+            $this->instanceProvider,
+            $searchEndpointConfiguration,
+            $queryOptionsArray
+        );
         $sql = QueryTool::createSearchQuerySQL($databaseType, $query);
         $this->outputLine($sql);
-        $this->outputLine("-- END OF QUERY");
-    }
-
-    public function refreshNodesAndTheirDocumentsCommand(): void
-    {
-        $databaseType = $this->databaseTypeDetector->detectDatabase();
-        switch ($databaseType) {
-            case DatabaseType::MYSQL:
-            case DatabaseType::MARIADB:
-                $this->executeSqlInTransaction(
-                    NeosContentSearchSchema::mariaDB_call_functionPopulateNodesAndTheirDocuments()
-                );
-                break;
-            case DatabaseType::POSTGRES:
-                throw new \Exception('Postgres not supported for now.');
-        }
+        $this->outputLine('-- END OF QUERY');
     }
 
     # Search API
 
-    public function queryCommand(string $endpoint, string $query, string $resultLimits, ?string $params = null, ?int $limit = null, bool $showMetaData = false): void
-    {
-        if ($params !== null) {
-            try {
-                $paramsArray = json_decode($params, true, 512, JSON_THROW_ON_ERROR);
-            } catch (\Throwable $jsonError) {
-                $this->outputLine('invalid --params value; cause: %s', [$jsonError->getMessage()]);
-                $this->outputLine('Example usage: --params \'{"neosContentDimensionValues": {"language": ["en_US"]}, "neosContentSiteNodeName": "neosdemo"}\'');
-                $this->sendAndExit(1);
-            }
-        } else {
-            $paramsArray = [];
-        }
+    public function queryCommand(
+        string $endpoint,
+        string $query,
+        string $resultLimits,
+        ?string $params = null,
+        ?string $options = null,
+        ?int $limit = null,
+        bool $showMetaData = false
+    ): void {
+        $resultLimitsArray = $this->parseJsonArgToArray(
+            $resultLimits,
+            'Example usage: --result-limits \'{"neos-content": 20, "foo": 10}\''
+        );
 
-        try {
-            $resultLimitsArray = json_decode($resultLimits, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\Throwable $jsonError) {
-            $this->outputLine('invalid --result-limits value; cause: %s', [$jsonError->getMessage()]);
-            $this->outputLine('Example usage: --result-limits \'{"neos-content": 20, "foo": 10}\'');
-            $this->sendAndExit(1);
-        }
+        $paramsArray = $this->parseJsonArgToArray(
+            $params,
+            'Example usage: --params \'{"neosContentDimensionValues": {"language": ["en_US"]}, "neosContentSiteNodeName": "neosdemo"}\''
+        );
+
+        $queryOptionsArray = $this->parseJsonArgToArray(
+            $options,
+            'Example usage: --options \'{"contentRepository": "default"}}\''
+        );
 
         $input = new SearchInput(
             $query,
@@ -231,8 +332,9 @@ class KISSearchCommandController extends CommandController
         $databaseType = $this->databaseTypeDetector->detectDatabase();
         $searchQuery = SearchQuery::create(
             $databaseType,
+            $this->instanceProvider,
             $searchEndpointConfiguration,
-            $this->instanceProvider
+            $queryOptionsArray
         );
 
         $results = QueryTool::executeSearchQuery(
@@ -243,6 +345,21 @@ class KISSearchCommandController extends CommandController
         );
 
         $this->outputSearchResultsTable($results, $query, $showMetaData);
+    }
+
+    private function parseJsonArgToArray(?string $argJson, string $usageDescription): array
+    {
+        if ($argJson !== null) {
+            try {
+                return json_decode($argJson, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\Throwable $jsonError) {
+                $this->outputLine('invalid JSON input argument; cause: %s', [$jsonError->getMessage()]);
+                $this->outputLine($usageDescription);
+                $this->sendAndExit(1);
+            }
+        } else {
+            return [];
+        }
     }
 
     private function outputSearchResultsTable(array $results, string $query, bool $showMetaData): void
@@ -258,7 +375,10 @@ class KISSearchCommandController extends CommandController
         $tableRows = array_map(function (\JsonSerializable $result) use ($showMetaData) {
             $serialized = $result->jsonSerialize();
             if ($showMetaData) {
-                $serialized['combinedMetaData'] = self::formatMetaData($serialized['groupMetaData'], $serialized['metaData']);
+                $serialized['combinedMetaData'] = self::formatMetaData(
+                    $serialized['groupMetaData'],
+                    $serialized['metaData']
+                );
             }
             unset($serialized['groupMetaData']);
             unset($serialized['metaData']);
@@ -306,7 +426,7 @@ class KISSearchCommandController extends CommandController
             }
             return $out;
         }
-        return $prefix . ((string) $value) . "\n";
+        return $prefix . ((string)$value) . "\n";
     }
 
 }

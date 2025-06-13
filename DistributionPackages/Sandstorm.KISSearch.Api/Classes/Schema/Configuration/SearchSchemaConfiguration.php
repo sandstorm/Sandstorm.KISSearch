@@ -7,37 +7,62 @@ namespace Sandstorm\KISSearch\Api\Schema\Configuration;
 readonly class SearchSchemaConfiguration
 {
     /**
-     * @param array<string, string> $schemaClasses
+     * @param string $schemaIdentifier
+     * @param string $schemaClass
+     * @param ?string $refresherClass
+     * @param array<string, mixed> $options
      */
     public function __construct(
-        private array $schemaClasses
+        private string $schemaIdentifier,
+        private string $schemaClass,
+        private ?string $refresherClass,
+        private array $options
     )
     {
         // TODO validate
     }
 
-    public static function fromConfigurationArray(array $schemasConfig): self
+    public static function fromConfigurationArray(string $identifier, array $schemaConfig): self
     {
-        // pure validation
-        $schemas = [];
-        foreach ($schemasConfig as $schemaIdentifier => $schemaClass) {
-            if (!is_string($schemaIdentifier)) {
-                throw new \RuntimeException("Invalid search schemas configuration 'schemas.$schemaIdentifier'; key must be a string but was: " . gettype($schemaIdentifier));
-            }
-            if (!is_string($schemaClass)) {
-                throw new \RuntimeException("Invalid search schemas configuration 'schemas.$schemaIdentifier'; value must be a string but was: " . gettype($schemaClass));
-            }
-            $schemas[$schemaIdentifier] = $schemaClass;
+        $schemaClass = $schemaConfig['class'];
+        if (!is_string($schemaClass) || strlen(trim($schemaClass)) === 0) {
+            throw new \RuntimeException("Invalid search schema configuration '...schemas.$identifier.class'; value must be a string but was: " . gettype($schemaClass));
+        }
+        $refresherClass = $schemaConfig['refresher'] ?? null;
+        if ($refresherClass !== null && (!is_string($refresherClass) || strlen(trim($refresherClass)) === 0)) {
+            throw new \RuntimeException("Invalid search schema configuration '...schemas.$identifier.refresher'; value must be null or a string but was: " . gettype($refresherClass));
+        }
+        $options = $schemaConfig['options'] ?? [];
+        if (!is_array($options)) {
+            throw new \RuntimeException("Invalid search schema configuration '...schemas.$identifier.options'; value must be an array but was: " . gettype($options));
         }
 
-        return new self($schemas);
+        return new self(
+            $identifier,
+            $schemaClass,
+            $refresherClass,
+            $options
+        );
     }
 
-    /**
-     * @return array<string, string>
-     */
-    public function getSchemaClasses(): array
+    public function getSchemaIdentifier(): string
     {
-        return $this->schemaClasses;
+        return $this->schemaIdentifier;
     }
+
+    public function getSchemaClass(): string
+    {
+        return $this->schemaClass;
+    }
+
+    public function getRefresherClass(): ?string
+    {
+        return $this->refresherClass;
+    }
+
+    public function getOptions(): array
+    {
+        return $this->options;
+    }
+
 }

@@ -3,7 +3,25 @@ Sandstorm:
 
     # write-side / SQL migrations
     schemas:
-      'neos-content': \Sandstorm\KISSearch\Neos\Schema\NeosContentSearchSchema
+      'neos-content':
+        # creates and drops the SQL schema needed for fulltext searching
+        class: \Sandstorm\KISSearch\Neos\Schema\NeosContentSearchSchema
+        # refreshes the "nodes and their documents" relation
+        refresher: \Sandstorm\KISSearch\Neos\Schema\NeosContentSearchSchema
+        # configuration for the Neos CR KISSearch schema
+        options:
+          # which content repository to use
+          contentRepository: 'default'
+          # explicit filter to exclude specific node types from search indexing
+          excludedNodeTypes:
+            - 'Neos.Neos:Shortcut'
+          # only document node types that extends this get indexed
+          # also only content nodes that lives below documents extending this get indexed
+          # defaults to 'Neos.Neos:Document' when not configured
+          baseDocumentNodeType: 'Neos.Neos:Document'
+          # only content node types that extends this get indexed
+          # defaults to 'Neos.Neos:Content' when not configured
+          baseContentNodeType: 'Neos.Neos:Content'
 
     # read-side / search query time
     query:
@@ -19,15 +37,13 @@ Sandstorm:
 
       endpoints:
         'default':
+          queryOptions:
+            contentRepository: 'default'
           filters:
             'neos':
-              filter: neos-content-filter
-              resultType: neos-document
               sources:
                 - neos-content-source
+              filter: neos-content-filter
+              resultType: neos-document
           typeAggregators:
             neos-document: neos-document-type-aggregator
-
-    Neos:
-      # TODO support multiple content repositories
-      contentRepositoryId: 'default'

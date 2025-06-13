@@ -31,5 +31,5 @@ Sandstorm:
         #   class: '...'
 
       # search endpoint configurations
-      endpoints:
+      #endpoints:
         # TODO
