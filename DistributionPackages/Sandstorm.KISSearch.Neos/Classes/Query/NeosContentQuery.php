@@ -272,13 +272,15 @@ class NeosContentQuery implements SearchSourceInterface, ResultFilterInterface, 
             select
                 -- KISSearch API
                 '$resultTypeName' as result_type,
-                concat_ws('__', nd.document_id, nd.dimensionshash, nd.contentstreamid) as result_id,
+                md5(concat_ws('__', nd.document_id, nd.dimensionshash, nd.contentstreamid, '$contentRepositoryId')) as result_id,
                 nd.document_title as result_title,
                 nd.document_uri_path as result_url,
                 $scoreSelector as score,
                 json_object(
                     'score', $scoreSelector,
                     'nodeIdentifier', nd.node_id,
+                    'documentNodeIdentifier', nd.document_id,
+                    'contentRepository', '$contentRepositoryId',
                     'nodeType', nd.nodetype,
                     'dimensionsHash', nd.dimensionshash,
                     'dimensionValues', nd.dimensionvalues,

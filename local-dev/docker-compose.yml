@@ -46,6 +46,20 @@ services:
       - maria-db
       - postgres-db
 
+  php:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./php-example
+    volumes:
+      - ./php-example/web-root/:/app/:ro,cached
+    networks:
+      - kissearch-test-distribution
+    ports:
+      - '8082:8082'
+    depends_on:
+      - maria-db
+      - postgres-db
+
   #####
   # Maria DB
   maria-db:

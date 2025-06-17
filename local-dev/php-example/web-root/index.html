@@ -1,0 +1,159 @@
+<html lang="en">
+<head>
+    <title>Very fast KISSearch query example</title>
+    <link rel="stylesheet" href="charts.min.css"/>
+    <style>
+        body{
+            background: #f2f2f2;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        label {
+            display: none;
+        }
+        .search {
+            width: 100%;
+            position: relative;
+            display: flex;
+        }
+
+        .searchTerm {
+            width: 100%;
+            border: 3px solid #00adee;
+            border-right: none;
+            padding: 15px;
+            height: 20px;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+            color: #111111;
+        }
+
+        .searchTerm:focus{
+            color: #00adee;
+        }
+
+        .searchButton {
+            width: 40px;
+            height: 36px;
+            border: 1px solid #00adee;
+            background: #00adee;
+            text-align: center;
+            color: #fff;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        /*Resize the wrap to see the search bar change!*/
+        .wrap{
+            width: 30%;
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #timing-chart {
+            top: 20%;
+            position: absolute;
+            width: 100%;
+        }
+
+        #result-output {
+            top: 20%;
+            width: 35%;
+        }
+    </style>
+</head>
+<body>
+
+<h1>KISSearch example</h1>
+
+<!-- taken from https://codepen.io/huange/pen/bGqMqM -->
+<div class="wrap">
+    <div class="search">
+        <label for="search">Search</label>
+        <input id="search" type="text" class="searchTerm" oninput="search()" placeholder="Try out KISSearch" />
+        <button type="submit" class="searchButton">
+            <svg width="30px" height="30px" viewBox="0 0 1024 1024" class="icon"  version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M853.988 783.582L704.985 634.578c29.249-49.501 46.054-107.229 46.054-168.891 0-183.636-148.866-332.504-332.503-332.504S86.034 282.051 86.034 465.688 234.9 798.19 418.536 798.19c61.662 0 119.39-16.805 168.892-46.055L736.43 901.138c32.462 32.462 85.094 32.462 117.558 0 32.462-32.461 32.462-85.094 0-117.556z m-435.452-21.339c-163.784 0-296.557-132.775-296.557-296.556 0-163.784 132.773-296.557 296.557-296.557 163.782 0 296.556 132.773 296.556 296.557 0 163.781-132.773 296.556-296.556 296.556z m411.939 115.384c-19.476 19.478-51.056 19.478-70.534 0L615.726 733.411a334.417 334.417 0 0 0 70.421-70.379l148.017 151.781c19.478 19.479 15.789 43.336-3.689 62.814z" fill="#ffffff" /></svg>
+        </button>
+    </div>
+</div>
+<div id="timing-chart">
+    <table class="charts-css line show-heading">
+        <caption>request timing</caption>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+<div id="result-output">
+    Results go here
+</div>
+<template id="timing-entry">
+    <tr>
+        <td>
+            <span class="data"></span>
+        </td>
+    </tr>
+</template>
+<script type="text/javascript">
+    const timingEntryTemplate = document.getElementById("timing-entry");
+    const chart = document.getElementById("timing-chart").querySelector('table tbody');
+    const resultOutput = document.getElementById("result-output");
+    let lastTiming = null;
+    const upperScaleTiming = 50;
+    let searchCounter = 0;
+
+    async function search() {
+        searchCounter++;
+        const searchQuery = document.getElementById('search').value;
+        console.log("searching for: " + searchQuery);
+
+        const startTime = Date.now();
+        const result = await callSearchApi(searchQuery);
+        const requestTime = Date.now() - startTime;
+        const requestTimePercent = requestTime / upperScaleTiming;
+        if (lastTiming === null) {
+            lastTiming = requestTimePercent;
+        }
+        console.log(result);
+
+        //const labelText = '"' + searchQuery + '" (' + requestTime + ' ms)';
+
+        const timingEntry = timingEntryTemplate.content.cloneNode(true);
+        let tdElem = timingEntry.querySelector('td');
+        tdElem.setAttribute('style', '--start: ' + lastTiming + '; --end: ' + requestTimePercent + ';');
+        timingEntry.querySelector('.data').innerText = requestTime + 'ms';
+        chart.appendChild(timingEntry);
+
+        resultOutput.innerText = '';
+
+        result['results'].forEach(result => {
+            const resultElem = document.createElement('div');
+            resultElem.innerText = result['result_title'];
+            resultOutput.append(resultElem);
+        })
+
+        if (searchCounter > 30) {
+            chart.removeChild(chart.children[0]);
+        }
+
+        lastTiming = requestTimePercent;
+    }
+
+    async function callSearchApi(searchQuery) {
+        const url = "http://localhost:8082/search.php?q=" + encodeURIComponent(searchQuery);
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error(error.message);
+        }
+    }
+</script>
+</body>
+</html>

@@ -11,6 +11,8 @@ use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
  */
 class MySQLHelper
 {
+    const SPECIAL_CHARACTERS = '-+~/<>\'":*$#@()!,.?`=%&^';
+
     public static function buildSearchQuerySql(SearchQuery $searchQuery): string
     {
         // limit is a global parameter
@@ -166,6 +168,31 @@ class MySQLHelper
                 '[^\\\.a-zA-Z0-9]', ' '),
             '\\\s+', ' ')
         SQL;
+    }
+
+    public static function prepareSearchTermQueryParameter(string $userInput): string
+    {
+        $sanitized = trim($userInput);
+        $sanitized = mb_strtolower($sanitized);
+        $sanitized = str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $sanitized);
+
+        $specialChars = str_split(self::SPECIAL_CHARACTERS);
+        $sanitized = str_replace($specialChars, ' ', $sanitized);
+
+        $searchWords = explode(
+            ' ',
+            $sanitized
+        );
+
+        $searchWords = array_filter($searchWords, function(string $searchWord) {
+            return strlen(trim($searchWord)) > 0;
+        });
+
+        $searchWordsFuzzy = array_map(function(string $searchWord) {
+            return '+' . $searchWord . '*';
+        }, $searchWords);
+
+        return implode(' ', $searchWordsFuzzy);
     }
 
 }

@@ -63,7 +63,7 @@ class QueryTool
         }
 
         // global default parameters
-        $mappedParameters[SearchQuery::SQL_QUERY_PARAM_QUERY] = $searchInput->getSearchQuery();
+        $mappedParameters[SearchQuery::SQL_QUERY_PARAM_QUERY] = self::prepareSearchTermParameterValue($databaseType, $searchInput->getSearchQuery());
         $mappedParameters[SearchQuery::SQL_QUERY_PARAM_GLOBAL_LIMIT] = $searchInput->getGlobalLimit();
         foreach ($searchInput->getResultTypeLimits() as $searchResultTypeName => $limit) {
             $mappedParameters[SearchQuery::buildAggregatorLimitParameterName($searchResultTypeName)] = $limit;
@@ -71,5 +71,20 @@ class QueryTool
 
         return $databaseAdapter->executeSearchQuery($sql, $mappedParameters);
     }
+
+    private static function prepareSearchTermParameterValue(
+        DatabaseType $databaseType, string $userInput): string
+    {
+        // TODO postgres
+        return match ($databaseType) {
+            DatabaseType::MYSQL, DatabaseType::MARIADB => MySQLHelper::prepareSearchTermQueryParameter($userInput),
+            //DatabaseType::POSTGRES => PostgresHelper::prepareSearchTermQueryParameter($userInput),
+            default => throw new UnsupportedDatabaseException(
+                "Search service does not support database of type '$databaseType->name'",
+                1689936258
+            )
+        };
+    }
+
 
 }
