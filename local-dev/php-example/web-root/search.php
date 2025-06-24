@@ -39,21 +39,30 @@ function prepareSearchTermQueryParameter(string $userInput): string
 }
 
 // Basic connection settings
+/*
 $databaseHost = 'maria-db';
 $databaseUsername = 'neos';
 $databasePassword = 'neos';
 $databaseName = 'neos';
+$databasePort = 3306;
+*/
+$databaseHost = 'host.docker.internal';
+$databaseUsername = 'root';
+$databasePassword = 'password';
+$databaseName = 'wwwneosio';
+$databasePort = 3307;
 
 $searchQuery = $_GET['q'];
 $searchQueryPrepared = prepareSearchTermQueryParameter($searchQuery);
 $limit = $_GET['l'] ?? 10;
 $workspace = 'live';
-$siteNodes = ['neosdemo'];
+$siteNodes = ['neosio'];
 $excludedSiteNodes = [];
+
 $dimensionValues = [
     [
         'dimension_name' => 'language',
-        'filter_value' => 'en_US'
+        'filter_value' => 'en'
     ]
 ];
 $dimensionValuesJson = json_encode($dimensionValues);
@@ -70,7 +79,7 @@ $contentNodeTypeFilter = inArrayFilter('nodetype', $contentNodeTypes);
 $documentNodeTypeFilter = inArrayFilter('document_nodetype', $documentNodeTypes);
 
 // Connect to the database
-$mysqli = mysqli_connect($databaseHost, $databaseUsername, $databasePassword, $databaseName);
+$mysqli = mysqli_connect($databaseHost, $databaseUsername, $databasePassword, $databaseName, $databasePort);
 
 $kissearchQuery = <<<SQL
 -- Printing KISSearch search query SQL for endpoint 'us-live'
@@ -84,7 +93,8 @@ $kissearchQuery = <<<SQL
         match (search_bucket_normal) against ( ? in boolean mode ) as score_bucket_normal,
         match (search_bucket_minor) against ( ? in boolean mode ) as score_bucket_minor
     from cr_default_p_graph_node n
-    where match (search_bucket_critical, search_bucket_major, search_bucket_normal, search_bucket_minor) against ( ? in boolean mode )),
+    where match (search_bucket_critical, search_bucket_major, search_bucket_normal, search_bucket_minor) against ( ? in boolean mode )
+    limit 100),
          all_results as (
             -- union of all search result types aggregated
                 (select

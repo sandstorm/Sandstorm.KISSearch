@@ -55,6 +55,26 @@ composer require sandstorm/kissearch-api
   the [neos_content parameter section](# neos_content additional parameters))
 - Configuration happens via Settings.yaml when using KISSearch in a Flow project.
 
+# Setup
+
+setup database schema initially:
+```
+./flow kissearch:schemacreate
+```
+
+setup database after code updates (f.e. to your NodeType configuration):
+```
+./flow kissearch:schemareset
+```
+
+refresh search dependencies:
+```
+./flow kissearch:refresh
+```
+
 # Configuration
 
-TODO
+## SQL Schema migrations
+
+For KISSearch to work properly, there are some changes to the database schema we need to apply.
+

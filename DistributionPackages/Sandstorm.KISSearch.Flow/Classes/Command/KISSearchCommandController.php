@@ -35,11 +35,17 @@ class KISSearchCommandController extends CommandController
     protected FlowCDIObjectInstanceProvider $instanceProvider;
 
     #[Inject]
-    protected EntityManagerInterface $entityManager;
-
-    #[Inject]
     protected DoctrineSearchQueryDatabaseAdapter $databaseAdapter;
 
+    #[Inject]
+    protected EntityManagerInterface $entityManager;
+
+    /**
+     * Prints out the schema configuration by identifier.
+     *
+     * @param string $schema
+     * @return void
+     */
     public function printSchemaCommand(string $schema): void
     {
         $schemaConfig = $this->searchSchemas->getSchemaConfiguration()->getSchemaConfigurations()[$schema] ?? null;
@@ -54,6 +60,12 @@ class KISSearchCommandController extends CommandController
         $this->outputLine(sprintf("Options:\n%s", json_encode($schemaConfig->getOptions(), JSON_PRETTY_PRINT)));
     }
 
+    /**
+     * Prints out the endpoint configuration by identifier.
+     *
+     * @param string $endpoint
+     * @return void
+     */
     public function printEndpointCommand(string $endpoint): void
     {
         $endpointConfig = $this->searchEndpoints->getEndpointConfiguration($endpoint);
@@ -71,6 +83,11 @@ class KISSearchCommandController extends CommandController
         }
     }
 
+    /**
+     * Lists all endpoint identifiers.
+     *
+     * @return void
+     */
     public function listEndpointsCommand(): void
     {
         $allEndpoints = $this->searchEndpoints->getAllEndpointIds();
@@ -219,6 +236,12 @@ class KISSearchCommandController extends CommandController
         $this->outputLine("done!");
     }
 
+    /**
+     * Refreshes the search dependencies.
+     *
+     * @param string|null $schema
+     * @return void
+     */
     public function refreshCommand(?string $schema = null): void
     {
         $databaseType = $this->databaseTypeDetector->detectDatabase();
@@ -259,6 +282,14 @@ class KISSearchCommandController extends CommandController
          */
     }
 
+    /**
+     * Prints the SQL for the given endpoint configuration.
+     *
+     * @param string $endpoint
+     * @param string|null $options
+     * @param string|null $database
+     * @return void
+     */
     public function printSearchQueryCommand(string $endpoint, ?string $options = null, ?string $database = null): void
     {
         $searchEndpointConfiguration = $this->searchEndpoints->getEndpointConfiguration($endpoint);
@@ -297,17 +328,28 @@ class KISSearchCommandController extends CommandController
 
     # Search API
 
+    /**
+     * Executes the search query for the given endpoint. Prints the results.
+     * @param string $endpoint
+     * @param string $query
+     * @param string $typeLimits
+     * @param string|null $params
+     * @param string|null $options
+     * @param int|null $limit
+     * @param bool $showMetaData
+     * @return void
+     */
     public function queryCommand(
         string $endpoint,
         string $query,
-        string $resultLimits,
+        string $typeLimits,
         ?string $params = null,
         ?string $options = null,
         ?int $limit = null,
         bool $showMetaData = false
     ): void {
         $resultLimitsArray = $this->parseJsonArgToArray(
-            $resultLimits,
+            $typeLimits,
             'Example usage: --result-limits \'{"neos-content": 20, "foo": 10}\''
         );
 
@@ -321,30 +363,49 @@ class KISSearchCommandController extends CommandController
             'Example usage: --options \'{"contentRepository": "default"}}\''
         );
 
+        // ### 0. detect database type
+        // may also be hard-coded in your project
+        $databaseType = $this->databaseTypeDetector->detectDatabase();
+
+        // ### 1. put user input into a SearchInput instance
         $input = new SearchInput(
+            // the search query input
             $query,
+            // the additional parameters, f.e. Neos workspace, etc.
+            // may override default parameters configured in the endpoint
             $paramsArray,
+            // limit per result type, f.e. ['neos-document' => 20, 'product' => 40]
             $resultLimitsArray,
+            // (optional) global limit of all merged results
+            // If not given, the sum of all limits per result type is used
             $limit
         );
 
+        // ### 2. load your endpoint configuration
+        // In this case, we use the shipped Flow service.
         $searchEndpointConfiguration = $this->searchEndpoints->getEndpointConfiguration($endpoint);
-        $databaseType = $this->databaseTypeDetector->detectDatabase();
+
+        // ### 3. create the search query
         $searchQuery = SearchQuery::create(
             $databaseType,
             $this->instanceProvider,
             $searchEndpointConfiguration,
+            // override default query options configured in the endpoint
             $queryOptionsArray
         );
 
+        // ### 4. execute the search query
+        $startTime = microtime(true);
         $results = QueryTool::executeSearchQuery(
             $databaseType,
             $searchQuery,
             $input,
             $this->databaseAdapter
         );
+        $queryDurationInMs = (microtime(true) - $startTime) * 1000;
 
         $this->outputSearchResultsTable($results, $query, $showMetaData);
+        $this->outputLine("Query took $queryDurationInMs ms");
     }
 
     private function parseJsonArgToArray(?string $argJson, string $usageDescription): array

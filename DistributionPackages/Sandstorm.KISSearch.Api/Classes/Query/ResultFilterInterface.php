@@ -37,8 +37,8 @@ interface ResultFilterInterface
     /**
      * @param DatabaseType $databaseType
      * @param string $resultFilterIdentifier
-     * @return QueryParameterMapper
+     * @return QueryParameters
      */
-    function getQueryParameterMapper(DatabaseType $databaseType, string $resultFilterIdentifier): QueryParameterMapper;
+    function getQueryParametersForFilter(DatabaseType $databaseType, string $resultFilterIdentifier): QueryParameters;
 
 }

@@ -15,7 +15,6 @@ use Sandstorm\KISSearch\Api\Query\SearchSourceInterface;
 use Sandstorm\KISSearch\Api\Query\TypeAggregatorInterface;
 use Sandstorm\KISSearch\Api\Schema\SearchDependencyRefresherInterface;
 use Sandstorm\KISSearch\Api\Schema\SearchSchemaInterface;
-use Sandstorm\KISSearch\Neos\Query\NeosContentQuery;
 
 #[Scope('singleton')]
 class FlowCDIObjectInstanceProvider implements QueryObjectInstanceProvider, SchemaObjectInstanceProvider

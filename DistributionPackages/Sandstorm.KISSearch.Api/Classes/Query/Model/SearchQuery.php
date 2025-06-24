@@ -9,7 +9,7 @@ use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\FrameworkAbstraction\QueryObjectInstanceProvider;
 use Sandstorm\KISSearch\Api\Query\Configuration\SearchEndpointConfiguration;
 use Sandstorm\KISSearch\Api\Query\InvalidEndpointConfigurationException;
-use Sandstorm\KISSearch\Api\Query\QueryParameterMapper;
+use Sandstorm\KISSearch\Api\Query\QueryParameters;
 use Sandstorm\KISSearch\Api\Query\ResultFilterInterface;
 use Sandstorm\KISSearch\Api\Query\TypeAggregatorInterface;
 
@@ -48,7 +48,7 @@ readonly class SearchQuery
         private array $searchingQueryParts,
         private array $mergingQueryParts,
         private array $defaultParameters,
-        private QueryParameterMapper $parameterMapper
+        private QueryParameters $parameterMapper
     ) {
     }
 
@@ -120,7 +120,7 @@ readonly class SearchQuery
                 $defaultParameters[$fullyQualifiedParameterName] = $defaultParameterValue;
             }
 
-            $parameterMappers[] = $resultFilter->getQueryParameterMapper($databaseType, $resultFilterConfiguration->getFilterIdentifier());
+            $parameterMappers[] = $resultFilter->getQueryParametersForFilter($databaseType, $resultFilterConfiguration->getFilterIdentifier());
 
             $resultProvidersByType[$resultTypeName][] = $resultFilter->getFilterQueryPart(
                 $databaseType,
@@ -159,7 +159,7 @@ readonly class SearchQuery
             $searchingQueryParts,
             $mergingQueryParts,
             $defaultParameters,
-            QueryParameterMapper::combineMappers($parameterMappers)
+            QueryParameters::combineMappers($parameterMappers)
         );
     }
 

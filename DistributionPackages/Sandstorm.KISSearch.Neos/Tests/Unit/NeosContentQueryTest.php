@@ -12,13 +12,14 @@ use Sandstorm\KISSearch\Api\Query\Configuration\SearchEndpointConfiguration;
 use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
 use Sandstorm\KISSearch\Api\Query\Model\SearchResultTypeName;
 use Sandstorm\KISSearch\Api\QueryTool;
-use Sandstorm\KISSearch\Neos\Query\NeosContentQuery;
+use Sandstorm\KISSearch\Neos\NeosContentSearchResultType;
+use Sandstorm\KISSearch\Neos\Query\NeosDocumentQuery;
 
 class NeosContentQueryTest extends UnitTestCase
 {
     public function test_createDefaultQuery_MariaDB_globalLimit(): void
     {
-        $neosContentQueryInstance = NeosContentQuery::createInstance('default');
+        $neosContentQueryInstance = NeosDocumentQuery::createInstance('default');
         $objectProvider = new DefaultQueryObjectInstanceProvider(
             ['neos-content-source' => $neosContentQueryInstance],
             ['neos-content-filter' => $neosContentQueryInstance],
@@ -26,6 +27,7 @@ class NeosContentQueryTest extends UnitTestCase
         );
         $endpoint = new SearchEndpointConfiguration(
             'testEndpoint',
+            [NeosContentSearchResultType::OPTION_CONTENT_REPOSITORY => 'default'],
             [
                 'testFilter' => new ResultFilterConfiguration(
                     'testFilter',
@@ -38,9 +40,16 @@ class NeosContentQueryTest extends UnitTestCase
             ['neos-document' => 'neos-content-type-aggregator']
         );
 
-        $searchQuery = SearchQuery::create(DatabaseType::MARIADB, $endpoint, $objectProvider);
+        $searchQuery = SearchQuery::create(
+            DatabaseType::MARIADB,
+            $objectProvider,
+            $endpoint
+        );
 
-        $sql = QueryTool::createSearchQuerySQL(DatabaseType::MARIADB, $searchQuery);
+        $sql = QueryTool::createSearchQuerySQL(
+            DatabaseType::MARIADB,
+            $searchQuery
+        );
 
         var_dump($sql);
     }

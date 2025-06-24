@@ -6,7 +6,7 @@ namespace Sandstorm\KISSearch\Api\Query;
 
 use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
 
-readonly class QueryParameterMapper
+readonly class QueryParameters
 {
     public function __construct(
         private array $parameterMappers = []
@@ -15,10 +15,10 @@ readonly class QueryParameterMapper
     }
 
     /**
-     * @param array<QueryParameterMapper> $mappers
-     * @return QueryParameterMapper
+     * @param array<QueryParameters> $mappers
+     * @return QueryParameters
      */
-    public static function combineMappers(array $mappers): QueryParameterMapper
+    public static function combineMappers(array $mappers): QueryParameters
     {
         $combinedMappers = [];
         foreach ($mappers as $mapper) {
@@ -29,7 +29,7 @@ readonly class QueryParameterMapper
                 $combinedMappers[$parameterName] = $mapperFunction;
             }
         }
-        return new QueryParameterMapper($combinedMappers);
+        return new QueryParameters($combinedMappers);
     }
 
     public function addMapper(string $fullyQualifiedParameterName, \Closure $mapperFunction): self
