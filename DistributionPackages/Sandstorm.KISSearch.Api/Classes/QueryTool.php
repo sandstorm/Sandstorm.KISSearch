@@ -9,6 +9,8 @@ use Sandstorm\KISSearch\Api\DBAbstraction\MySQLHelper;
 use Sandstorm\KISSearch\Api\DBAbstraction\SearchQueryDatabaseAdapterInterface;
 use Sandstorm\KISSearch\Api\Query\Model\SearchInput;
 use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
+use Sandstorm\KISSearch\Api\Query\Model\SearchResult;
+use Sandstorm\KISSearch\Api\Query\Model\SearchResults;
 
 class QueryTool
 {
@@ -37,14 +39,14 @@ class QueryTool
      * @param SearchQuery $searchQuery
      * @param SearchInput $searchInput
      * @param SearchQueryDatabaseAdapterInterface $databaseAdapter
-     * @return array<SearchResult>
+     * @return SearchResults
      */
     public static function executeSearchQuery(
         DatabaseType $databaseType,
         SearchQuery $searchQuery,
         SearchInput $searchInput,
         SearchQueryDatabaseAdapterInterface $databaseAdapter
-    ): array
+    ): SearchResults
     {
         $queryParameterMappers = $searchQuery->getParameterMappers();
         $sql = self::createSearchQuerySQL($databaseType, $searchQuery);
@@ -69,7 +71,13 @@ class QueryTool
             $mappedParameters[SearchQuery::buildAggregatorLimitParameterName($searchResultTypeName)] = $limit;
         }
 
-        return $databaseAdapter->executeSearchQuery($sql, $mappedParameters);
+        $startTime = microtime(true);
+        $results = $databaseAdapter->executeSearchQuery($sql, $mappedParameters);
+        $queryExecutionTimeInMs = (microtime(true) - $startTime) * 1000;
+        return new SearchResults(
+            $queryExecutionTimeInMs,
+            $results
+        );
     }
 
     private static function prepareSearchTermParameterValue(

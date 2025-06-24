@@ -106,7 +106,9 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
                 ) as meta_data,
                 -- additional data for later meta data
                 s.primarydomain as primarydomain,
+                nd.document_id as document_id,
                 nd.document_nodetype as document_nodetype,
+                nd.document_node_name as document_nodename,
                 nd.site_nodename as site_nodename,
                 nd.dimensionshash as dimensionshash,
                 nd.dimensionvalues as dimensionvalues,
@@ -184,7 +186,10 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
                                where d.persistence_object_identifier = r.primarydomain
                                and d.active = 1),
                     'documentNodeType', r.document_nodetype,
+                    'nodeName', r.document_nodetype,
                     'siteNodeName', r.site_nodename,
+                    'documentNodeName', r.document_nodename,
+                    'documentAggregateId', r.document_id,
                     'dimensionsHash', r.dimensionshash,
                     'dimensionValues', r.dimensionvalues,
                     'contentstreamid', r.contentstreamid,

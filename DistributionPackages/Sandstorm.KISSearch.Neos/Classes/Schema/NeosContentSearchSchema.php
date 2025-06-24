@@ -461,6 +461,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                 inherited_nodetypes             json            not null,
                 dimensionshash                  varchar(32)     not null,
                 dimensionvalues                 json            not null,
+                document_node_name              varchar(255)    not null,     
                 site_nodename                   varchar(255)    not null,
                 document_uri_path               varchar(4000),
                 parent_documents                json            not null
@@ -506,6 +507,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                sn.nodeaggregateid                         as document_id,
                                                json_value(sn.properties, '$.title.value') as document_title,
                                                sn.nodetypename                            as document_nodetype,
+                                               cast(null as varchar(255))                 as document_nodename,
                                                (json_value(h.subtreetags, '$.disabled') is null
                                                    or json_value(h.subtreetags, '$.disabled') = false)
                                                                                           as is_not_hidden,
@@ -531,6 +533,9 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   cn.nodetypename,
                                                   pn.document_nodetype)                                       as document_nodetype,
+                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
+                                                  cn.name,
+                                                  pn.document_nodename)                                       as document_nodename,
                                                (json_value(h.subtreetags, '$.disabled') is null
                                                    or json_value(h.subtreetags, '$.disabled') = false)
                                                                                                               as is_not_hidden,
@@ -558,6 +563,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                            sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(nd.nodetype) as inherited_nodetypes,
                            nd.dimensionshash,
                            nd.dimensionvalues,
+                           nd.document_nodename,
                            nd.site_nodename,
                            du.uripath as document_uri_path,
                            nd.parent_documents

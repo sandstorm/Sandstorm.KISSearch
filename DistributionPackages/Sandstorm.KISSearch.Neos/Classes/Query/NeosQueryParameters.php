@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Sandstorm\KISSearch\Neos\Query;
 
+use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeName;
+use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Sandstorm\KISSearch\Api\Query\QueryParameters;
 
 class NeosQueryParameters
@@ -40,9 +43,15 @@ class NeosQueryParameters
                 return self::dimensionValuesMapper($rawValue);
             })
             ->addFilterSpecificMapper($resultFilterIdentifier, self::PARAM_NAME_WORKSPACE, function ($rawValue) {
+                if ($rawValue instanceof WorkspaceName) {
+                    return $rawValue->value;
+                }
                 return $rawValue;
             })
             ->addFilterSpecificMapper($resultFilterIdentifier, self::PARAM_NAME_ROOT_NODE, function ($rawValue) {
+                if ($rawValue instanceof NodeAggregateId) {
+                    return $rawValue->value;
+                }
                 return $rawValue;
             })
             ->addFilterSpecificMapper(
@@ -127,10 +136,16 @@ class NeosQueryParameters
         return [(string)$nodeTypeNames];
     }
 
-    private static function dimensionValuesMapper(array $input): string
+    private static function dimensionValuesMapper(array|DimensionSpacePoint $input): string
     {
+        if ($input instanceof DimensionSpacePoint) {
+            $values = $input->coordinates;
+        } else {
+            $values = $input;
+        }
+
         $result = [];
-        foreach ($input as $dimensionName => $dimensionValue) {
+        foreach ($values as $dimensionName => $dimensionValue) {
             $result[] = [
                 'dimension_name' => $dimensionName,
                 'filter_value' => $dimensionValue

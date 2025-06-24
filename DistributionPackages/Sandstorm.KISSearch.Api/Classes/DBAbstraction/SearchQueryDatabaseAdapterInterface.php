@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Sandstorm\KISSearch\Api\DBAbstraction;
 
-use Sandstorm\KISSearch\Api\SearchResult;
+use Sandstorm\KISSearch\Api\Query\Model\SearchResult;
 
 interface SearchQueryDatabaseAdapterInterface
 {

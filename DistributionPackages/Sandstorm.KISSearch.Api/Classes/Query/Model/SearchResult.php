@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sandstorm\KISSearch\Api;
-
-use Sandstorm\KISSearch\Api\Query\Model\SearchResultTypeName;
+namespace Sandstorm\KISSearch\Api\Query\Model;
 
 readonly class SearchResult implements \JsonSerializable
 {

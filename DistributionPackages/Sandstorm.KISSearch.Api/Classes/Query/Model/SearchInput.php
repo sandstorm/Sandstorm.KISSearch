@@ -22,6 +22,15 @@ readonly class SearchInput
         }
     }
 
+    public static function filterSpecificParameters(string $filterId, array $parametersWithoutNamePrefix): array
+    {
+        $result = [];
+        foreach ($parametersWithoutNamePrefix as $name => $value) {
+            $result[SearchQuery::buildFilterSpecificParameterName($filterId, $name)] = $value;
+        }
+        return $result;
+    }
+
     public function getSearchQuery(): string
     {
         return $this->searchQuery;

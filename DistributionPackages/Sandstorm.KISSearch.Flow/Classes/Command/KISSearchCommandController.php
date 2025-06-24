@@ -395,17 +395,15 @@ class KISSearchCommandController extends CommandController
         );
 
         // ### 4. execute the search query
-        $startTime = microtime(true);
         $results = QueryTool::executeSearchQuery(
             $databaseType,
             $searchQuery,
             $input,
             $this->databaseAdapter
         );
-        $queryDurationInMs = (microtime(true) - $startTime) * 1000;
 
-        $this->outputSearchResultsTable($results, $query, $showMetaData);
-        $this->outputLine("Query took $queryDurationInMs ms");
+        $this->outputSearchResultsTable($results->getResults(), $query, $showMetaData);
+        $this->outputLine('Query took ' . $results->getQueryExecutionTimeInMs() . ' ms');
     }
 
     private function parseJsonArgToArray(?string $argJson, string $usageDescription): array

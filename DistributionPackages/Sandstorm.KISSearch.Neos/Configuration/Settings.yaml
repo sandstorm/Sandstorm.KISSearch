@@ -37,10 +37,10 @@ Sandstorm:
             'neos':
               sources:
                 - neos-content-source
-              filter: neos-node-filter
-              resultType: neos-node
+              filter: neos-document-filter
+              resultType: neos-document
           typeAggregators:
-            neos-node: neos-node-type-aggregator
+            neos-node: neos-document-type-aggregator
 
     # write-side / SQL migrations
     schemas:

@@ -5,28 +5,78 @@ declare(strict_types=1);
 namespace Sandstorm\KISSearch\Neos\Query;
 
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
+use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
-use Sandstorm\KISSearch\Api\SearchResult;
+use Sandstorm\KISSearch\Api\Query\Model\SearchResult;
 
 readonly class NeosDocumentResult
 {
-    public function __construct(
-        private SearchResult $result
+    private function __construct(
+        private SearchResult $result,
+        private NodeAddress $nodeAddress,
+        private NodeName $nodeName,
+        private NodeAggregateId $aggregateId,
+        private NodeTypeName $nodeType
     )
     {
     }
 
-    public function getNodeAddress(): NodeAddress
+    public static function fromSearchResult(SearchResult $result): self
     {
-        $metaData = $this->result->getMetaData();
-        return NodeAddress::create(
-            ContentRepositoryId::fromString($metaData['contentRepository']),
-            WorkspaceName::fromString($metaData['workspace']),
-            DimensionSpacePoint::fromArray($metaData['dimensionValues']),
-            NodeAggregateId::fromString($metaData['documentNodeIdentifier'])
+        $metaData = $result->getMetaData();
+        return new self(
+            $result,
+            NodeAddress::create(
+                ContentRepositoryId::fromString($metaData['contentRepository']),
+                WorkspaceName::fromString($metaData['workspace']),
+                DimensionSpacePoint::fromArray($metaData['dimensionValues']),
+                NodeAggregateId::fromString($metaData['documentNodeIdentifier'])
+            ),
+            NodeName::fromString($metaData['documentNodeName']),
+            NodeAggregateId::fromString($metaData['documentAggregateId']),
+            NodeTypeName::fromString($metaData['documentNodeType'])
         );
     }
+
+    /**
+     * @return SearchResult
+     */
+    public function getResult(): SearchResult
+    {
+        return $this->result;
+    }
+
+    /**
+     * @return NodeAddress
+     */
+    public function getNodeAddress(): NodeAddress
+    {
+        return $this->nodeAddress;
+    }
+
+    /**
+     * @return NodeName
+     */
+    public function getNodeName(): NodeName
+    {
+        return $this->nodeName;
+    }
+
+    /**
+     * @return NodeAggregateId
+     */
+    public function getAggregateId(): NodeAggregateId
+    {
+        return $this->aggregateId;
+    }
+
+    public function getNodeType(): NodeTypeName
+    {
+        return $this->nodeType;
+    }
+
 }

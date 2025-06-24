@@ -9,7 +9,7 @@ use Doctrine\ORM\Query\ResultSetMapping;
 use Neos\Flow\Annotations\Inject;
 use Neos\Flow\Annotations\Scope;
 use Sandstorm\KISSearch\Api\DBAbstraction\SearchQueryDatabaseAdapterInterface;
-use Sandstorm\KISSearch\Api\SearchResult;
+use Sandstorm\KISSearch\Api\Query\Model\SearchResult;
 
 #[Scope('singleton')]
 class DoctrineSearchQueryDatabaseAdapter implements SearchQueryDatabaseAdapterInterface
