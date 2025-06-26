@@ -41,7 +41,7 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
         string $resultTypeName,
         array $queryOptions
     ): string {
-        $contentRepositoryId = NeosContentSearchResultType::getContentRepositoryIdFromQueryOptions($resultFilterIdentifier, $queryOptions);
+        $contentRepositoryId = NeosContentSearchResultType::getContentRepositoryIdFromQueryOptions($queryOptions);
         $cteAlias = NeosContentSource::buildCTEName($contentRepositoryId);
         $scoreSelector = '(20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)';
 
@@ -97,7 +97,7 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
                     'score', $scoreSelector,
                     'nodeIdentifier', nd.node_id,
                     'documentNodeIdentifier', nd.document_id,
-                    'contentRepository', '$contentRepositoryId',
+                    'contentRepositoryId', '$contentRepositoryId',
                     'nodeType', nd.nodetype,
                     'dimensionsHash', nd.dimensionshash,
                     'dimensionValues', nd.dimensionvalues,
@@ -108,7 +108,7 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
                 s.primarydomain as primarydomain,
                 nd.document_id as document_id,
                 nd.document_nodetype as document_nodetype,
-                nd.document_node_name as document_nodename,
+                nd.document_nodename as document_nodename,
                 nd.site_nodename as site_nodename,
                 nd.dimensionshash as dimensionshash,
                 nd.dimensionvalues as dimensionvalues,
@@ -170,6 +170,8 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
         array $mergingQueryParts,
         array $queryOptions
     ): string {
+        $contentRepositoryId = NeosContentSearchResultType::getContentRepositoryIdFromQueryOptions($queryOptions);
+
         // TODO postgres
         return MySQLHelper::buildDefaultResultTypeAggregator(
             $resultTypeName,
@@ -193,7 +195,8 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
                     'dimensionsHash', r.dimensionshash,
                     'dimensionValues', r.dimensionvalues,
                     'contentstreamid', r.contentstreamid,
-                    'workspace', r.workspace_name
+                    'workspace', r.workspace_name,
+                    'contentRepositoryId', '$contentRepositoryId'
                 )
         SQL
         );

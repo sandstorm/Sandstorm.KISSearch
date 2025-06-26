@@ -27,14 +27,14 @@ readonly class NeosDocumentResult
 
     public static function fromSearchResult(SearchResult $result): self
     {
-        $metaData = $result->getMetaData();
+        $metaData = $result->getGroupMetaData();
         return new self(
             $result,
             NodeAddress::create(
-                ContentRepositoryId::fromString($metaData['contentRepository']),
+                ContentRepositoryId::fromString($metaData['contentRepositoryId']),
                 WorkspaceName::fromString($metaData['workspace']),
                 DimensionSpacePoint::fromArray($metaData['dimensionValues']),
-                NodeAggregateId::fromString($metaData['documentNodeIdentifier'])
+                NodeAggregateId::fromString($metaData['documentAggregateId'])
             ),
             NodeName::fromString($metaData['documentNodeName']),
             NodeAggregateId::fromString($metaData['documentAggregateId']),

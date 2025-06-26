@@ -25,7 +25,7 @@ class NeosContentSource implements SearchSourceInterface
 
     function getSearchingQueryPart(DatabaseType $databaseType, string $sourceIdentifier, array $queryOptions): string
     {
-        $contentRepositoryId = NeosContentSearchResultType::getContentRepositoryIdFromQueryOptions($sourceIdentifier, $queryOptions);
+        $contentRepositoryId = NeosContentSearchResultType::getContentRepositoryIdFromQueryOptions($queryOptions);
 
         $columnNameBucketCritical = NeosContentSearchResultType::BUCKET_COLUMN_CRITICAL;
         $columnNameBucketMajor = NeosContentSearchResultType::BUCKET_COLUMN_MAJOR;

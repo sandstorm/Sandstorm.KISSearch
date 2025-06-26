@@ -461,7 +461,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                 inherited_nodetypes             json            not null,
                 dimensionshash                  varchar(32)     not null,
                 dimensionvalues                 json            not null,
-                document_node_name              varchar(255)    not null,     
+                document_nodename               varchar(255)    not null,     
                 site_nodename                   varchar(255)    not null,
                 document_uri_path               varchar(4000),
                 parent_documents                json            not null

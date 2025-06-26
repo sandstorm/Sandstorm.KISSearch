@@ -9,9 +9,15 @@ use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations\Around;
-use Neos\Flow\Annotations\Scope;
+use Neos\Flow\Annotations\Aspect;
+use Neos\Flow\Annotations\InjectConfiguration;
+use Neos\Flow\Annotations\Pointcut;
 use Neos\Flow\AOP\JoinPointInterface;
+use Neos\Flow\Mvc\ActionRequest;
+use Neos\Neos\Ui\Fusion\Helper\NodeInfoHelper;
+use Neos\Utility\ObjectAccess;
 use Sandstorm\KISSearch\Api\Query\Configuration\SearchEndpointConfiguration;
 use Sandstorm\KISSearch\Api\Query\Model\SearchInput;
 use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;
@@ -26,12 +32,18 @@ use Sandstorm\KISSearch\Neos\NeosContentSearchResultType;
 use Sandstorm\KISSearch\Neos\Query\NeosDocumentResult;
 use Sandstorm\KISSearch\Neos\Query\NeosQueryParameters;
 
-#[Scope('singleton')]
+#[Aspect]
 class NeosBackendSearchService
 {
     // state
     private SearchEndpointConfiguration $backendSearchEndpoint;
     private array $queryByContentRepository = [];
+
+    #[InjectConfiguration(path: 'backendSearch.endpoint')]
+    protected string $endpointConfig;
+
+    #[InjectConfiguration(path: 'backendSearch.enabled')]
+    protected bool $enabled;
 
     // dependencies
 
@@ -39,14 +51,23 @@ class NeosBackendSearchService
         private FlowCDIObjectInstanceProvider $instanceProvider,
         private DatabaseTypeDetector $databaseTypeDetector,
         private DoctrineSearchQueryDatabaseAdapter $databaseAdapter,
+        private ContentRepositoryRegistry $contentRepositoryRegistry,
+        private NodeInfoHelper $nodeInfoHelper,
         FlowSearchEndpoints $searchEndpoints
     ) {
         $this->backendSearchEndpoint = $searchEndpoints->getEndpointConfiguration('neos-backend');
     }
 
-    #[Around('\Neos\Neos\Ui\Controller\BackendServiceController->flowQueryAction')]
+    #[Pointcut("method(Neos\Neos\Ui\Controller\BackendServiceController->flowQueryAction())")]
+    public function flowQueryActionPointcut(): void {}
+
+    #[Around("Sandstorm\KISSearch\Neos\BackendSearch\NeosBackendSearchService->flowQueryActionPointcut")]
     public function wrapAroundOriginalBackendService(JoinPointInterface $joinPoint): string
     {
+        if (!$this->enabled) {
+            // call original method, if feature is deactivated
+            return $joinPoint->getAdviceChain()->proceed($joinPoint);
+        }
         $chainArg = $joinPoint->getMethodArgument('chain');
         if (!is_array($chainArg)) {
             throw new \RuntimeException('Invalid AOP API access to Neos.Neos.UI BackendServiceController');
@@ -60,6 +81,13 @@ class NeosBackendSearchService
         } else {
             // ### use KISSearch
 
+            $request = ObjectAccess::getProperty($joinPoint->getProxy(), 'request', true);;
+            if (!($request instanceof ActionRequest)) {
+                throw new \RuntimeException(
+                    'Invalid AOP API usage of Neos.Neos.UI BackendServiceController; cannot access action request'
+                );
+            }
+
             // 1. get arguments from request payload
             $query = $chainElemSearch['payload'][0];
             if (!is_string($query)) {
@@ -68,7 +96,7 @@ class NeosBackendSearchService
                 );
             }
             if (trim($query) === '') {
-                return self::returnAsOriginalExpectedFormat([], $joinPoint);
+                return "[]";
             }
             $nodeContext = $chainElemCreateContext['payload'][0]['$node'] ?? null;
             if (!is_string($nodeContext)) {
@@ -76,13 +104,18 @@ class NeosBackendSearchService
                     'Invalid AOP API usage of Neos.Neos.UI BackendServiceController; cannot extract $node context from search payload'
                 );
             }
+            $finisherFilter = $chainArg[2]['payload']['nodeTypeFilter'] ?? null;
+            if (!is_string($finisherFilter)) {
+                throw new \RuntimeException(
+                    'Invalid AOP API usage of Neos.Neos.UI BackendServiceController; cannot extract nodeTypeFilter context from search payload'
+                );
+            }
             $nodeContextArray = json_decode($nodeContext, true);
             $rootNode = NodeAggregateId::fromString($nodeContextArray['aggregateId']);
             $contentRepositoryId = ContentRepositoryId::fromString($nodeContextArray['contentRepositoryId']);
             $workspace = WorkspaceName::fromString($nodeContextArray['workspaceName']);
             $nodeType = NodeTypeName::fromString($chainElemSearch['payload'][1]);
-            $dimensionSpacePoint = DimensionSpacePoint::fromJsonString($chainElemCreateContext['dimensionSpacePoint']);
-
+            $dimensionSpacePoint = DimensionSpacePoint::fromArray($nodeContextArray['dimensionSpacePoint']);
             $searchResults = $this->callKISSearchQuery(
                 $query,
                 $contentRepositoryId,
@@ -91,7 +124,14 @@ class NeosBackendSearchService
                 $workspace,
                 $dimensionSpacePoint
             );
-            return self::returnAsOriginalExpectedFormat($searchResults->getResults());
+            return self::returnAsOriginalExpectedFormat(
+                $contentRepositoryId,
+                $workspace,
+                $dimensionSpacePoint,
+                $finisherFilter,
+                $request,
+                $searchResults->getResults()
+            );
         }
     }
 
@@ -124,7 +164,7 @@ class NeosBackendSearchService
             $query,
             SearchInput::filterSpecificParameters('neos', [
                 NeosQueryParameters::PARAM_NAME_ROOT_NODE => $rootNode,
-                NeosQueryParameters::PARAM_NAME_DOCUMENT_NODE_TYPES => [$nodeType],
+                //NeosQueryParameters::PARAM_NAME_INHERITED_DOCUMENT_NODE_TYPE => $nodeType,
                 NeosQueryParameters::PARAM_NAME_WORKSPACE => $workspaceName,
                 NeosQueryParameters::PARAM_NAME_DIMENSION_VALUES => $dimensionSpacePoint
             ]),
@@ -132,7 +172,6 @@ class NeosBackendSearchService
                 'neos-document' => 20
             ]
         );
-
         return QueryTool::executeSearchQuery(
             $this->databaseTypeDetector->detectDatabase(),
             $kissearchQuery,
@@ -175,20 +214,25 @@ class NeosBackendSearchService
      * @return string
      * @throws \JsonException
      */
-    private static function returnAsOriginalExpectedFormat(array $results): string
+    private function returnAsOriginalExpectedFormat(
+        ContentRepositoryId $contentRepositoryId,
+        WorkspaceName $workspaceName,
+        DimensionSpacePoint $contentDimensions,
+        string $nodeTypeFilter,
+        ActionRequest $request,
+        array $results
+    ): string
     {
-        $backendApiResponse = [];
+        $cr = $this->contentRepositoryRegistry->get($contentRepositoryId);
+        $subgraph = $cr->getContentSubgraph($workspaceName, $contentDimensions);
+
+        $nodes = [];
         foreach ($results as $result) {
             $neosDocumentResult = NeosDocumentResult::fromSearchResult($result);
-            $backendApiResponse[] = [
-                'contextPath' => $neosDocumentResult->getNodeAddress()->toJson(),
-                'name' => $neosDocumentResult->getNodeName()->value,
-                'identifier' => $neosDocumentResult->getAggregateId()->value,
-                'nodeType' => $neosDocumentResult->getNodeType()->value,
-                'label' => $result->getTitle()
-            ];
+            $nodes[] = $subgraph->findNodeById($neosDocumentResult->getAggregateId());
         }
 
-        return json_encode($backendApiResponse, JSON_THROW_ON_ERROR);
+        $result = $this->nodeInfoHelper->renderNodesWithParents($nodes, $request, $nodeTypeFilter);
+        return json_encode($result, JSON_THROW_ON_ERROR);
     }
 }

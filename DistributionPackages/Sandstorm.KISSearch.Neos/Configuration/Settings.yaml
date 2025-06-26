@@ -40,7 +40,7 @@ Sandstorm:
               filter: neos-document-filter
               resultType: neos-document
           typeAggregators:
-            neos-node: neos-document-type-aggregator
+            neos-document: neos-document-type-aggregator
 
     # write-side / SQL migrations
     schemas:
@@ -63,3 +63,11 @@ Sandstorm:
           # only content node types that extends this get indexed
           # defaults to 'Neos.Neos:Content' when not configured
           baseContentNodeType: 'Neos.Neos:Content'
+
+    # Integration of KISSearch in the Neos Backend search bar.
+    backendSearch:
+      # Enable/Disable the feature. If disabled, the original search endpoint is used
+      enabled: true
+      # Which KISSearch endpoint to use for the backend search.
+      # Expects a filter with ID "neos"
+      endpoint: neos-backend

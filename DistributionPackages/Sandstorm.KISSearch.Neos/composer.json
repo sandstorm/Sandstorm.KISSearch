@@ -4,6 +4,7 @@
     "require": {
         "neos/flow": "~9.0",
         "neos/neos": "~9.0",
+        "neos/neos-ui": "~9.0",
         "sandstorm/kissearch-api": "@dev"
     },
     "license": "MIT",

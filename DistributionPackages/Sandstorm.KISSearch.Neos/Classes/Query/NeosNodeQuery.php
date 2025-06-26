@@ -23,7 +23,7 @@ class NeosNodeQuery implements ResultFilterInterface, TypeAggregatorInterface
         string $resultTypeName,
         array $queryOptions
     ): string {
-        $contentRepositoryId = NeosContentSearchResultType::getContentRepositoryIdFromQueryOptions($resultFilterIdentifier, $queryOptions);
+        $contentRepositoryId = NeosContentSearchResultType::getContentRepositoryIdFromQueryOptions($queryOptions);
         $cteAlias = NeosContentSource::buildCTEName($contentRepositoryId);
         $scoreSelector = '(20 * n.score_bucket_critical) + (5 * n.score_bucket_major) + (1 * n.score_bucket_normal) + (0.5 * n.score_bucket_minor)';
 

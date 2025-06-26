@@ -41,16 +41,15 @@ class NeosContentSearchResultType
         return sprintf('cr_%s_p_graph_workspace', $contentRepositoryId);
     }
 
-    public static function getContentRepositoryIdFromQueryOptions(string $identifier, array $queryOptions): string
+    public static function getContentRepositoryIdFromQueryOptions(array $queryOptions): string
     {
         $contentRepositoryId = $queryOptions[self::OPTION_CONTENT_REPOSITORY] ??
             throw new InvalidConfigurationException(sprintf("No '%s' option set in query options.", self::OPTION_CONTENT_REPOSITORY));
         if (!is_string($contentRepositoryId) || strlen(trim($contentRepositoryId)) === 0) {
             throw new InvalidConfigurationException(
                 sprintf(
-                    "Invalid query options '%s' found in %s; value must be a non-empty string but was: %s",
+                    "Invalid query options '%s' found; value must be a non-empty string but was: %s",
                     self::OPTION_CONTENT_REPOSITORY,
-                    $identifier,
                     gettype($contentRepositoryId)
                 )
             );
