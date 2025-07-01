@@ -368,7 +368,8 @@ Executing a search query can be done in various ways:
 - use the backend search bar in the Document Tree
 - use the shipped flow command
 
-Important:
+## Query parameters
+
 Each filter defines its set of parameters. Since you can add the same filter more than one time,
 all parameter names in the `SearchInput` must be **prefixed with the filter ID** in the following general form:
 
@@ -380,7 +381,27 @@ parameter name, prefixed by Filter ID followed by two underscores.
 
 See also some examples.
 
-## PHP API (with Flow dependency injection)
+## Limit input
+
+You need to specify **a limit** value for **each search result type** that is defined in your search endpoint.
+They are required for each defined result type.
+
+There is also the possibility to add a global limit. This parameter is optional and defaults to the 
+**sum of all result type specific limits**.
+
+A global limit, **less than** the sum of the result type limits will result in a definitive hard limit to the
+overall result count. Less important items of any type are "cut off".
+
+No global limit means: query the N most important items of each type.
+
+If you only have one result type in your search endpoint, just leave out the global limit, since it is kind of redundant.
+
+HINT: Currently, there are no plans to add **offset** parameters.
+... who really looks at the second google result page at all? ;) but it's open for discussion ofc.
+
+## Examples
+
+### PHP API (with Flow dependency injection)
 
 Given, you configured a search endpoint with the ID `your-endpoint-id` in the Settings.yaml.
 
@@ -460,7 +481,7 @@ class YourSearchService {
     }
 ```
 
-## PHP API plain
+### PHP API plain
 
 Given, you use doctrine and have access to the `EntityManagerInterface` instance.
 If you don't use doctrine, implement your own `SearchQueryDatabaseAdapterInterface`.
@@ -571,7 +592,7 @@ final readonly class YourSearchService {
 }
 ```
 
-## Fusion API
+### Fusion API
 
 There are two Fusion objects and EEL Helpers that you can use:
 
@@ -697,9 +718,8 @@ here: [ExampleDefaultQuery.fusion](Resources/Private/Fusion/_Examples/ExampleDef
 
 # Sandstorm.KISSearch.Neos
 
-The package `Sandstorm.KISSearch.Neos` (composer `sandstorm/kissearch-neos`) is the implementation of the KISSearch Core
-API
-that provides full-text search for the Neos **ContentRepository** (Neos 9 ESCR).
+The package namespace `Sandstorm.KISSearch.Neos` is the implementation of the KISSearch Core API,
+which provides full-text search for the Neos **ContentRepository** (Neos 9 ESCR).
 
 ## Configuration
 
