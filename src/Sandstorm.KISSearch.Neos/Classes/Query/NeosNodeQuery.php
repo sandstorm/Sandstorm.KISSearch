@@ -15,7 +15,10 @@ use Sandstorm\KISSearch\Neos\NeosContentSearchResultType;
 
 // prototypish for now. the only difference to NeosDocumentQuery is the result_id md5 aggregator is built out of the node_id
 // instead of the document_id (we do **not** aggregate by parent document here)!
-#[Deprecated]
+
+/**
+ * @deprecated this is experimental -> this will change for sure
+ */
 class NeosNodeQuery implements ResultFilterInterface, TypeAggregatorInterface
 {
 
