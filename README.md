@@ -11,6 +11,10 @@ Supported Databases:
 - MySQL version >= 8.0
 - PostgreSQL -> supported very soon
 
+Supports Neos 9+
+
+For Neos 8 use the prototype version from branch `neos8-prototype` (this is not actively maintained though).
+
 <!-- TOC -->
 * [KISSearch - simple and extensible full text search for Neos](#kissearch---simple-and-extensible-full-text-search-for-neos)
   * [Why KISSearch?](#why-kissearch)
@@ -99,13 +103,13 @@ actual rendered output.
 
 ### Features
 
-- Search configuration via NodeType yaml (compatible to Neos.SimpleSearch)
 - shipped query for document search (match results are grouped by their closest parent Document node)
 - shipped query for node search (just return plain nodes, don't care if they are Content or Documents)
-- auto-update search dependencies on node publish (enable/disable via Settings.yaml)
 - backend search bar integration (enable/disable via Settings.yaml)
-- flow commands for debugging
 - Fusion API
+- Search configuration via NodeType yaml (compatible to Neos.SimpleSearch)
+- auto-update search dependencies on node publish (enable/disable via Settings.yaml)
+- flow commands for debugging
 
 What's next?
 
@@ -661,6 +665,34 @@ here: [ExampleDefaultQuery.fusion](Resources/Private/Fusion/_Examples/ExampleDef
 The package `Sandstorm.KISSearch.Neos` (composer `sandstorm/kissearch-neos`) is the implementation of the KISSearch Core
 API
 that provides full-text search for the Neos **ContentRepository** (Neos 9 ESCR).
+
+## Configuration
+
+The configuration that is specific for the Neos integration lives under the Settings.yaml
+namespace `Sandstorm.KISSearch.Neos`
+
+```yaml
+Sandstorm:
+  KISSearch:
+    Neos:
+
+      # Integration of KISSearch in the Neos Backend search bar.
+      backendSearch:
+        # Enable/Disable the feature. If disabled, the original search endpoint is used
+        enabled: true
+        # Which KISSearch endpoint to use for the backend search.
+        # Expects a filter with ID "neos"
+        endpoint: neos-backend
+
+      # Auto refresh dependencies on node publish events
+      refresher:
+        autoRefreshEnabled: true
+```
+
+Enable or disable the backend search bar integration and the auto-refresher on node publish.
+You also can customize the search endpoint here, or you change the configuration of the default endpoint `neos-backend`
+directly.
+
 
 ## Schema
 
