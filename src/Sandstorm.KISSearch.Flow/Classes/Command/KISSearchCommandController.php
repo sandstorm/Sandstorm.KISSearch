@@ -356,26 +356,48 @@ class KISSearchCommandController extends CommandController
      * Executes the search query for the given endpoint. Prints the results.
      * @param string $endpoint
      * @param string $query
-     * @param string $typeLimits
+     * @param string|null $typeLimits
      * @param string|null $params
      * @param string|null $options
      * @param int|null $limit
      * @param bool $showMetaData
      * @return void
+     * @throws \Exception
      */
     public function queryCommand(
         string $endpoint,
         string $query,
-        string $typeLimits,
+        ?string $typeLimits = null,
         ?string $params = null,
         ?string $options = null,
         ?int $limit = null,
         bool $showMetaData = false
     ): void {
-        $resultLimitsArray = $this->parseJsonArgToArray(
-            $typeLimits,
-            'Example usage: --result-limits \'{"neos-content": 20, "foo": 10}\''
-        );
+
+        // ### first, load your endpoint configuration
+        // In this case, we use the shipped Flow service.
+        $searchEndpointConfiguration = $this->searchEndpoints->getEndpointConfiguration($endpoint);
+
+        if ($typeLimits === null) {
+            // if not given, prompt for each individual
+            $resultLimitsArray = [];
+            foreach ($searchEndpointConfiguration->getResultTypeNames() as $resultTypeName) {
+                $resultLimitsArray[$resultTypeName] = $this->output->askAndValidate(
+                    "Please specify the result limit for '" . $resultTypeName . "' (10): ",
+                    function($value) {
+                        return intval($value);
+                    },
+                    2,
+                    '10'
+                );
+            }
+        } else {
+            // given as JSON string in the command
+            $resultLimitsArray = $this->parseJsonArgToArray(
+                $typeLimits,
+                'Example usage: --result-limits \'{"neos-content": 20, "foo": 10}\''
+            );
+        }
 
         $paramsArray = $this->parseJsonArgToArray(
             $params,
@@ -387,11 +409,11 @@ class KISSearchCommandController extends CommandController
             'Example usage: --options \'{"contentRepository": "default"}}\''
         );
 
-        // ### 0. detect database type
+        // ### 1. detect database type
         // may also be hard-coded in your project
         $databaseType = $this->databaseTypeDetector->detectDatabase();
 
-        // ### 1. put user input into a SearchInput instance
+        // ### 2. put user input into a SearchInput instance
         $input = new SearchInput(
             // the search query input
             $query,
@@ -404,10 +426,6 @@ class KISSearchCommandController extends CommandController
             // If not given, the sum of all limits per result type is used
             $limit
         );
-
-        // ### 2. load your endpoint configuration
-        // In this case, we use the shipped Flow service.
-        $searchEndpointConfiguration = $this->searchEndpoints->getEndpointConfiguration($endpoint);
 
         // ### 3. create the search query
         $searchQuery = SearchQuery::create(

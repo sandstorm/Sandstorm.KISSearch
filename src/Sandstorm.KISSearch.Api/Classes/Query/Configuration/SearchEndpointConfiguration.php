@@ -108,4 +108,12 @@ final readonly class SearchEndpointConfiguration
     {
         return $this->typeAggregators;
     }
+
+    /**
+     * @return array<string>
+     */
+    public function getResultTypeNames(): array
+    {
+        return array_keys($this->typeAggregators);
+    }
 }
