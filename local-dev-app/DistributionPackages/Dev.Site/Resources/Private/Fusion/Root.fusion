@@ -7,3 +7,6 @@
 ##############################################
 include: nodetypes://Dev.Site/**/*.fusion
 include: **/*.fusion
+
+#root >
+#root = Sandstorm.KISSearch.Examples:DefaultQuery

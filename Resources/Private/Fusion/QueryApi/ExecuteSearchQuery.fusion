@@ -1,0 +1,9 @@
+prototype(Sandstorm.KISSearch:ExecuteSearchQuery) < prototype(Neos.Fusion:Component) {
+
+  endpoint = 'default'
+  input = Sandstorm.KISSearch:SearchInput
+  queryOptions = Neos.Fusion:DataStructure
+  databaseType = null
+
+  renderer = ${KISSearch.search(props.endpoint, props.input, props.queryOptions, props.databaseType)}
+}

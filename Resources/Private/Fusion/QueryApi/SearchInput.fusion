@@ -1,0 +1,25 @@
+/**
+ * Wraps the PHP class {@link \Sandstorm\KISSearch\Api\Query\Model\SearchInput}
+ */
+prototype(Sandstorm.KISSearch:SearchInput) < prototype(Neos.Fusion:Component) {
+
+    ## user API
+
+    # The search term input.
+    # -> must evaluate to a string
+    searchQuery = null
+
+    # The query parameters that are defined by the filters configured in the endpoint.
+    # -> must evaluate to an associative array<string, mixed>
+    parameters = Neos.Fusion:DataStructure
+
+    # The limits per result type.
+    # -> must evaluate to an associative array<string, int> (key is result type name, value is limit)
+    resultTypeLimits = Neos.Fusion:DataStructure
+
+    # The (optional) global result limit. If null, the **sum** of all result type limits is used.
+    # -> must evalute to an integer
+    limit = null
+
+    renderer = ${KISSearch.input(props.searchQuery, props.parameters, props.resultTypeLimits, props.limit)}
+}

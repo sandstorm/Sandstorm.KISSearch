@@ -1,0 +1,105 @@
+prototype(Sandstorm.KISSearch.Examples:DefaultQuery) < prototype(Neos.Fusion:Component) {
+
+    searchQuery = ${request.arguments.q}
+
+    @private {
+        searchResults = Sandstorm.KISSearch:ExecuteSearchQuery {
+            @if.searched = ${props.searchQuery}
+            endpoint = 'default'
+            input = Sandstorm.KISSearch:SearchInput {
+                searchQuery = ${props.searchQuery}
+                parameters {
+                    neos__workspace = 'live'
+                    neos__dimension_values {
+                        language = 'en_US'
+                    }
+                }
+                resultTypeLimits {
+                    'neos-document' = 20
+                }
+            }
+        }
+    }
+
+    @cache {
+        mode = 'dynamic'
+
+        context {
+            1 = 'node'
+            2 = 'site'
+            3 = 'documentNode'
+        }
+
+        entryIdentifier {
+            1 = ${Neos.Caching.entryIdentifierForNode(node)}
+        }
+
+        entryDiscriminator = ${'kisssearch__' + request.arguments.q}
+
+        entryTags {
+            ## any node change -> discard the search bar cache
+            1 = ${Neos.Caching.nodeTypeTag('Neos.Neos:Document', node)}
+            2 = ${Neos.Caching.nodeTypeTag('Neos.Neos:Content', node)}
+        }
+    }
+
+
+    renderer = afx`
+        <div>
+            <h1>KISSearch example query</h1>
+            <div>
+                <form>
+                    <label for="search">Search:</label>
+                    <input name="q" id="search" value={props.searchQuery} />
+                </form>
+            </div>
+            <div @if.notSearched={!props.searchQuery}>
+                no search executed
+            </div>
+            <div @if.searched={props.searchQuery}>
+                query executed in {private.searchResults.queryExecutionTimeInMs} ms
+                <Sandstorm.KISSearch.Examples:DefaultQuery.ResultList resultList={private.searchResults.results}/>
+            </div>
+        </div>
+    `
+}
+
+prototype(Sandstorm.KISSearch.Examples:DefaultQuery.ResultList) < prototype(Neos.Fusion:Component) {
+
+    resultList = Neos.Fusion:DataStructure
+
+    renderer = afx`
+        <ul>
+            <Neos.Fusion:Loop items={props.resultList}>
+                <li @path='itemRenderer'>
+                    <a>
+                        <Sandstorm.KISSearch.Examples:DefaultQuery.ResultList.ContentDimensionLinker @path='attributes.href' uri={item.url} languageDimensionValue={item.groupMetaData.dimensionValues.language} />
+                        {item.title} ({item.groupMetaData.dimensionValues.language})
+                    </a>
+                </li>
+            </Neos.Fusion:Loop>
+        </ul>
+    `
+}
+
+prototype(Sandstorm.KISSearch.Examples:DefaultQuery.ResultList.ContentDimensionLinker) < prototype(Neos.Fusion:Component) {
+    uri = null
+    languageDimensionValue = null
+    @private {
+        mapping = Neos.Fusion:DataStructure {
+            en_US = 'en'
+            en_UK = 'uk'
+            de = 'de'
+        }
+    }
+    renderer = Neos.Fusion:Case {
+        landingPage {
+            condition = ${props.uri == null || props.uri == '/'}
+            renderer = ${props.uri}
+        }
+        prepend {
+            condition = true
+            renderer = ${'/' + private.mapping[props.languageDimensionValue] + '/' + props.uri}
+        }
+    }
+}

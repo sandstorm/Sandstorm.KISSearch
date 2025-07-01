@@ -1,0 +1,2 @@
+include: ./QueryApi/*.fusion
+include: ./_Examples/*.fusion

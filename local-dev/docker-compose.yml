@@ -33,11 +33,16 @@ services:
       POSTGRES_DB_NEOS_DATABASE: 'neos'
     volumes:
       # mount KISSearch source packages
-      - ../DistributionPackages/:/DistributionPackages/:cached
+      - ../Configuration:/KISSearchSources/Configuration/:cached
+      - ../Resources/:/KISSearchSources/Resources/:cached
+      - ../src/:/KISSearchSources/src/:cached
+      - ../composer.json:/KISSearchSources/composer.json:cached
       # mount test-distribution
       - ../local-dev-app/:/app/:cached
       # Explcitly set up Composer cache for faster fetching of packages
       - ./tmp/composer_cache:/composer_cache:cached
+      # mount entrypoint
+      - ./entrypoint.sh:/entrypoint.sh:cached
     networks:
       - kissearch-test-distribution
     ports:

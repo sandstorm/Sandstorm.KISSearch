@@ -1,0 +1,6 @@
+prototype(Neos.Demo:Presentation.Layout.LandingPage) {
+  content.@process.prependSearchBar = Neos.Fusion:Join {
+    searchBar = Sandstorm.KISSearch.Examples:DefaultQuery
+    content = ${value}
+  }
+}

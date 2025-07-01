@@ -1,0 +1,6 @@
+Neos:
+  Flow:
+    object:
+      includeClasses:
+        'Sandstorm.KISSearch':
+          - 'Sandstorm\\KISSearch\\(Neos|Flow)\\.*'

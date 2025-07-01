@@ -1,0 +1,8 @@
+Neos:
+  ContentRepositoryRegistry:
+    presets:
+      default:
+        contentGraphProjection:
+          catchUpHooks:
+            'Sandstorm.KISSearch.Neos:RefreshDependencies':
+              factoryObjectName: Sandstorm\KISSearch\Neos\Refresher\AutoRefreshDependenciesOnNodePublish

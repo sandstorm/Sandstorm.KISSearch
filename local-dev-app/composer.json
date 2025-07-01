@@ -27,8 +27,7 @@
         "neos/neos-ui": "~9.0",
         "neos/demo": "~9.0",
         "dev/site": "@dev",
-        "sandstorm/kissearch-flow": "@dev",
-        "sandstorm/kissearch-neos": "@dev"
+        "sandstorm/kissearch": "@dev"
     },
     "require-dev": {
         "neos/buildessentials": "~9.0",
@@ -42,9 +41,9 @@
             "type": "path",
             "url": "./DistributionPackages/*"
         },
-        "distributionPackagesLocalSources": {
+        "kissearchPackageSources": {
             "type": "path",
-            "url": "../../DistributionPackages/*"
+            "url": "/KISSearchSources"
         }
     },
     "replace": {

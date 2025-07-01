@@ -1,0 +1,32 @@
+{
+    "description": "Sandstorm KISSearch - search Neos content in your existing database and extend it with custom entities",
+    "type": "neos-package",
+    "require": {
+        "neos/flow": "~9.0",
+        "neos/neos": "~9.0",
+        "neos/neos-ui": "~9.0"
+    },
+    "license": "MIT",
+    "name": "sandstorm/kissearch",
+    "autoload": {
+        "psr-4": {
+            "Sandstorm\\KISSearch\\Api\\": "src/Sandstorm.KISSearch.Api/Classes/",
+            "Sandstorm\\KISSearch\\Flow\\": "src/Sandstorm.KISSearch.Flow/Classes/",
+            "Sandstorm\\KISSearch\\Neos\\": "src/Sandstorm.KISSearch.Neos/Classes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Sandstorm\\KISSearch\\Neos\\Tests\\": "src/Sandstorm.KISSearch.Neos/Tests/"
+        }
+    },
+    "archive": {
+        "exclude": [
+        ]
+    },
+    "extra": {
+        "neos": {
+            "package-key": "Sandstorm.KISSearch"
+        }
+    }
+}

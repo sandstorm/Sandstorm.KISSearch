@@ -20,6 +20,8 @@ composer config --global cache-dir /composer_cache
 _log_green "### 2. setup application"
 cd /app
 
+composer update
+
 if [ ! -f ./flow ]; then
   _log_green " - flow is not installed, running 'composer install'"
   composer install
