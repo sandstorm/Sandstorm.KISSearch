@@ -66,10 +66,10 @@ readonly class SearchQuery
             $effectiveQueryOptions[$name] = $value;
         }
 
-        // collect all sources and result providers and prepare query builder instances
-        // sources are only added once to the query
-        // group each result provider configuration by its returning "search result type"
-        $resultProvidersByType = [];
+        // Collect all sources and filters and prepare query builder instances.
+        // Sources are only added once to the query, their uniqueness is declared by their CTE name.
+        // Then, group each aggregator configuration by its returning "search result type".
+        $resultFiltersByType = [];
         $searchingQueryParts = [];
         $defaultParameters = [];
         $resultTypeNames = [];
@@ -107,17 +107,9 @@ readonly class SearchQuery
             }
             $resultFilter = $resultFilterInstances[$resultFilterReference];
             $resultTypeName = $resultFilterConfiguration->getResultType()->getName();
-            if (!array_key_exists($resultTypeName, $resultProvidersByType)) {
-                $resultProvidersByType[$resultTypeName] = [];
+            if (!array_key_exists($resultTypeName, $resultFiltersByType)) {
+                $resultFiltersByType[$resultTypeName] = [];
                 $resultTypeNames[] = SearchResultTypeName::fromString($resultTypeName);
-                // also initialize type aggregator (there is exactly one aggregator per result type)
-                $typeAggregatorReference = $endpointConfiguration->getTypeAggregators()[$resultTypeName] ?? null;
-                if ($typeAggregatorReference === null) {
-                    throw new InvalidEndpointConfigurationException("no type aggregator for search result type $resultTypeName");
-                }
-                $typeAggregatorInstances[$resultTypeName] = $instanceProvider->getTypeAggregatorInstance(
-                    $typeAggregatorReference
-                );
             }
 
             // here, the parameter names are expected NOT to be prefixed with the result filter identifier
@@ -131,7 +123,7 @@ readonly class SearchQuery
 
             $parameterMappers[] = $resultFilter->getQueryParametersForFilter($databaseType, $resultFilterConfiguration->getFilterIdentifier());
 
-            $resultProvidersByType[$resultTypeName][] = $resultFilter->getFilterQueryPart(
+            $resultFiltersByType[$resultTypeName][] = $resultFilter->getFilterQueryPart(
                 $databaseType,
                 $resultFilterConfiguration->getFilterIdentifier(),
                 $resultTypeName,
@@ -140,27 +132,43 @@ readonly class SearchQuery
             );
         }
 
+        // TODO Maybe validate non-declared parameters that are passed in -> Fail if you misspelled the parameter name
+        //      instead of silently using the default value.
+
         // some validation before we continue
         if (count($searchingQueryParts) === 0) {
             throw new InvalidEndpointConfigurationException("no search sources");
         }
-        if (count($resultProvidersByType) === 0) {
+        if (count($resultFiltersByType) === 0) {
             throw new InvalidEndpointConfigurationException("no result providers");
         }
-        foreach ($resultProvidersByType as $resultTypeName => $providers) {
+        foreach ($resultFiltersByType as $resultTypeName => $providers) {
             if (count($providers) === 0) {
                 throw new InvalidEndpointConfigurationException("no result providers for type $resultTypeName");
             }
         }
 
-        // now the filter parts get aggregated by result type (a.k.a. merging query parts)
+        // Now, the aggregator parts are created for each result type that is declared by any filter.
+
         $mergingQueryParts = [];
-        foreach ($resultProvidersByType as $resultTypeName => $filterQueryParts) {
+        foreach ($endpointConfiguration->getTypeAggregators() as $resultTypeName => $aggregatorConfiguration) {
+            $typeAggregatorReference = $endpointConfiguration->getTypeAggregators()[$resultTypeName] ?? null;
+            if ($typeAggregatorReference === null) {
+                throw new InvalidEndpointConfigurationException("no type aggregator for search result type $resultTypeName");
+            }
+            // the type aggregator instances are re-used
+            if (!array_key_exists($resultTypeName, $typeAggregatorInstances)) {
+                $typeAggregatorInstances[$resultTypeName] = $instanceProvider->getTypeAggregatorInstance(
+                    $typeAggregatorReference->getTypeAggregatorRef()
+                );
+            }
+
             $mergingQueryParts[] = $typeAggregatorInstances[$resultTypeName]->getResultTypeAggregatorQueryPart(
                 $databaseType,
                 $resultTypeName,
-                $filterQueryParts,
-                $effectiveQueryOptions
+                $resultFiltersByType[$resultTypeName],
+                $effectiveQueryOptions,
+                $aggregatorConfiguration->getAggregatorOptions()
             );
         }
 

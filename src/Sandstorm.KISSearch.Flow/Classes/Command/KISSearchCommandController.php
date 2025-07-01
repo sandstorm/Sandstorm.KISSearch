@@ -41,6 +41,71 @@ class KISSearchCommandController extends CommandController
     protected EntityManagerInterface $entityManager;
 
     /**
+     * Lists all endpoint identifiers.
+     *
+     * @return void
+     */
+    public function listEndpointsCommand(): void
+    {
+        $allEndpoints = $this->searchEndpoints->getAllEndpointIds();
+        if (count($allEndpoints) === 0) {
+            $this->outputLine("No KISSearch query endpoints configured!");
+        } else {
+            $this->outputLine("List KISSearch query endpoints:");
+            foreach ($allEndpoints as $endpoint) {
+                $this->outputLine(" - $endpoint");
+            }
+        }
+    }
+
+    /**
+     * Prints out the endpoint configuration by identifier.
+     *
+     * @param string $endpoint
+     * @return void
+     */
+    public function printEndpointCommand(string $endpoint): void
+    {
+        $endpointConfig = $this->searchEndpoints->getEndpointConfiguration($endpoint);
+
+        $this->outputLine(sprintf('### Endpoint: %s', $endpoint));
+        $this->outputLine(sprintf("Query options:\n%s", json_encode($endpointConfig->getQueryOptions(), JSON_PRETTY_PRINT)));
+        $this->outputLine('Filters:');
+        foreach ($endpointConfig->getFilters() as $filter) {
+            $this->outputLine(sprintf('  * Filter: %s', $filter->getFilterIdentifier()));
+            $this->outputLine(sprintf('     - Filter reference: %s', $filter->getResultFilterReference()));
+            $this->outputLine(sprintf('     - Result type: %s', $filter->getResultType()->getName()));
+            $this->outputLine(sprintf("     - Required sources:\n%s", json_encode($filter->getRequiredSources(), JSON_PRETTY_PRINT)));
+            $this->outputLine(sprintf("     - Default parameters:\n%s", json_encode($filter->getDefaultParameters(), JSON_PRETTY_PRINT)));
+            $this->outputLine(sprintf("     - Filter options:\n%s", json_encode($filter->getFilterOptions(), JSON_PRETTY_PRINT)));
+        }
+        $this->outputLine("Type aggregators:\n");
+        foreach ($endpointConfig->getTypeAggregators() as $resultType => $aggregator) {
+            $this->outputLine(sprintf('  * Aggregator for type: %s', $resultType));
+            $this->outputLine(sprintf('     - Aggregator reference: %s', $aggregator->getTypeAggregatorRef()));
+            $this->outputLine(sprintf("     - Aggregator options:\n%s", json_encode($aggregator->getAggregatorOptions(), JSON_PRETTY_PRINT)));
+        }
+    }
+
+    /**
+     * Lists all endpoint identifiers.
+     *
+     * @return void
+     */
+    public function listSchemasCommand(): void
+    {
+        $allSchemas = $this->searchSchemas->getSchemaConfiguration()->getAllSchemaIds();
+        if (count($allSchemas) === 0) {
+            $this->outputLine("No KISSearch schemas configured!");
+        } else {
+            $this->outputLine("List KISSearch schemas:");
+            foreach ($allSchemas as $schema) {
+                $this->outputLine(" - $schema");
+            }
+        }
+    }
+
+    /**
      * Prints out the schema configuration by identifier.
      *
      * @param string $schema
@@ -58,47 +123,6 @@ class KISSearchCommandController extends CommandController
         $this->outputLine(sprintf('Schema class: %s', $schemaConfig->getSchemaClass()));
         $this->outputLine(sprintf('Refresher class: %s', $schemaConfig->getRefresherClass()));
         $this->outputLine(sprintf("Options:\n%s", json_encode($schemaConfig->getOptions(), JSON_PRETTY_PRINT)));
-    }
-
-    /**
-     * Prints out the endpoint configuration by identifier.
-     *
-     * @param string $endpoint
-     * @return void
-     */
-    public function printEndpointCommand(string $endpoint): void
-    {
-        $endpointConfig = $this->searchEndpoints->getEndpointConfiguration($endpoint);
-
-        $this->outputLine(sprintf('### Endpoint: %s', $endpoint));
-        $this->outputLine(sprintf("Query options:\n%s", json_encode($endpointConfig->getQueryOptions(), JSON_PRETTY_PRINT)));
-        $this->outputLine(sprintf("Type aggregators:\n%s", json_encode($endpointConfig->getTypeAggregators(), JSON_PRETTY_PRINT)));
-        $this->outputLine('Filters:');
-        foreach ($endpointConfig->getFilters() as $filter) {
-            $this->outputLine(sprintf('  * Filter: %s', $filter->getFilterIdentifier()));
-            $this->outputLine(sprintf('     - Filter reference: %s', $filter->getResultFilterReference()));
-            $this->outputLine(sprintf('     - Result type: %s', $filter->getResultType()->getName()));
-            $this->outputLine(sprintf("     - Required sources:\n%s", json_encode($filter->getRequiredSources(), JSON_PRETTY_PRINT)));
-            $this->outputLine(sprintf("     - Default parameters:\n%s", json_encode($filter->getDefaultParameters(), JSON_PRETTY_PRINT)));
-        }
-    }
-
-    /**
-     * Lists all endpoint identifiers.
-     *
-     * @return void
-     */
-    public function listEndpointsCommand(): void
-    {
-        $allEndpoints = $this->searchEndpoints->getAllEndpointIds();
-        if (count($allEndpoints) === 0) {
-            $this->outputLine("No KISSearch query endpoints configured!");
-        } else {
-            $this->outputLine("List KISSearch query endpoints:");
-            foreach ($allEndpoints as $endpoint) {
-                $this->outputLine(" - $endpoint");
-            }
-        }
     }
 
     /**

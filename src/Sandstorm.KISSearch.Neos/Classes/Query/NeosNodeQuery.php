@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Sandstorm\KISSearch\Neos\Query;
 
-use JetBrains\PhpStorm\Deprecated;
 use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 use Sandstorm\KISSearch\Api\DBAbstraction\MySQLHelper;
 use Sandstorm\KISSearch\Api\Query\Model\SearchQuery;

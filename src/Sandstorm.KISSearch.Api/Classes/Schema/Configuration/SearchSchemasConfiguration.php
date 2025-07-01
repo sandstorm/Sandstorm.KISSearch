@@ -40,4 +40,12 @@ readonly class SearchSchemasConfiguration
     {
         return $this->schemaConfigurations;
     }
+
+    /**
+     * @return array<string>
+     */
+    public function getAllSchemaIds(): array
+    {
+        return array_keys($this->schemaConfigurations);
+    }
 }

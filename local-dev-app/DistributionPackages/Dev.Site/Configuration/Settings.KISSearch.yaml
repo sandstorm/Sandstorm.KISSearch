@@ -32,4 +32,5 @@ Sandstorm:
                 #'inherited_content_node_type': ''
           # type aggregators, scoped by their respective result type name
           typeAggregators:
-            neos-document: neos-document-type-aggregator
+            'neos-document':
+              aggregator: neos-document-type-aggregator

@@ -12,7 +12,7 @@ final readonly class SearchEndpointConfiguration
      * @param string $endpointIdentifier
      * @param array<string, mixed> $queryOptions
      * @param array<string, ResultFilterConfiguration> $filters
-     * @param array<string, string> $typeAggregators
+     * @param array<string, TypeAggregatorConfiguration> $typeAggregators
      */
     public function __construct(
         private string $endpointIdentifier,
@@ -62,14 +62,14 @@ final readonly class SearchEndpointConfiguration
 
         // pure validation
         $typeAggregators = [];
-        foreach ($typeAggregatorsConfig as $resultTypeName => $typeAggregatorRef) {
+        foreach ($typeAggregatorsConfig as $resultTypeName => $typeAggregatorConfigArray) {
             if (!is_string($resultTypeName)) {
                 throw new InvalidEndpointConfigurationException("Invalid search endpoint type aggregators configuration '$endpointIdentifier.$resultTypeName.$resultTypeName'; key must be a string but was: " . gettype($resultTypeName));
             }
-            if (!is_string($typeAggregatorRef)) {
-                throw new InvalidEndpointConfigurationException("Invalid search endpoint type aggregators configuration '$endpointIdentifier.$resultTypeName.$resultTypeName'; value must be a string but was: " . gettype($typeAggregatorRef));
+            if (!is_array($typeAggregatorConfigArray)) {
+                throw new InvalidEndpointConfigurationException("Invalid search endpoint type aggregators configuration '$endpointIdentifier.$resultTypeName.$resultTypeName'; value must be an array but was: " . gettype($typeAggregatorConfigArray));
             }
-            $typeAggregators[$resultTypeName] = $typeAggregatorRef;
+            $typeAggregators[$resultTypeName] = TypeAggregatorConfiguration::fromConfigurationArray($resultTypeName, $typeAggregatorConfigArray);
         }
 
         return new self(
@@ -102,7 +102,7 @@ final readonly class SearchEndpointConfiguration
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, TypeAggregatorConfiguration>
      */
     public function getTypeAggregators(): array
     {

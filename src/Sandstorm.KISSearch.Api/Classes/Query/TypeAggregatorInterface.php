@@ -22,6 +22,14 @@ use Sandstorm\KISSearch\Api\DBAbstraction\DatabaseType;
 interface TypeAggregatorInterface
 {
 
+    /**
+     * @param DatabaseType $databaseType
+     * @param string $resultTypeName
+     * @param array $mergingQueryParts
+     * @param array $queryOptions
+     * @param array $aggregatorOptions
+     * @return string
+     */
     function getResultTypeAggregatorQueryPart(
         DatabaseType $databaseType,
         string $resultTypeName,
