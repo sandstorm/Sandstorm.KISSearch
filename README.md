@@ -20,6 +20,7 @@ For Neos 8 use the prototype version from branch `neos8-prototype` (this is not 
   * [Why KISSearch?](#why-kissearch)
   * [Neos integration](#neos-integration)
     * [Features](#features)
+    * [known issues](#known-issues)
   * [Installation](#installation)
   * [Brief architecture overview](#brief-architecture-overview)
 * [Setup](#setup)
@@ -38,6 +39,7 @@ For Neos 8 use the prototype version from branch `neos8-prototype` (this is not 
       * [Sandstorm.KISSearch:SearchInput](#sandstormkissearchsearchinput)
       * [Sandstorm.KISSearch:ExecuteSearchQuery (search)](#sandstormkissearchexecutesearchquery-search)
 * [Sandstorm.KISSearch.Neos](#sandstormkissearchneos)
+  * [Configuration](#configuration)
   * [Schema](#schema)
   * [Query](#query)
   * [NodeType search configuration](#nodetype-search-configuration)
@@ -48,6 +50,7 @@ For Neos 8 use the prototype version from branch `neos8-prototype` (this is not 
     * [Score Aggregator](#score-aggregator)
       * [Example: boost score for individual filters](#example-boost-score-for-individual-filters)
       * [Example: different](#example-different)
+* [Extending KISSearch with own search results](#extending-kissearch-with-own-search-results)
 <!-- TOC -->
 
 ## Why KISSearch?
@@ -118,6 +121,11 @@ What's next?
 - KISSearch backend module
     - execute and debug search queries
     - see configuration
+- better API for result row to custom class mapping
+
+### known issues
+
+- BUG: content dimension fallback behavior does not work properly for now... will be fixed soon
 
 ## Installation
 
@@ -330,11 +338,20 @@ $myEndpoint = new \Sandstorm\KISSearch\Api\Query\Configuration\SearchEndpointCon
             requiredSources: ['your-source-ref-id'],
             defaultParameters: [
                 'workspace': \Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName::forLive()
+            ],
+            filterOptions: [
+                  // ...
             ]
         )
     ],
     typeAggregators: [
-        'your-result': 'your-aggregator-ref-id'
+        'your-result': new \Sandstorm\KISSearch\Api\Query\Configuration\TypeAggregatorConfiguration(
+            resultTypeName: \Sandstorm\KISSearch\Api\Query\Model\SearchResultTypeName::fromString('your-result'),
+            typeAggregatorRef: 'your-aggregator-ref-id'
+            aggregatorOptions: [
+                // ...
+            ]
+        )
     ]
 );
 ```
@@ -345,11 +362,23 @@ Executing a search query can be done in various ways:
 
 - use the PHP API
 - integrate the Fusion API
-- call the shipped REST controller
+- call the shipped REST controller (TODO)
 - print out the search query SQL and do whatever you feel like with it
 - use the backend module
 - use the backend search bar in the Document Tree
 - use the shipped flow command
+
+Important:
+Each filter defines its set of parameters. Since you can add the same filter more than one time,
+all parameter names in the `SearchInput` must be **prefixed with the filter ID** in the following general form:
+
+```
+[FILTER-ID]__[PARAMETER-NAME]
+```
+-> The "filter-specific" parameter name:
+parameter name, prefixed by Filter ID followed by two underscores.
+
+See also some examples.
 
 ## PHP API (with Flow dependency injection)
 
@@ -491,7 +520,13 @@ final readonly class YourSearchService {
                 )
             ],
             typeAggregators: [
-                'neos-document': 'neos-document-aggregator'
+                'neos-document': new \Sandstorm\KISSearch\Api\Query\Configuration\TypeAggregatorConfiguration(
+                    resultType: \Sandstorm\KISSearch\Api\Query\Model\SearchResultTypeName::fromString('neos-document'),
+                    typeAggregatorRef: 'neos-document-aggregator',
+                    aggregatorOptions: [
+                        'contentRepository' => 'default'
+                    ] 
+                )
             ]
         )
         
@@ -927,6 +962,12 @@ Sandstorm:
 #### Example: different
 
 TODO more examples
+
+For now, just to mention some:
+ - Search for the 10 most important blog posts and 20 most important Product pages
+   - -> this can be done with two different filters + different search result types
+   - then set the result limit per type
+ - 
 
 # Extending KISSearch with own search results
 
