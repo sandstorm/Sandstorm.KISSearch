@@ -168,20 +168,22 @@ Initially or after code updates (f.e. to your NodeType configuration), call:
 ./flow kissearch:schemacreate
 ```
 
-(the reset command also works, if the schema has not been applied before)
-
-Every time your NodeTypes have search index relevant changes, you should reset the schema.
-So probably on each deployment. It does not hurt to reset the schema, when there are no changes.
+Every time your NodeTypes have search index relevant changes, you should create the schema.
+So probably on each deployment. It does not hurt to create the schema, when there are no changes.
 The schema creation should not take long. Please open issues, if you encounter problems during this process.
 
-Schema reset is basically a drop + create.
+Schema create is basically a drop + init every time.
 
 Remove the KISSearch schema from your DB:
 ```
 ./flow kissearch:schemadrop
 ```
 
-If you need for some reason to only apply the "create" schema without dropping it.
+If you need for some reason to only apply the "create" schema without dropping it first:
+Initialize the KISSearch schema from your DB:
+```
+./flow kissearch:schemainit
+```
 
 ## Refresh Search Dependencies
 
