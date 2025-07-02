@@ -35,6 +35,22 @@ Sandstorm:
               aggregator: neos-document-type-aggregator
               # options:
 
+        'default-live':
+          queryOptions:
+            contentRepository: 'default'
+          filters:
+            'neos':
+              sources:
+                - neos-content-source
+              filter: neos-document-filter
+              resultType: neos-document
+              defaultParameters:
+                workspace: 'live'
+          typeAggregators:
+            neos-document:
+              aggregator: neos-document-type-aggregator
+              # options:
+
         'neos-backend':
           queryOptions:
             contentRepository: 'default'

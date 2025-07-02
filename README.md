@@ -1,4 +1,4 @@
-# KISSearch - simple and extensible full text search for Neos
+# KISSearch - Simple Full-Text Search for Neos
 
 Search with the power of SQL full text queries. No need for additional infrastructure like ElasticSearch or MySQLite.
 KISSearch works purely with your existing PostgreSQL, MariaDB or MySQL database.
@@ -15,15 +15,25 @@ Supports Neos 9+
 
 For Neos 8 use the prototype version from branch `neos8-prototype` (this is not actively maintained though).
 
+## Installation
+
+```
+composer require sandstorm/kissearch
+```
+
+## TOC
+
 <!-- TOC -->
-* [KISSearch - simple and extensible full text search for Neos](#kissearch---simple-and-extensible-full-text-search-for-neos)
-  * [Why KISSearch?](#why-kissearch)
-  * [Neos integration](#neos-integration)
-    * [Features](#features)
-    * [known issues](#known-issues)
+* [KISSearch - Simple Full-Text Search for Neos](#kissearch---simple-full-text-search-for-neos)
   * [Installation](#installation)
-  * [Brief architecture overview](#brief-architecture-overview)
-* [Setup](#setup)
+  * [TOC](#toc)
+  * [Why KISSearch?](#why-kissearch)
+  * [Neos Integration](#neos-integration)
+    * [Features](#features)
+  * [Brief Architecture Overview](#brief-architecture-overview)
+* [Setup and Deployment](#setup-and-deployment)
+  * [Deployment](#deployment)
+  * [Refresh Search Dependencies](#refresh-search-dependencies)
 * [generic Configuration API](#generic-configuration-api)
   * [SQL Schema migrations](#sql-schema-migrations)
   * [Query Configuration API](#query-configuration-api)
@@ -59,19 +69,20 @@ For Neos 8 use the prototype version from branch `neos8-prototype` (this is not 
 ## Why KISSearch?
 
 - no additional infrastructure required (like ElasticSearch or MySQLite)
-- no explicit full-text index building after changing nodes required
+- no explicit full-text index building after changing nodes required, full-text indexes are up-to-date on INSERT or UPDATE
 - easy to extend with additional search result types (f.e. tables from your database and/or custom flow entities like
   products, etc.)
-- comes with Neos Content / Neos Documents as default result types
+- the API package provides generic search query and schema functionality
+- the Neos package comes with Neos Content / Neos Documents as default result types
 - search multiple sources with a single SQL query
 - configure your "search endpoints" plug-and-play style
 - good query performance due to full text indexing on database level
     - LIMITS: for now, I tested with 200k nodes which was a bit flaky tbh
 
-## Neos integration
+## Neos Integration
 
 The `Sandstorm.KISSearch.Neos` package namespace implements the KISSearch API to provide full-text search for the Neos 9
-ContentRepository. It is intent to be used standalone or in combination with other search sources (most likely your
+ContentRepository. It is intended to be used standalone or in combination with other search sources (most likely your
 custom database entities).
 
 Important note:
@@ -112,31 +123,22 @@ actual rendered output.
 - shipped query for document search (match results are grouped by their closest parent Document node)
 - shipped query for node search (just return plain nodes, don't care if they are Content or Documents)
 - backend search bar integration (enable/disable via Settings.yaml)
-- Fusion API
+- Fusion API for executing search queries
 - Search configuration via NodeType yaml (compatible to Neos.SimpleSearch)
-- auto-update search dependencies on node publish (enable/disable via Settings.yaml)
 - flow commands for debugging
 
 What's next?
 
-- default REST API Controller
+- this README gets improved and structured into more use-case-centric smaller documents
+- contribution guide
+- default REST API Controller for search queries
 - Neos integration: score boost based on node age
 - KISSearch backend module
     - execute and debug search queries
-    - see configuration
+    - view endpoint and schema configuration
 - better API for result row to custom class mapping
 
-### known issues
-
-- BUG: content dimension fallback behavior does not work properly for now... will be fixed soon
-
-## Installation
-
-```
-composer require sandstorm/kissearch
-```
-
-## Brief architecture overview
+## Brief Architecture Overview
 
 - for now, this is a mono-repo, containing multiple namespaces
 - This repository contains **three** sub-namespaces:
@@ -152,26 +154,46 @@ composer require sandstorm/kissearch
 - KISSearch abstracts the underlying database system to a certain degree (MariaDB, MySQL, Postgres, ...).
 - There is a search result type extension API. Utilize this API for searching custom data that lives in your database
   (e.g. products in a shop).
-- The Neos Documents search result type comes shipped with this package, internally it uses the search result type
+- The `NeosDocumentQuery` and `NeosContentSearchSchema` come shipped with this package, internally it uses the search result type
   extension API. This can be seen as reference implementation.
-- You can declare additional facette parameters (see f.e. the NeosDocumentQuery as example).
-- Configuration happens via Settings.yaml when using KISSearch in a Flow project.
+- You can declare additional filter parameters (see f.e. the NeosDocumentQuery as example).
+- Configuration happens via Settings.yaml when using KISSearch in a Flow project or alternatively, you can use the PHP API.
 
-# Setup
+# Setup and Deployment
 
-setup database schema initially:
+## Deployment
 
+Initially or after code updates (f.e. to your NodeType configuration), call:
 ```
 ./flow kissearch:schemacreate
 ```
 
-setup database after code updates (f.e. to your NodeType configuration):
+(the reset command also works, if the schema has not been applied before)
 
+Every time your NodeTypes have search index relevant changes, you should reset the schema.
+So probably on each deployment. It does not hurt to reset the schema, when there are no changes.
+The schema creation should not take long. Please open issues, if you encounter problems during this process.
+
+Schema reset is basically a drop + create.
+
+Remove the KISSearch schema from your DB:
 ```
-./flow kissearch:schemareset
+./flow kissearch:schemadrop
 ```
 
-refresh search dependencies:
+If you need for some reason to only apply the "create" schema without dropping it.
+
+## Refresh Search Dependencies
+
+The Neos KISSearch package comes with a so-called "search dependency". It needs to know the "nodes to their closest 
+parent document" relation (why: see explanation above). This info is stored in a table created by the KISSearch Neos schema.
+There is one such table per content repository, called: `sandstorm_kissearch_nodes_and_their_documents_[ContentRepositoryID]`
+
+This table need to be updated, every time the node structure has relevant changed. This search dependency is
+**updated automatically** by default. This happens every time a node gets published. You can deactivate this behavior, in case
+you have performance issues with lots of nodes in your DB.
+
+As alternative, you can run this command once a night via cron f.e.
 
 ```
 ./flow kissearch:refresh
@@ -181,6 +203,8 @@ IMPORTANT:
 currently, when you have lots of nodes in your DB, the schema create command can fail.
 To solve that, reset your ContentRepository projections, then create the KISSearch schema
 and finally, update your CR subscriptions again.
+
+Idea from `klfman`: make auto-refresh asynchronous (configurable) -> this is easy in postgres with materialized views
 
 # generic Configuration API
 
@@ -267,7 +291,7 @@ Here you "wire" together all sources, filters and aggregators you need in your s
 
 Why search endpoints?
 
-- customize your query with sources, filters and aggregators
+- re-use sources, filters and aggregators in different query "presets"
 - combine multiple sources
 - define default parameters
 - use the same filters twice in a query with different parameters
@@ -679,7 +703,7 @@ Wrapper for EEL Helper `KISSearch.search()`
 prototype(Vendor:SearchResultList) < prototype(Neos.Fusion:Component) {
     searchResults = Sandstorm.KISSearch:ExecuteSearchQuery {
         # reference the default endpoint
-        endpoint = 'neos-default-cr'
+        endpoint = 'default-live'
 
         # see doc for search input
         input = Sandstorm.KISSearch:SearchInput {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Sandstorm\KISSearch\Api\Schema\Configuration;
 
-readonly class SearchSchemaConfiguration
+final readonly class SearchSchemaConfiguration
 {
     /**
      * @param string $schemaIdentifier

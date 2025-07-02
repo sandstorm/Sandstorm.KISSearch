@@ -202,31 +202,12 @@ class KISSearchCommandController extends CommandController
      *
      * @return void
      */
-    public function schemaCreateCommand(): void
+    public function schemaInitCommand(): void
     {
         $databaseType = $this->databaseTypeDetector->detectDatabase();
-        $this->outputLine("creating KISSearch schema for $databaseType->value database ...");
+        $this->outputLine("Initializing KISSearch schema for $databaseType->value database ...");
 
         $sql = SchemaTool::createSchemaSql(
-            $databaseType,
-            $this->searchSchemas->getSchemaConfiguration(),
-            $this->instanceProvider
-        );
-        $this->executeSqlInTransaction($sql);
-        $this->outputLine("done!");
-    }
-
-    /**
-     * Applies the SQL DROP schema for all configured SearchSchemaInterfaces.
-     *
-     * @return void
-     */
-    public function schemaDropCommand(): void
-    {
-        $databaseType = $this->databaseTypeDetector->detectDatabase();
-        $this->outputLine("dropping KISSearch schema for $databaseType->value database ...");
-
-        $sql = SchemaTool::dropSchemaSql(
             $databaseType,
             $this->searchSchemas->getSchemaConfiguration(),
             $this->instanceProvider
@@ -240,10 +221,10 @@ class KISSearchCommandController extends CommandController
      *
      * @return void
      */
-    public function schemaResetCommand(): void
+    public function schemaCreateCommand(): void
     {
         $databaseType = $this->databaseTypeDetector->detectDatabase();
-        $this->outputLine("resetting KISSearch schema for $databaseType->value database ...");
+        $this->outputLine("Creating KISSearch schema for $databaseType->value database (first drop, then create) ...");
 
         $dropSql = SchemaTool::dropSchemaSql(
             $databaseType,
@@ -260,6 +241,26 @@ class KISSearchCommandController extends CommandController
         $this->outputLine("done!");
     }
 
+
+    /**
+     * Applies the SQL DROP schema for all configured SearchSchemaInterfaces.
+     *
+     * @return void
+     */
+    public function schemaDropCommand(): void
+    {
+        $databaseType = $this->databaseTypeDetector->detectDatabase();
+        $this->outputLine("Dropping KISSearch schema for $databaseType->value database ...");
+
+        $sql = SchemaTool::dropSchemaSql(
+            $databaseType,
+            $this->searchSchemas->getSchemaConfiguration(),
+            $this->instanceProvider
+        );
+        $this->executeSqlInTransaction($sql);
+        $this->outputLine("done!");
+    }
+
     /**
      * Refreshes the search dependencies.
      *
@@ -269,7 +270,7 @@ class KISSearchCommandController extends CommandController
     public function refreshCommand(?string $schema = null): void
     {
         $databaseType = $this->databaseTypeDetector->detectDatabase();
-        $this->outputLine("refreshing KISSearch dependencies for $databaseType->value database ...");
+        $this->outputLine("Refreshing KISSearch dependencies for $databaseType->value database ...");
 
         $sql = SchemaTool::refreshSearchDependenciesSql(
             $databaseType,
