@@ -470,7 +470,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
             );
             -- FIXME why is this not unique? TODO -> understand what's unique here, I got unique key constraint errors after publishing to live and refreshing
             -- create unique index idx_kissearch_natd_id_$contentRepositoryId on sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
-            create unique index idx_kissearch_natd_id_$contentRepositoryId on sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
+            create index idx_kissearch_natd_id_$contentRepositoryId on sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
                 (contentstreamid, dimensionshash, relationanchorpoint);
             create index idx_kissearch_relationanchorpoint_$contentRepositoryId on sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
                 (relationanchorpoint);
