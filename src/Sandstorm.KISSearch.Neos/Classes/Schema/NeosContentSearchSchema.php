@@ -461,13 +461,24 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                 inherited_nodetypes             json            not null,
                 dimensionshash                  varchar(32)     not null,
                 dimensionvalues                 json            not null,
+                origindimensionshash            varchar(32)     not null,
+                origindimensionvalues           json            not null,
                 document_nodename               varchar(255)    not null,     
                 site_nodename                   varchar(255)    not null,
                 document_uri_path               varchar(4000),
                 parent_documents                json            not null
             );
-            -- TODO indices
+            -- FIXME why is this not unique? TODO -> understand what's unique here, I got unique key constraint errors after publishing to live and refreshing
+            -- create unique index idx_kissearch_natd_id_$contentRepositoryId on sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
+            create unique index idx_kissearch_natd_id_$contentRepositoryId on sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
+                (contentstreamid, dimensionshash, relationanchorpoint);
+            create index idx_kissearch_relationanchorpoint_$contentRepositoryId on sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
+                (relationanchorpoint);
+            -- all other filterable properties are JSON magic which MariaDB / MySQL does not have index types for
+            create index idx_kissearch_searchfilters_$contentRepositoryId on sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
+                (workspace_name, document_nodetype, nodetype);
         SQL;
+        // TODO performance: add generated columns for each content dimension value and index them as well
     }
 
     private static function mariaDB_drop_tableNodesAndTheirDocuments(string $contentRepositoryId): string
@@ -503,6 +514,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                sn.nodetypename                            as nodetype,
                                                h.dimensionspacepointhash                  as dimensionshash,
                                                cast(null as varchar(10000000))            as dimensionvalues,
+                                               sn.origindimensionspacepointhash           as origindimensionshash,
+                                               cast(null as varchar(10000000))            as origindimensionvalues,
                                                cast(null as varchar(255))                 as site_nodename,
                                                sn.nodeaggregateid                         as document_id,
                                                json_value(sn.properties, '$.title.value') as document_title,
@@ -521,8 +534,10 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                h.contentstreamid,
                                                cn.nodeaggregateid                                             as node_id,
                                                cn.nodetypename                                                as nodetype,
-                                               cn.origindimensionspacepointhash                               as dimensionshash,
+                                               h.dimensionspacepointhash                                      as dimensionshash,
                                                d.dimensionspacepoint                                          as dimensionvalues,
+                                               cn.origindimensionspacepointhash                               as origindimensionshash,
+                                               do.dimensionspacepoint                                         as origindimensionvalues,
                                                if(pn.nodetype = 'Neos.Neos:Sites', cn.name, pn.site_nodename) as site_nodename,
                                                if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   cn.nodeaggregateid,
@@ -550,7 +565,9 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                  left join $tableNameNode cn
                                                            on cn.relationanchorpoint = h.childnodeanchor
                                                  left join $tableNameDimensionSpacePoint d
-                                                           on d.hash = cn.origindimensionspacepointhash)
+                                                           on d.hash = h.dimensionspacepointhash
+                                                 left join $tableNameDimensionSpacePoint do
+                                                           on do.hash = cn.origindimensionspacepointhash)
                     select nd.relationanchorpoint,
                            nd.contentstreamid,
                            ws.name as workspace_name,
@@ -563,6 +580,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                            sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(nd.nodetype) as inherited_nodetypes,
                            nd.dimensionshash,
                            nd.dimensionvalues,
+                           nd.origindimensionshash,
+                           nd.origindimensionvalues,
                            nd.document_nodename,
                            nd.site_nodename,
                            -- content dimension prefixing needs to be customized in rendering the final URL by the integrator

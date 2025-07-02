@@ -113,6 +113,8 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
                     'nodeType', nd.nodetype,
                     'dimensionsHash', nd.dimensionshash,
                     'dimensionValues', nd.dimensionvalues,
+                    'origindimensionsHash', nd.origindimensionshash,
+                    'origindimensionValues', nd.origindimensionvalues,
                     'contentstreamid', nd.contentstreamid,
                     'workspace', nd.workspace_name
                 ) as meta_data,
@@ -124,6 +126,8 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
                 nd.site_nodename as site_nodename,
                 nd.dimensionshash as dimensionshash,
                 nd.dimensionvalues as dimensionvalues,
+                nd.origindimensionshash as origindimensionshash,
+                nd.origindimensionvalues as origindimensionvalues,
                 nd.contentstreamid as contentstreamid,
                 nd.workspace_name as workspace_name
             -- for all nodes matching search terms, we have to find the corresponding document node
@@ -212,6 +216,8 @@ class NeosDocumentQuery implements ResultFilterInterface, TypeAggregatorInterfac
                     'documentAggregateId', r.document_id,
                     'dimensionsHash', r.dimensionshash,
                     'dimensionValues', r.dimensionvalues,
+                    'originDimensionsHash', r.origindimensionshash,
+                    'originDimensionValues', r.origindimensionvalues,
                     'contentstreamid', r.contentstreamid,
                     'workspace', r.workspace_name,
                     'contentRepositoryId', '$contentRepositoryId'

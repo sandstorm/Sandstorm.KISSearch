@@ -11,7 +11,7 @@ prototype(Sandstorm.KISSearch.Examples:DefaultQuery) < prototype(Neos.Fusion:Com
                 parameters {
                     neos__workspace = 'live'
                     neos__dimension_values {
-                        language = 'en_US'
+                        language = 'en_UK'
                     }
                 }
                 resultTypeLimits {
@@ -74,7 +74,10 @@ prototype(Sandstorm.KISSearch.Examples:DefaultQuery.ResultList) < prototype(Neos
                 <li @path='itemRenderer'>
                     <a>
                         <Sandstorm.KISSearch.Examples:DefaultQuery.ResultList.ContentDimensionLinker @path='attributes.href' uri={item.url} languageDimensionValue={item.groupMetaData.dimensionValues.language} />
-                        {item.title} ({item.groupMetaData.dimensionValues.language})
+                        {item.title}
+                        <Neos.Fusion:Tag tagName="span" attributes.style={'font-size: 10px; margin-left: 10px;'}>
+                            ({item.groupMetaData.dimensionValues.language} <span @if={item.groupMetaData.originDimensionValues.language != item.groupMetaData.dimensionValues.language}> => {item.groupMetaData.originDimensionValues.language}</span>)
+                        </Neos.Fusion:Tag>
                     </a>
                 </li>
             </Neos.Fusion:Loop>

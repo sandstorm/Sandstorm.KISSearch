@@ -23,7 +23,7 @@ Sandstorm:
                 'workspace': 'live'
                 'site_node': 'neosdemo'
                 'dimension_values':
-                  'language': 'en_US'
+                  'language': 'en_UK'
                 #'exclude_site_node': []
                 #'content_node_types': []
                 #'document_node_types': []
