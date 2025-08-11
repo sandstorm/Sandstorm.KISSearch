@@ -251,7 +251,7 @@ use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Annotations\Inject;
 
-#[Scope('singleton')]
+#[Scope("singleton")]
 class SearchController extends ActionController {
 
     private const DEFAULT_SEARCH_LIMIT = 100;

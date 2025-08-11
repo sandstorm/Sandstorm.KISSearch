@@ -8,13 +8,13 @@ use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Sandstorm\KISSearch\InvalidConfigurationException;
 
 /**
- * @Flow\Scope('singleton')
+ * @Flow\Scope("singleton")
  */
 class SearchResultTypesRegistry
 {
 
     /**
-     * @Flow\InjectConfiguration('searchResultTypes')
+     * @Flow\InjectConfiguration("searchResultTypes")
      * @var array
      */
     protected array $searchResultTypesConfiguration;

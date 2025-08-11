@@ -7,7 +7,7 @@ use Neos\Flow\Annotations as Flow;
 
 /**
  * Intent to be overridden in e2e tests.
- * @Flow\Scope('singleton')
+ * @Flow\Scope("singleton")
  */
 class CurrentDateTimeProvider
 {

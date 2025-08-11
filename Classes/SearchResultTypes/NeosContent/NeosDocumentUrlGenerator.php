@@ -16,7 +16,7 @@ use Neos\Flow\Mvc\Routing\UriBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 
 /**
- * @Flow\Scope('singleton')
+ * @Flow\Scope("singleton")
  */
 class NeosDocumentUrlGenerator
 {

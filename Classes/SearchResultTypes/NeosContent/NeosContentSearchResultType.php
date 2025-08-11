@@ -27,7 +27,7 @@ use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 use Sandstorm\KISSearch\SearchResultTypes\UnsupportedDatabaseException;
 
 /**
- * @Flow\Scope('singleton')
+ * @Flow\Scope("singleton")
  */
 class NeosContentSearchResultType implements SearchResultTypeInterface
 {
