@@ -27,7 +27,7 @@ use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypesRegistry;
 use Sandstorm\KISSearch\SearchResultTypes\UnsupportedDatabaseException;
 
 /**
- * @Flow\Scope("singleton")
+ * @Scope("singleton")
  */
 class SearchService
 {
