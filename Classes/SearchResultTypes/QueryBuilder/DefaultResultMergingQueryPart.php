@@ -5,7 +5,9 @@ namespace Sandstorm\KISSearch\SearchResultTypes\QueryBuilder;
 use Neos\Flow\Annotations\Proxy;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class DefaultResultMergingQueryPart implements ResultMergingQueryPartInterface
 {
     private readonly SearchResultTypeName $resultTypeName;

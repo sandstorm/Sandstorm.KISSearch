@@ -4,7 +4,9 @@ namespace Sandstorm\KISSearch\SearchResultTypes;
 
 use Neos\Flow\Annotations\Proxy;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class SearchResultTypeName
 {
 

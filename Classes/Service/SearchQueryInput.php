@@ -4,7 +4,9 @@ namespace Sandstorm\KISSearch\Service;
 
 use Neos\Flow\Annotations\Proxy;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class SearchQueryInput
 {
     private readonly string $query;

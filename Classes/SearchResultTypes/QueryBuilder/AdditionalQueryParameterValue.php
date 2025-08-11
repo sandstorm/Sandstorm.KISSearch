@@ -8,7 +8,9 @@ use Doctrine\DBAL\Types\Types;
 use Neos\Flow\Annotations\Proxy;
 use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class AdditionalQueryParameterValue
 {
 

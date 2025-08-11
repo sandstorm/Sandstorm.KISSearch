@@ -7,7 +7,9 @@ use Sandstorm\KISSearch\SearchResultTypes\InvalidAdditionalParameterException;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 use Closure;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class AdditionalQueryParameterDefinition
 {
 

@@ -5,7 +5,9 @@ namespace Sandstorm\KISSearch\SearchResultTypes\QueryBuilder;
 use ArrayObject;
 use Neos\Flow\Annotations\Proxy;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class ResultMergingQueryParts
 {
 

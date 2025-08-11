@@ -12,7 +12,9 @@ use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\ResultSearchingQueryParts
 use Sandstorm\KISSearch\SearchResultTypes\SearchQueryProviderInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class NeosContentPostgresSearchQueryProvider implements SearchQueryProviderInterface
 {
 

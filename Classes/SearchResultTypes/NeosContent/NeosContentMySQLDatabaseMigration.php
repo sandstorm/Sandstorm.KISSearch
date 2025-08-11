@@ -9,7 +9,9 @@ use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\MySQLSearchQueryBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchBucket;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 {
 

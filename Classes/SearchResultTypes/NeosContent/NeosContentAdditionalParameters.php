@@ -5,7 +5,9 @@ namespace Sandstorm\KISSearch\SearchResultTypes\NeosContent;
 use Neos\ContentRepository\Domain\NodeAggregate\NodeName;
 use Neos\Flow\Annotations\Proxy;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class NeosContentAdditionalParameters
 {
 

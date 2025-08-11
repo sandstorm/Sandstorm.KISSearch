@@ -3,12 +3,12 @@
 namespace Sandstorm\KISSearch\Service;
 
 use DateTimeImmutable;
-use Neos\Flow\Annotations\Scope;
+use Neos\Flow\Annotations as Flow;
 
 /**
  * Intent to be overridden in e2e tests.
+ * @Flow\Scope('singleton')
  */
-#[Scope('singleton')]
 class CurrentDateTimeProvider
 {
 

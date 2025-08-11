@@ -15,6 +15,18 @@
         <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-arrays/Tests" />
         <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/eventstore-doctrineadapter/tests" />
         <option value="$PROJECT_DIR$/local-dev-app/Packages/Libraries/neos/utility-unicode/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/mikey179/vfsstream/src/test" />
+        <option value="$PROJECT_DIR$/test-distribution/Build/Behat/vendor/fabpot/goutte/Goutte/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/neos/utility-files/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/seld/signal-handler/tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/neos/utility-objecthandling/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/neos/utility-unicode/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/neos/cache/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/neos/error-messages/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/neos/utility-mediatypes/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/neos/utility-arrays/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/neos/utility-schema/Tests" />
+        <option value="$PROJECT_DIR$/test-distribution/Packages/Libraries/doctrine/deprecations/tests" />
       </list>
     </option>
   </component>

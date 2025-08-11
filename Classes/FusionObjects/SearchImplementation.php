@@ -2,16 +2,21 @@
 
 namespace Sandstorm\KISSearch\FusionObjects;
 
-use Neos\Flow\Annotations\Inject;
-use Neos\Flow\Annotations\Scope;
 use Sandstorm\KISSearch\Service\SearchQueryInput;
 use Sandstorm\KISSearch\Service\SearchService;
+use Neos\Flow\Annotations as Flow;
 
-#[Scope('singleton')]
+/**
+ * @Flow\Scope('singleton')
+ */
 class SearchImplementation extends AbstractSearchImplementation
 {
 
-    #[Inject]
+    /**
+     * @Flow\Inject
+     *
+     * @var SearchService
+     */
     protected SearchService $searchService;
 
     public function evaluate(): array

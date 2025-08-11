@@ -2,17 +2,22 @@
 
 namespace Sandstorm\KISSearch\FusionObjects;
 
-use Neos\Flow\Annotations\Inject;
-use Neos\Flow\Annotations\Scope;
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
 use Sandstorm\KISSearch\Service\SearchQueryInput;
 use Sandstorm\KISSearch\Service\SearchService;
 
-#[Scope('singleton')]
+/**
+ * @Flow\Scope('singleton')
+ */
 class SearchLimitPerResultTypeImplementation extends AbstractSearchImplementation
 {
 
-    #[Inject]
+    /**
+     * @Flow\Inject
+     *
+     * @var SearchService
+     */
     protected SearchService $searchService;
 
     /**

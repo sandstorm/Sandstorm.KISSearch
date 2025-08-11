@@ -10,7 +10,7 @@ use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\Eel\EelEvaluatorInterface;
 use Neos\Eel\Utility as EelUtility;
-use Neos\Flow\Annotations\Scope;
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
 use Neos\Neos\Domain\Model\Site;
@@ -26,7 +26,9 @@ use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 use Sandstorm\KISSearch\SearchResultTypes\UnsupportedDatabaseException;
 
-#[Scope('singleton')]
+/**
+ * @Flow\Scope('singleton')
+ */
 class NeosContentSearchResultType implements SearchResultTypeInterface
 {
     public const TYPE_NAME = 'neos_content';

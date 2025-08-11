@@ -6,7 +6,9 @@ use Neos\Flow\Annotations\Proxy;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Sandstorm\KISSearch\InvalidConfigurationException;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 enum DatabaseType: string
 {
     case MYSQL = 'MySQL';

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Sandstorm\KISSearch\Controller\Backend;
 
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Annotations\Scope;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
 use Neos\Flow\Mvc\Exception\NoSuchArgumentException;
@@ -17,7 +16,9 @@ use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypesRegistry;
 use Sandstorm\KISSearch\Service\SearchQueryInput;
 use Sandstorm\KISSearch\Service\SearchService;
 
-#[Scope('singleton')]
+/**
+ * @Flow\Scope('singleton')
+ */
 class BackendSearchController extends AbstractModuleController
 {
     protected $defaultViewObjectName = FusionView::class;

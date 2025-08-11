@@ -9,7 +9,9 @@ use Sandstorm\KISSearch\PostgresTS\PostgresFulltextSearchMode;
 use Sandstorm\KISSearch\SearchResultTypes\DatabaseMigrationInterface;
 use Sandstorm\KISSearch\SearchResultTypes\SearchBucket;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class NeosContentPostgresDatabaseMigration implements DatabaseMigrationInterface
 {
 

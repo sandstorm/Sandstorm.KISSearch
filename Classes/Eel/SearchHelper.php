@@ -4,11 +4,13 @@ namespace Sandstorm\KISSearch\Eel;
 
 
 use Neos\Eel\ProtectedContextAwareInterface;
-use Neos\Flow\Annotations\Scope;
+use Neos\Flow\Annotations as Flow;
 use Sandstorm\KISSearch\Service\SearchQueryInput;
 use Sandstorm\KISSearch\Service\SearchService;
 
-#[Scope('singleton')]
+/**
+ * @Flow\Scope('singleton')
+ */
 class SearchHelper implements ProtectedContextAwareInterface
 {
 

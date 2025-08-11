@@ -6,7 +6,9 @@ use Neos\Flow\Annotations\Proxy;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResultTypeName;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class PostgresSearchQueryBuilder
 {
     const SPECIAL_CHARACTERS = '-+~/<>\'":*$#@()!,.?`=%&^';

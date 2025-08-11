@@ -3,16 +3,20 @@
 namespace Sandstorm\KISSearch\SearchResultTypes;
 
 
-use Neos\Flow\Annotations\InjectConfiguration;
-use Neos\Flow\Annotations\Scope;
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Sandstorm\KISSearch\InvalidConfigurationException;
 
-#[Scope('singleton')]
+/**
+ * @Flow\Scope('singleton')
+ */
 class SearchResultTypesRegistry
 {
 
-    #[InjectConfiguration('searchResultTypes')]
+    /**
+     * @Flow\InjectConfiguration('searchResultTypes')
+     * @var array
+     */
     protected array $searchResultTypesConfiguration;
 
     // constructor injected

@@ -4,7 +4,9 @@ namespace Sandstorm\KISSearch\SearchResultTypes\NeosContent;
 
 use Neos\Flow\Annotations\Proxy;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class NodePropertyFulltextExtraction
 {
 

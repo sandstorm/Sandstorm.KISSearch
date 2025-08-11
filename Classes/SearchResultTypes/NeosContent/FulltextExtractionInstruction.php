@@ -6,7 +6,9 @@ use Neos\Flow\Annotations\Proxy;
 use RuntimeException;
 use Sandstorm\KISSearch\SearchResultTypes\SearchBucket;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class FulltextExtractionInstruction
 {
     private readonly array $targetBuckets;

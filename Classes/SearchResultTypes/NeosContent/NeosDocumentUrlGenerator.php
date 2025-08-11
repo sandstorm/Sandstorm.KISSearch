@@ -6,7 +6,7 @@ use GuzzleHttp\Psr7\ServerRequest;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Service\Context;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
-use Neos\Flow\Annotations\Scope;
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Http\Exception;
 use Neos\Flow\Http\ServerRequestAttributes;
 use Neos\Flow\Mvc\ActionRequest;
@@ -15,7 +15,9 @@ use Neos\Flow\Mvc\Routing\Exception\MissingActionNameException;
 use Neos\Flow\Mvc\Routing\UriBuilder;
 use Sandstorm\KISSearch\SearchResultTypes\SearchResult;
 
-#[Scope("singleton")]
+/**
+ * @Flow\Scope('singleton')
+ */
 class NeosDocumentUrlGenerator
 {
 

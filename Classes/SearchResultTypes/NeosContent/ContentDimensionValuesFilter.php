@@ -5,7 +5,9 @@ namespace Sandstorm\KISSearch\SearchResultTypes\NeosContent;
 use Neos\Flow\Annotations\Proxy;
 use Sandstorm\KISSearch\SearchResultTypes\QueryBuilder\AdditionalJsonParameterValueInterface;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class ContentDimensionValuesFilter implements AdditionalJsonParameterValueInterface
 {
 

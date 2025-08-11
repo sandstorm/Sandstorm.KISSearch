@@ -7,7 +7,9 @@ use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
 use Sandstorm\KISSearch\InvalidConfigurationException;
 
-#[Proxy(false)]
+/**
+ * @Proxy(false)
+ */
 class PostgresFulltextSearchConfiguration
 {
 
