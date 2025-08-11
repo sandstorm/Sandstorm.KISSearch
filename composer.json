@@ -2,8 +2,8 @@
     "description": "Extensible, low impact, self-contained, SQL-pure stupidly simple search integration for Neos",
     "type": "neos-package",
     "require": {
-        "neos/flow": "8.*",
-        "neos/neos": "8.*"
+        "neos/flow": "7.3.* || 8.*",
+        "neos/neos": "7.3.* || 8.*"
     },
     "license": "MIT",
     "name": "sandstorm/kissearch",
