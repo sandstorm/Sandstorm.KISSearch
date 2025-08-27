@@ -47,14 +47,28 @@ class RefreshDependenciesHook implements CatchUpHookInterface
             return;
         }
         $sql = match ($this->databaseType) {
-            DatabaseType::MYSQL, DatabaseType::MARIADB =>
-            NeosContentSearchSchema::mariaDB_call_functionPopulateNodesAndTheirDocuments(
-                $this->contentRepositoryId->value
-            ),
+            DatabaseType::MYSQL, DatabaseType::MARIADB => $this->doRefresh_MariaDB(),
             DatabaseType::POSTGRES => throw new \RuntimeException('To be implemented'),
         };
 
+        if ($sql === null) {
+            return;
+        }
+
         $this->dbal->executeQuery($sql);
+    }
+
+    private function doRefresh_MariaDB():?string {
+        $schemaExists =  $this->dbal->executeQuery(NeosContentSearchSchema::mariaDB_exists_functionPopulateNodesAndTheirDocuments(
+            $this->contentRepositoryId->value
+        ))->fetchAssociative();
+
+        if ($schemaExists['kissearch_schema_exists'] ?? false) {
+            return NeosContentSearchSchema::mariaDB_call_functionPopulateNodesAndTheirDocuments(
+                $this->contentRepositoryId->value
+            );
+        }
+        return null;
     }
 
     public function onBeforeCatchUp(SubscriptionStatus $subscriptionStatus): void

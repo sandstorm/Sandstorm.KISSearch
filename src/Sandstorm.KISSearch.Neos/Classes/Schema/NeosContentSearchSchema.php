@@ -463,7 +463,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                 dimensionvalues                 json            not null,
                 origindimensionshash            varchar(32)     not null,
                 origindimensionvalues           json            not null,
-                document_nodename               varchar(255)    not null,     
+                document_nodename               varchar(255)    not null,
                 site_nodename                   varchar(255)    not null,
                 document_uri_path               varchar(4000),
                 parent_documents                json            not null
@@ -616,6 +616,17 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
         SQL;
     }
 
+
+    public static function mariaDB_exists_functionPopulateNodesAndTheirDocuments(string $contentRepositoryId): string
+    {
+        return <<<SQL
+            select exists(select 1
+                from information_schema.ROUTINES
+                where ROUTINE_TYPE = 'PROCEDURE'
+                and SPECIFIC_NAME = 'sandstorm_kissearch_populate_nodes_and_their_documents_$contentRepositoryId'
+              ) as kissearch_schema_exists;
+        SQL;
+    }
     // TODO timed visibility seems to be removed in Neos 9?
     /*
     private static function mariaDB_create_functionAnyTimedHidden(): string
