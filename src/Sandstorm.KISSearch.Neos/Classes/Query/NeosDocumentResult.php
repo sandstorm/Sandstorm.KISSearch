@@ -18,7 +18,7 @@ readonly class NeosDocumentResult
     private function __construct(
         private SearchResult $result,
         private NodeAddress $nodeAddress,
-        private NodeName $nodeName,
+        private ?NodeName $nodeName,
         private NodeAggregateId $aggregateId,
         private NodeTypeName $nodeType
     )
@@ -67,9 +67,9 @@ readonly class NeosDocumentResult
     }
 
     /**
-     * @return NodeName
+     * @return ?NodeName
      */
-    public function getNodeName(): NodeName
+    public function getNodeName(): ?NodeName
     {
         return $this->nodeName;
     }
