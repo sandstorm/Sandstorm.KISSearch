@@ -36,10 +36,18 @@ readonly class NeosDocumentResult
                 DimensionSpacePoint::fromArray($metaData['dimensionValues']),
                 NodeAggregateId::fromString($metaData['documentAggregateId'])
             ),
-            NodeName::fromString($metaData['documentNodeName']),
+            self::optionalNodeName($metaData['documentNodeName']),
             NodeAggregateId::fromString($metaData['documentAggregateId']),
             NodeTypeName::fromString($metaData['documentNodeType'])
         );
+    }
+
+    private static function optionalNodeName(?string $rawValue): ?NodeName
+    {
+        if ($rawValue === null) {
+            return null;
+        }
+        return NodeName::fromString($rawValue);
     }
 
     /**
