@@ -463,7 +463,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                 dimensionvalues                 json            not null,
                 origindimensionshash            varchar(32)     not null,
                 origindimensionvalues           json            not null,
-                document_nodename               varchar(255)    not null,
+                document_nodename               varchar(255),
                 site_nodename                   varchar(255)    not null,
                 document_uri_path               varchar(4000),
                 parent_documents                json            not null
