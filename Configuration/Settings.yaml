@@ -92,11 +92,14 @@ Sandstorm:
       # Integration of KISSearch in the Neos Backend search bar.
       backendSearch:
         # Enable/Disable the feature. If disabled, the original search endpoint is used
-        enabled: true
+        # THIS FEATURE IS STILL EXPERIMENTAL.
+        enabled: false
         # Which KISSearch endpoint to use for the backend search.
         # Expects a filter with ID "neos"
         endpoint: neos-backend
 
       # Auto refresh dependencies on node publish events
       refresher:
-        autoRefreshEnabled: true
+        # THIS FEATURE IS STILL EXPERIMENTAL, AND IS CURRENTLY
+        # NOT WORKING CORRECTLY (indexes happen on every save, instead of every publish; and the delays for even smallish websites is quite high (5-10s))
+        autoRefreshEnabled: false
