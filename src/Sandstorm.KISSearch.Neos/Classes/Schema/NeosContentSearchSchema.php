@@ -521,8 +521,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                json_value(sn.properties, '$.title.value') as document_title,
                                                sn.nodetypename                            as document_nodetype,
                                                cast(null as varchar(255))                 as document_nodename,
-                                               (json_value(h.subtreetags, '$.disabled') is null
-                                                   or json_value(h.subtreetags, '$.disabled') = false)
+                                               not json_contains_path(h.subtreetags, 'all', '$.disabled')
                                                                                           as is_not_hidden,
                                                cast('[]' as varchar(10000000))            as parent_documents
                                         from $tableNameNode sn
@@ -551,8 +550,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   cn.name,
                                                   pn.document_nodename)                                       as document_nodename,
-                                               (json_value(h.subtreetags, '$.disabled') is null
-                                                   or json_value(h.subtreetags, '$.disabled') = false)
+                                               not json_contains_path(h.subtreetags, 'all', '$.disabled')
                                                                                                               as is_not_hidden,
                                                if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   json_array_append(pn.parent_documents, '$', cn.nodeaggregateid),
