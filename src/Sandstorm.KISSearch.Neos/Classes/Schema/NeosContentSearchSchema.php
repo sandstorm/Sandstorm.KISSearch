@@ -135,7 +135,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
         }
 
         return [
-            self::mariaDB_create_generatedSearchBucketColumns(
+            self::mariaDB_create_tableSearchBuckets($contentRepositoryId),
+            self::mariaDB_create_procedurePopulateSearchBuckets(
                 $this->nodeTypesSearchConfiguration->getExtractorsForCritical(),
                 $this->nodeTypesSearchConfiguration->getExtractorsForMajor(),
                 $this->nodeTypesSearchConfiguration->getExtractorsForNormal(),
@@ -157,8 +158,6 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
             ),
             self::mariaDB_create_functionPopulateNodesAndTheirDocuments($contentRepositoryId),
             self::mariaDB_create_functionAllDimensionValuesMatch(),
-            // move to data update command
-            //self::mariaDB_call_functionPopulateNodesAndTheirDocuments()
         ];
     }
 
@@ -168,7 +167,11 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
 
         // TODO postgres
         return [
-            self::mariaDB_drop_generatedSearchBucketColumns($contentRepositoryId),
+            self::mariaDB_drop_tableSearchBuckets($contentRepositoryId),
+            self::mariaDB_drop_procedurePopulateSearchBuckets($contentRepositoryId),
+            // Legacy cleanup: remove generated columns from the nodes table if they exist
+            // from a previous KISSearch version that used ALTER TABLE on the CR-managed table.
+            self::mariaDB_drop_legacyGeneratedSearchBucketColumns($contentRepositoryId),
             self::mariaDB_drop_tableNodesAndTheirDocuments($contentRepositoryId),
             self::mariaDB_drop_functionIsDocumentNodeType($contentRepositoryId),
             self::mariaDB_drop_functionIsContentNodeType($contentRepositoryId),
@@ -183,13 +186,55 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
         $contentRepositoryId = self::getContentRepositoryIdFromOptions($schemaIdentifier, $options);
 
         return [
+            self::mariaDB_call_procedurePopulateSearchBuckets($contentRepositoryId),
             self::mariaDB_call_functionPopulateNodesAndTheirDocuments($contentRepositoryId)
         ];
     }
 
-    // ## generated search bucket columns
+    // ## search buckets table (separate from the CR-managed nodes table)
 
-    private static function mariaDB_create_generatedSearchBucketColumns(
+    private static function mariaDB_create_tableSearchBuckets(string $contentRepositoryId): string
+    {
+        $columnNameBucketCritical = NeosContentSearchResultType::BUCKET_COLUMN_CRITICAL;
+        $columnNameBucketMajor = NeosContentSearchResultType::BUCKET_COLUMN_MAJOR;
+        $columnNameBucketNormal = NeosContentSearchResultType::BUCKET_COLUMN_NORMAL;
+        $columnNameBucketMinor = NeosContentSearchResultType::BUCKET_COLUMN_MINOR;
+
+        $tableName = NeosContentSearchResultType::buildSearchBucketsTableName($contentRepositoryId);
+
+        return <<<SQL
+                create table if not exists $tableName (
+                    relationanchorpoint bigint not null,
+                    $columnNameBucketCritical text,
+                    $columnNameBucketMajor text,
+                    $columnNameBucketNormal text,
+                    $columnNameBucketMinor text,
+                    primary key (relationanchorpoint)
+                );
+                create fulltext index idx_neos_content_all_buckets on $tableName ($columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor);
+                create fulltext index idx_neos_content_bucket_critical on $tableName ($columnNameBucketCritical);
+                create fulltext index idx_neos_content_bucket_major on $tableName ($columnNameBucketMajor);
+                create fulltext index idx_neos_content_bucket_normal on $tableName ($columnNameBucketNormal);
+                create fulltext index idx_neos_content_bucket_minor on $tableName ($columnNameBucketMinor);
+        SQL;
+    }
+
+    private static function mariaDB_drop_tableSearchBuckets(string $contentRepositoryId): string
+    {
+        $tableName = NeosContentSearchResultType::buildSearchBucketsTableName($contentRepositoryId);
+
+        return <<<SQL
+            drop table if exists $tableName;
+        SQL;
+    }
+
+    /**
+     * Creates a stored procedure that populates the search buckets table by extracting
+     * fulltext content from node properties. This replaces the previous approach of using
+     * generated stored columns directly on the CR-managed nodes table, which caused conflicts
+     * with Doctrine's schema diff in cr:setup.
+     */
+    private static function mariaDB_create_procedurePopulateSearchBuckets(
         array $extractorsForCritical,
         array $extractorsForMajor,
         array $extractorsForNormal,
@@ -218,31 +263,48 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
             SearchBucket::MINOR
         );
 
-        $tableName = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
+        $nodesTableName = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
+        $bucketsTableName = NeosContentSearchResultType::buildSearchBucketsTableName($contentRepositoryId);
 
         return <<<SQL
-                alter table $tableName
-                    add $columnNameBucketCritical text generated always as (
-                        $fulltextExtractorsByNodeTypeForCritical
-                    ) stored,
-                    add $columnNameBucketMajor text generated always as (
-                        $fulltextExtractorsByNodeTypeForMajor
-                    ) stored,
-                    add $columnNameBucketNormal text generated always as (
-                        $fulltextExtractorsByNodeTypeForNormal
-                    ) stored,
-                    add $columnNameBucketMinor text generated always as (
-                        $fulltextExtractorsByNodeTypeForMinor
-                    ) stored;
-                create fulltext index idx_neos_content_all_buckets on $tableName ($columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor);
-                create fulltext index idx_neos_content_bucket_critical on $tableName ($columnNameBucketCritical);
-                create fulltext index idx_neos_content_bucket_major on $tableName ($columnNameBucketMajor);
-                create fulltext index idx_neos_content_bucket_normal on $tableName ($columnNameBucketNormal);
-                create fulltext index idx_neos_content_bucket_minor on $tableName ($columnNameBucketMinor);
+            create procedure sandstorm_kissearch_populate_search_buckets_$contentRepositoryId()
+            modifies sql data
+            begin
+                start transaction;
+                truncate table $bucketsTableName;
+                insert into $bucketsTableName (relationanchorpoint, $columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor)
+                select
+                    relationanchorpoint,
+                    $fulltextExtractorsByNodeTypeForCritical,
+                    $fulltextExtractorsByNodeTypeForMajor,
+                    $fulltextExtractorsByNodeTypeForNormal,
+                    $fulltextExtractorsByNodeTypeForMinor
+                from $nodesTableName;
+                commit;
+            end;
         SQL;
     }
 
-    private static function mariaDB_drop_generatedSearchBucketColumns(string $contentRepositoryId): string
+    private static function mariaDB_drop_procedurePopulateSearchBuckets(string $contentRepositoryId): string
+    {
+        return <<<SQL
+            drop procedure if exists sandstorm_kissearch_populate_search_buckets_$contentRepositoryId;
+        SQL;
+    }
+
+    private static function mariaDB_call_procedurePopulateSearchBuckets(string $contentRepositoryId): string
+    {
+        return <<<SQL
+            call sandstorm_kissearch_populate_search_buckets_$contentRepositoryId();
+        SQL;
+    }
+
+    /**
+     * Legacy cleanup: removes generated columns and indexes that a previous KISSearch version
+     * added directly to the CR-managed nodes table. Safe to call even if they don't exist
+     * (uses IF EXISTS).
+     */
+    private static function mariaDB_drop_legacyGeneratedSearchBucketColumns(string $contentRepositoryId): string
     {
         $columnNameBucketCritical = NeosContentSearchResultType::BUCKET_COLUMN_CRITICAL;
         $columnNameBucketMajor = NeosContentSearchResultType::BUCKET_COLUMN_MAJOR;
@@ -252,11 +314,6 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
         $tableName = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
 
         return <<<SQL
-            drop index if exists idx_neos_content_all_buckets on $tableName;
-            drop index if exists idx_neos_content_bucket_critical on $tableName;
-            drop index if exists idx_neos_content_bucket_major on $tableName;
-            drop index if exists idx_neos_content_bucket_normal on $tableName;
-            drop index if exists idx_neos_content_bucket_minor on $tableName;
             alter table $tableName
                 drop column if exists $columnNameBucketCritical,
                 drop column if exists $columnNameBucketMajor,
