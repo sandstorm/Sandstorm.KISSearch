@@ -47,6 +47,11 @@ class NeosContentSearchResultType
         return sprintf('cr_%s_p_graph_workspace', $contentRepositoryId);
     }
 
+    public static function buildSearchBucketsTableName(string $contentRepositoryId): string
+    {
+        return sprintf('sandstorm_kissearch_search_buckets_%s', $contentRepositoryId);
+    }
+
     public static function getContentRepositoryIdFromOptions(array $partOptions, array $queryOptions): string
     {
         $contentRepositoryId = $partOptions[self::OPTION_CONTENT_REPOSITORY] ??

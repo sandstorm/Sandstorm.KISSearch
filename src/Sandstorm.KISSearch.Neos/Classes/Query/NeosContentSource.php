@@ -40,7 +40,8 @@ class NeosContentSource implements SearchSourceInterface
         $paramNameQuery = SearchQuery::SQL_QUERY_PARAM_QUERY;
         $cteName = self::buildCTEName($contentRepositoryId);
 
-        $tableName = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
+        $nodesTableName = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
+        $bucketsTableName = NeosContentSearchResultType::buildSearchBucketsTableName($contentRepositoryId);
 
         // TODO postgres
 
@@ -48,12 +49,13 @@ class NeosContentSource implements SearchSourceInterface
         return <<<SQL
             $cteName as
                 (select n.*,
-                    match ($columnNameBucketCritical) against ( :$paramNameQuery in boolean mode ) as score_bucket_critical,
-                    match ($columnNameBucketMajor) against ( :$paramNameQuery in boolean mode ) as score_bucket_major,
-                    match ($columnNameBucketNormal) against ( :$paramNameQuery in boolean mode ) as score_bucket_normal,
-                    match ($columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ) as score_bucket_minor
-                from $tableName n
-                where match ($columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ))
+                    match (sb.$columnNameBucketCritical) against ( :$paramNameQuery in boolean mode ) as score_bucket_critical,
+                    match (sb.$columnNameBucketMajor) against ( :$paramNameQuery in boolean mode ) as score_bucket_major,
+                    match (sb.$columnNameBucketNormal) against ( :$paramNameQuery in boolean mode ) as score_bucket_normal,
+                    match (sb.$columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ) as score_bucket_minor
+                from $nodesTableName n
+                inner join $bucketsTableName sb on sb.relationanchorpoint = n.relationanchorpoint
+                where match (sb.$columnNameBucketCritical, sb.$columnNameBucketMajor, sb.$columnNameBucketNormal, sb.$columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ))
             SQL;
     }
 
