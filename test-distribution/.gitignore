@@ -1,0 +1,15 @@
+/Build/Behat/*
+/Build/PhpCodesniffer/*
+/Build/BuildEssentials
+/Build/Reports
+/Build/Resources
+/Data/
+/Packages
+/Web/
+/flow
+/flow.bat
+
+/bin
+/tmp
+
+.DS_Store
