@@ -11,9 +11,9 @@ Supported Databases:
 - MySQL version >= 8.0
 - PostgreSQL -> supported very soon
 
-Supports Neos 9+
+Supports Neos 9+ (version 3.x and above releases)
 
-For Neos 8 use the prototype version from branch `neos8-prototype` (this is not actively maintained though).
+For Neos 8 use the prototype version 2.x (this is not actively maintained though).
 
 ## Installation
 
