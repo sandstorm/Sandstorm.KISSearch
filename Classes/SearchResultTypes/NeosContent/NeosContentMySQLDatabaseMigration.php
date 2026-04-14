@@ -52,29 +52,24 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
         $fulltextExtractorsByNodeTypeForMinor = self::buildMySQLFulltextExtractionForBucket(
             $this->nodeTypesSearchConfiguration->getExtractorsForMinor(), SearchBucket::MINOR);
 
-        // generated fulltext extraction bucket columns
+        // own search buckets table (separate from the Neos-managed nodedata table)
         $sqlQueries = [
             <<<SQL
-                alter table neos_contentrepository_domain_model_nodedata
-                    add $columnNameBucketCritical text generated always as (
-                        $fulltextExtractorsByNodeTypeForCritical
-                    ) stored,
-                    add $columnNameBucketMajor text generated always as (
-                        $fulltextExtractorsByNodeTypeForMajor
-                    ) stored,
-                    add $columnNameBucketNormal text generated always as (
-                        $fulltextExtractorsByNodeTypeForNormal
-                    ) stored,
-                    add $columnNameBucketMinor text generated always as (
-                        $fulltextExtractorsByNodeTypeForMinor
-                    ) stored;
+                create table if not exists sandstorm_kissearch_search_buckets (
+                    persistence_object_identifier varchar(40) not null,
+                    $columnNameBucketCritical text,
+                    $columnNameBucketMajor text,
+                    $columnNameBucketNormal text,
+                    $columnNameBucketMinor text,
+                    primary key (persistence_object_identifier)
+                );
             SQL
         ];
 
-        // fulltext index on generated columns
+        // fulltext index on buckets table
         $sqlQueries[] = MySQLSearchQueryBuilder::createFulltextIndex(
             SearchResultTypeName::create(NeosContentSearchResultType::TYPE_NAME),
-            'neos_contentrepository_domain_model_nodedata',
+            'sandstorm_kissearch_search_buckets',
             new ColumnNamesByBucket(
                 critical: [$columnNameBucketCritical],
                 major: [$columnNameBucketMajor],
@@ -82,6 +77,28 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                 minor: [$columnNameBucketMinor]
             )
         );
+
+        $sqlQueries[] = <<<SQL
+            create procedure sandstorm_kissearch_populate_search_buckets()
+            modifies sql data
+            begin
+                start transaction;
+                truncate table sandstorm_kissearch_search_buckets;
+                insert into sandstorm_kissearch_search_buckets (persistence_object_identifier, $columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor)
+                select
+                    persistence_object_identifier,
+                    $fulltextExtractorsByNodeTypeForCritical,
+                    $fulltextExtractorsByNodeTypeForMajor,
+                    $fulltextExtractorsByNodeTypeForNormal,
+                    $fulltextExtractorsByNodeTypeForMinor
+                from neos_contentrepository_domain_model_nodedata;
+                commit;
+            end;
+        SQL;
+
+        $sqlQueries[] = <<<SQL
+            call sandstorm_kissearch_populate_search_buckets();
+        SQL;
 
         // table for content node to closest parent document
         $documentNodeTypesCommaSeparated = self::toCommaSeparatedStringList($this->nodeTypesSearchConfiguration->getDocumentNodeTypeNames());
@@ -362,6 +379,14 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
 
         $sqlQueries = [
             <<<SQL
+                drop table if exists sandstorm_kissearch_search_buckets;
+            SQL,
+            <<<SQL
+                drop procedure if exists sandstorm_kissearch_populate_search_buckets;
+            SQL,
+            // Legacy cleanup: remove generated columns from the Neos nodedata table if they exist
+            // from a previous KISSearch version that used ALTER TABLE on the Neos-managed table.
+            <<<SQL
                 alter table neos_contentrepository_domain_model_nodedata
                     drop column if exists $columnNameBucketCritical,
                     drop column if exists $columnNameBucketMajor,
@@ -369,11 +394,6 @@ class NeosContentMySQLDatabaseMigration implements DatabaseMigrationInterface
                     drop column if exists $columnNameBucketMinor;
             SQL
         ];
-
-        $sqlQueries[] = MySQLSearchQueryBuilder::dropFulltextIndex(
-            SearchResultTypeName::create(NeosContentSearchResultType::TYPE_NAME),
-            'neos_contentrepository_domain_model_nodedata'
-        );
 
         $sqlQueries[] = <<<SQL
             drop table if exists sandstorm_kissearch_nodes_and_their_documents;

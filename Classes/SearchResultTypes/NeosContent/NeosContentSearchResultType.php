@@ -411,8 +411,14 @@ class NeosContentSearchResultType implements SearchResultTypeInterface
                 1690389124
             )
         };
-        $query = $this->entityManager->createNativeQuery($sqlQuery, new ResultSetMapping());
-        $query->execute();
+        $this->entityManager->createNativeQuery($sqlQuery, new ResultSetMapping())->execute();
+
+        if ($databaseType === DatabaseType::MYSQL || $databaseType === DatabaseType::MARIADB) {
+            $this->entityManager->createNativeQuery(
+                'call sandstorm_kissearch_populate_search_buckets();',
+                new ResultSetMapping()
+            )->execute();
+        }
     }
 
 }

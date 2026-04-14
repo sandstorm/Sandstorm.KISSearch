@@ -33,13 +33,14 @@ class NeosContentMySQLSearchQueryProvider implements SearchQueryProviderInterfac
             new DefaultResultSearchingQueryPart(
                 self::CTE_ALIAS,
                 <<<SQL
-                    select *,
-                        match ($columnNameBucketCritical) against ( :$paramNameQuery in boolean mode ) as score_bucket_critical,
-                        match ($columnNameBucketMajor) against ( :$paramNameQuery in boolean mode ) as score_bucket_major,
-                        match ($columnNameBucketNormal) against ( :$paramNameQuery in boolean mode ) as score_bucket_normal,
-                        match ($columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ) as score_bucket_minor
-                    from neos_contentrepository_domain_model_nodedata
-                    where match ($columnNameBucketCritical, $columnNameBucketMajor, $columnNameBucketNormal, $columnNameBucketMinor) against ( :$paramNameQuery in boolean mode )
+                    select n.*,
+                        match (sb.$columnNameBucketCritical) against ( :$paramNameQuery in boolean mode ) as score_bucket_critical,
+                        match (sb.$columnNameBucketMajor) against ( :$paramNameQuery in boolean mode ) as score_bucket_major,
+                        match (sb.$columnNameBucketNormal) against ( :$paramNameQuery in boolean mode ) as score_bucket_normal,
+                        match (sb.$columnNameBucketMinor) against ( :$paramNameQuery in boolean mode ) as score_bucket_minor
+                    from neos_contentrepository_domain_model_nodedata n
+                    inner join sandstorm_kissearch_search_buckets sb on sb.persistence_object_identifier = n.persistence_object_identifier
+                    where match (sb.$columnNameBucketCritical, sb.$columnNameBucketMajor, sb.$columnNameBucketNormal, sb.$columnNameBucketMinor) against ( :$paramNameQuery in boolean mode )
                 SQL
             )
         );
