@@ -650,6 +650,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                             on ws.currentContentStreamId = nd.contentstreamid
                     where nd.site_nodename is not null
                       and nd.is_not_hidden
+                      and ws.name is not null
                       and (sandstorm_kissearch_neos_is_document_$contentRepositoryId(nd.nodetype)
                         or sandstorm_kissearch_neos_is_content_$contentRepositoryId(nd.nodetype));
                 commit;
