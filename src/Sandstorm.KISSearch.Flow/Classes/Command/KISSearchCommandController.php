@@ -134,7 +134,7 @@ class KISSearchCommandController extends CommandController
     public function printSchemaCreateCommand(?string $database = null): void
     {
         $this->printScript($database, 'CREATE schema', function (DatabaseType $databaseType) {
-            SchemaTool::createSchemaSql(
+            return SchemaTool::createSchemaSql(
                 $databaseType,
                 $this->searchSchemas->getSchemaConfiguration(),
                 $this->instanceProvider

@@ -113,18 +113,28 @@ class MySQLHelper
     {
         return self::normalizeFulltext(
             <<<SQL
-                json_extract($valueSql, '$.$jsonKey.value')
+                json_unquote(json_extract($valueSql, '$.$jsonKey.value'))
             SQL
         );
     }
 
     public static function normalizeFulltext(string $valueSql): string
     {
-        return <<<SQL
-            replace(replace(replace(replace(
-                lower($valueSql),
-                'ä','ae'),'ö','oe'), 'ü','ue'), 'ß','ss')
-        SQL;
+        // Convert to binary first to do collation-agnostic byte-level replacement,
+        // then convert back to utf8mb4. This avoids "Illegal mix of collations" errors.
+        // Ä/Ö/Ü are lowercased first by lower() before the byte replacement.
+        // UTF-8 hex: ä=C3A4→ae(6165), ö=C3B6→oe(6F65), ü=C3BC→ue(7565), ß=C39F→ss(7373)
+        $umlauts = [
+            "x'C3A4'" => "x'6165'", // ä → ae
+            "x'C3B6'" => "x'6F65'", // ö → oe
+            "x'C3BC'" => "x'7565'", // ü → ue
+            "x'C39F'" => "x'7373'", // ß → ss
+        ];
+        $sql = "convert(lower($valueSql) using binary)";
+        foreach ($umlauts as $from => $to) {
+            $sql = "replace($sql, $from, $to)";
+        }
+        return "convert($sql using utf8mb4)";
     }
 
     public static function extractAllText(string $valueSql): string
@@ -176,7 +186,7 @@ class MySQLHelper
     {
         $sanitized = trim($userInput);
         $sanitized = mb_strtolower($sanitized);
-        $sanitized = str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $sanitized);
+        $sanitized = str_replace(['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü'], ['ae', 'oe', 'ue', 'ss', 'ae', 'oe', 'ue'], $sanitized);
 
         $specialChars = str_split(self::SPECIAL_CHARACTERS);
         $sanitized = str_replace($specialChars, ' ', $sanitized);
