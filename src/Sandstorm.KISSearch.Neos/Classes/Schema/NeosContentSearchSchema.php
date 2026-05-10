@@ -294,7 +294,25 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
 
     private static function mariaDB_call_procedurePopulateSearchBuckets(string $contentRepositoryId): string
     {
+        // Changing transaction isolation level to READ COMMITTED:
+        // - Default in MariaDB is REPEATABLE READ.
+        // - Under REPEATABLE READ, LOCKS are taken for the `INSERT ... SELECT FROM cr_*`
+        // - Those locks deadlock against the contentGraph projection's concurrent
+        //   UPDATEs on the same rows, producing:
+        //   "SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying
+        //   to get lock" — which leaves the projection stuck in ERROR state.
+        // - Errors occur either during kissearch:refresh or in projection replay.
+        //
+        // SOLUTION: switch the session to READ COMMITTED. => NO locks anymore,
+        //
+        // CONSEQUENCES:
+        // - Snapshot is no longer atomic across source tables; rows committed
+        //   mid-read may become visible. Acceptable here: the target is a fully
+        //   rebuilt derived search index, refreshed regularily
+        // - Requires `binlog_format = ROW` or `MIXED` (MariaDB default since 10.5).
+        //   With `STATEMENT`, MariaDB would warn about replication safety.
         return <<<SQL
+            set session transaction isolation level read committed;
             call sandstorm_kissearch_populate_search_buckets_$contentRepositoryId();
         SQL;
     }
@@ -660,7 +678,25 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
 
     public static function mariaDB_call_functionPopulateNodesAndTheirDocuments(string $contentRepositoryId): string
     {
+        // Changing transaction isolation level to READ COMMITTED:
+        // - Default in MariaDB is REPEATABLE READ.
+        // - Under REPEATABLE READ, LOCKS are taken for the `INSERT ... SELECT FROM cr_*`
+        // - Those locks deadlock against the contentGraph projection's concurrent
+        //   UPDATEs on the same rows, producing:
+        //   "SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying
+        //   to get lock" — which leaves the projection stuck in ERROR state.
+        // - Errors occur either during kissearch:refresh or in projection replay.
+        //
+        // SOLUTION: switch the session to READ COMMITTED. => NO locks anymore,
+        //
+        // CONSEQUENCES:
+        // - Snapshot is no longer atomic across source tables; rows committed
+        //   mid-read may become visible. Acceptable here: the target is a fully
+        //   rebuilt derived search index, refreshed regularily
+        // - Requires `binlog_format = ROW` or `MIXED` (MariaDB default since 10.5).
+        //   With `STATEMENT`, MariaDB would warn about replication safety.
         return <<<SQL
+            set session transaction isolation level read committed;
             call sandstorm_kissearch_populate_nodes_and_their_documents_$contentRepositoryId();
         SQL;
     }
