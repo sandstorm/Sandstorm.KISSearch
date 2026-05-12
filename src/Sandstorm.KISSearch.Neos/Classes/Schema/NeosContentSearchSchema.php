@@ -598,6 +598,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                cast(null as varchar(255))                 as document_nodename,
                                                not json_contains_path(h.subtreetags, 'all', '$.disabled')
                                                                                           as is_not_hidden,
+                                                not json_contains_path(h.subtreetags, 'all', '$.removed') as is_not_removed,
                                                cast('[]' as varchar(10000000))            as parent_documents
                                         from $tableNameNode sn
                                                  left join $tableNameGraphHierarchy h
@@ -627,6 +628,8 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                                                   pn.document_nodename)                                       as document_nodename,
                                                not json_contains_path(h.subtreetags, 'all', '$.disabled')
                                                                                                               as is_not_hidden,
+
+                                                not json_contains_path(h.subtreetags, 'all', '$.removed') as is_not_removed,
                                                if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
                                                   json_array_append(pn.parent_documents, '$', cn.nodeaggregateid),
                                                   pn.parent_documents
@@ -668,6 +671,7 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
                             on ws.currentContentStreamId = nd.contentstreamid
                     where nd.site_nodename is not null
                       and nd.is_not_hidden
+                      and nd.is_not_removed
                       and ws.name is not null
                       and (sandstorm_kissearch_neos_is_document_$contentRepositoryId(nd.nodetype)
                         or sandstorm_kissearch_neos_is_content_$contentRepositoryId(nd.nodetype));
