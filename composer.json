@@ -2,9 +2,9 @@
     "description": "Sandstorm KISSearch - search Neos content in your existing database and extend it with custom entities",
     "type": "neos-package",
     "require": {
-        "neos/flow": "~9.0",
-        "neos/neos": "~9.0",
-        "neos/neos-ui": "~9.0"
+        "neos/flow": ">=9.2 <10.0.0",
+        "neos/neos": ">=9.2 <10.0.0",
+        "neos/neos-ui": ">=9.2 <10.0.0"
     },
     "license": "MIT",
     "name": "sandstorm/kissearch",
