@@ -51,19 +51,6 @@ Sandstorm:
               aggregator: neos-document-type-aggregator
               # options:
 
-        'neos-backend':
-          queryOptions:
-            contentRepository: 'default'
-          filters:
-            'neos':
-              sources:
-                - neos-content-source
-              filter: neos-document-filter
-              resultType: neos-document
-          typeAggregators:
-            neos-document:
-              aggregator: neos-document-type-aggregator
-
     ## write-side / SQL schema
     schemas:
       'neos-default-cr':
@@ -89,15 +76,6 @@ Sandstorm:
 
     # Sandstorm.KISSearch.Neos specific configuration
     Neos:
-      # Integration of KISSearch in the Neos Backend search bar.
-      backendSearch:
-        # Enable/Disable the feature. If disabled, the original search endpoint is used
-        # THIS FEATURE IS STILL EXPERIMENTAL.
-        enabled: false
-        # Which KISSearch endpoint to use for the backend search.
-        # Expects a filter with ID "neos"
-        endpoint: neos-backend
-
       # Auto refresh dependencies on node publish events
       refresher:
         # THIS FEATURE IS STILL EXPERIMENTAL, AND IS CURRENTLY
