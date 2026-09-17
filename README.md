@@ -122,7 +122,6 @@ actual rendered output.
 
 - shipped query for document search (match results are grouped by their closest parent Document node)
 - shipped query for node search (just return plain nodes, don't care if they are Content or Documents)
-- backend search bar integration (enable/disable via Settings.yaml)
 - Fusion API for executing search queries
 - Search configuration via NodeType yaml (compatible to Neos.SimpleSearch)
 - flow commands for debugging
@@ -394,7 +393,6 @@ Executing a search query can be done in various ways:
 - call the shipped REST controller (TODO)
 - print out the search query SQL and do whatever you feel like with it
 - use the backend module
-- use the backend search bar in the Document Tree
 - use the shipped flow command
 
 ## Query parameters
@@ -760,22 +758,12 @@ Sandstorm:
   KISSearch:
     Neos:
 
-      # Integration of KISSearch in the Neos Backend search bar.
-      backendSearch:
-        # Enable/Disable the feature. If disabled, the original search endpoint is used
-        enabled: true
-        # Which KISSearch endpoint to use for the backend search.
-        # Expects a filter with ID "neos"
-        endpoint: neos-backend
-
       # Auto refresh dependencies on node publish events
       refresher:
         autoRefreshEnabled: true
 ```
 
-Enable or disable the backend search bar integration and the auto-refresher on node publish.
-You also can customize the search endpoint here, or you change the configuration of the default endpoint `neos-backend`
-directly.
+Enable or disable the auto-refresher on node publish.
 
 
 ## Schema

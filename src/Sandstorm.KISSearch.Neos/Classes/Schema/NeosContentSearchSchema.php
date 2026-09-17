@@ -565,6 +565,18 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
 
     // update function
 
+    /**
+     * Neos 9.2 introduced Content Stream Layers: `hierarchyrelation` no longer has a
+     * `contentstreamid` column, only `contentstreamlayer` (int). A row's "winning" layer for a
+     * given content stream is the highest `contentstreamlayer` among that content stream's
+     * allowed layers (`{$contentStreamLayerTable}`), resolved via an anti-join - see
+     * HierarchyRelationSubquery::toSql() in neos/contentgraph-doctrinedbaladapter, which this
+     * mirrors. That allowed-layer set is fixed for one content stream's whole traversal, so
+     * unlike before we can no longer traverse the graph once for all workspaces: each workspace
+     * is processed in its own loop iteration with its own fixed layer set, and the previous
+     * final `left join workspace` is gone since workspace is now a loop input, not a derived
+     * output.
+     */
     private static function mariaDB_create_functionPopulateNodesAndTheirDocuments(string $contentRepositoryId): string
     {
         $tableNameNode = NeosContentSearchResultType::buildCRTableName_nodes($contentRepositoryId);
@@ -574,107 +586,140 @@ class NeosContentSearchSchema implements SearchSchemaInterface, SearchDependency
         );
         $tableNameDocumentUriPath = NeosContentSearchResultType::buildCRTableName_documentUriPath($contentRepositoryId);
         $tableNameWorkspace = NeosContentSearchResultType::buildCRTableName_workspace($contentRepositoryId);
+        $tableNameContentStreamLayer = NeosContentSearchResultType::buildCRTableName_contentStreamLayer($contentRepositoryId);
+
+        // allowed layers for the content stream currently being processed by the loop (v_content_stream_id);
+        // fixed for the whole traversal of that content stream, so this is safe to reuse unchanged in every join
+        $allowedLayersForCurrentContentStream = <<<SQL
+            select contentstreamlayer from $tableNameContentStreamLayer where contentstreamid = v_content_stream_id
+        SQL;
 
         return <<<SQL
             create procedure sandstorm_kissearch_populate_nodes_and_their_documents_$contentRepositoryId()
             modifies sql data
             begin
+                declare v_done int default 0;
+                declare v_workspace_name varchar(36);
+                declare v_content_stream_id varbinary(36);
+                declare cur cursor for
+                    select name, currentcontentstreamid from $tableNameWorkspace;
+                declare continue handler for not found set v_done = 1;
+
                 start transaction;
                 truncate table sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId;
-                insert into sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
-                    with recursive nodes_and_their_documents as
-                                       (select sn.relationanchorpoint,
-                                               h.contentstreamid,
-                                               sn.nodeaggregateid                         as node_id,
-                                               sn.nodetypename                            as nodetype,
-                                               h.dimensionspacepointhash                  as dimensionshash,
-                                               cast(null as varchar(10000000))            as dimensionvalues,
-                                               sn.origindimensionspacepointhash           as origindimensionshash,
-                                               cast(null as varchar(10000000))            as origindimensionvalues,
-                                               cast(null as varchar(255))                 as site_nodename,
-                                               sn.nodeaggregateid                         as document_id,
-                                               json_value(sn.properties, '$.title.value') as document_title,
-                                               sn.nodetypename                            as document_nodetype,
-                                               cast(null as varchar(255))                 as document_nodename,
-                                               not json_contains_path(h.subtreetags, 'all', '$.disabled')
-                                                                                          as is_not_hidden,
-                                                not json_contains_path(h.subtreetags, 'all', '$.removed') as is_not_removed,
-                                               cast('[]' as varchar(10000000))            as parent_documents
-                                        from $tableNameNode sn
-                                                 left join $tableNameGraphHierarchy h
-                                                           on h.childnodeanchor = sn.relationanchorpoint
-                                        where sn.nodetypename = 'Neos.Neos:Sites'
-                                        union
-                                        select cn.relationanchorpoint,
-                                               h.contentstreamid,
-                                               cn.nodeaggregateid                                             as node_id,
-                                               cn.nodetypename                                                as nodetype,
-                                               h.dimensionspacepointhash                                      as dimensionshash,
-                                               d.dimensionspacepoint                                          as dimensionvalues,
-                                               cn.origindimensionspacepointhash                               as origindimensionshash,
-                                               do.dimensionspacepoint                                         as origindimensionvalues,
-                                               if(pn.nodetype = 'Neos.Neos:Sites', cn.name, pn.site_nodename) as site_nodename,
-                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
-                                                  cn.nodeaggregateid,
-                                                  pn.document_id)                                             as document_id,
-                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
-                                                  json_value(cn.properties, '$.title.value'),
-                                                  pn.document_title)                                          as document_title,
-                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
-                                                  cn.nodetypename,
-                                                  pn.document_nodetype)                                       as document_nodetype,
-                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
-                                                  cn.name,
-                                                  pn.document_nodename)                                       as document_nodename,
-                                               not json_contains_path(h.subtreetags, 'all', '$.disabled')
-                                                                                                              as is_not_hidden,
 
-                                                not json_contains_path(h.subtreetags, 'all', '$.removed') as is_not_removed,
-                                               if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
-                                                  json_array_append(pn.parent_documents, '$', cn.nodeaggregateid),
-                                                  pn.parent_documents
-                                               )                                                              as parent_documents
-                                        from nodes_and_their_documents pn
-                                                 left join $tableNameGraphHierarchy h
-                                                           on h.parentnodeanchor = pn.relationanchorpoint
-                                                               and h.contentstreamid = pn.contentstreamid
-                                                 left join $tableNameNode cn
-                                                           on cn.relationanchorpoint = h.childnodeanchor
-                                                 left join $tableNameDimensionSpacePoint d
-                                                           on d.hash = h.dimensionspacepointhash
-                                                 left join $tableNameDimensionSpacePoint do
-                                                           on do.hash = cn.origindimensionspacepointhash)
-                    select nd.relationanchorpoint,
-                           nd.contentstreamid,
-                           ws.name as workspace_name,
-                           nd.node_id,
-                           nd.document_id,
-                           nd.document_title,
-                           nd.document_nodetype,
-                           sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(nd.document_nodetype) as inherited_document_nodetypes,
-                           nd.nodetype,
-                           sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(nd.nodetype) as inherited_nodetypes,
-                           nd.dimensionshash,
-                           nd.dimensionvalues,
-                           nd.origindimensionshash,
-                           nd.origindimensionvalues,
-                           nd.document_nodename,
-                           nd.site_nodename,
-                           -- content dimension prefixing needs to be customized in rendering the final URL by the integrator
-                           du.uripath as document_uri_path,
-                           nd.parent_documents
-                    from nodes_and_their_documents nd
-                        left join $tableNameDocumentUriPath du
-                            on du.nodeaggregateid = nd.document_id
-                           and du.dimensionspacepointhash = nd.dimensionshash
-                        left join $tableNameWorkspace ws
-                            on ws.currentContentStreamId = nd.contentstreamid
-                    where nd.site_nodename is not null
-                      and nd.is_not_hidden
-                      and nd.is_not_removed
-                      and ws.name is not null
-                      and (sandstorm_kissearch_neos_is_document_$contentRepositoryId(nd.nodetype)
-                        or sandstorm_kissearch_neos_is_content_$contentRepositoryId(nd.nodetype));
+                open cur;
+                workspace_loop: loop
+                    fetch cur into v_workspace_name, v_content_stream_id;
+                    if v_done then
+                        leave workspace_loop;
+                    end if;
+
+                    insert into sandstorm_kissearch_nodes_and_their_documents_$contentRepositoryId
+                        with recursive nodes_and_their_documents as
+                                           (select sn.relationanchorpoint,
+                                                   sn.nodeaggregateid                         as node_id,
+                                                   sn.nodetypename                            as nodetype,
+                                                   h.dimensionspacepointhash                  as dimensionshash,
+                                                   cast(null as varchar(10000000))            as dimensionvalues,
+                                                   sn.origindimensionspacepointhash           as origindimensionshash,
+                                                   cast(null as varchar(10000000))            as origindimensionvalues,
+                                                   cast(null as varchar(255))                 as site_nodename,
+                                                   sn.nodeaggregateid                         as document_id,
+                                                   json_value(sn.properties, '$.title.value') as document_title,
+                                                   sn.nodetypename                            as document_nodetype,
+                                                   cast(null as varchar(255))                 as document_nodename,
+                                                   not json_contains_path(h.subtreetags, 'all', '$.disabled')
+                                                                                              as is_not_hidden,
+                                                    not json_contains_path(h.subtreetags, 'all', '$.removed') as is_not_removed,
+                                                   cast('[]' as varchar(10000000))            as parent_documents
+                                            from $tableNameNode sn
+                                                     left join $tableNameGraphHierarchy h
+                                                               on h.childnodeanchor = sn.relationanchorpoint
+                                                                   and h.contentstreamlayer in ($allowedLayersForCurrentContentStream)
+                                                                   and not exists (
+                                                                       select 1 from $tableNameGraphHierarchy hWin
+                                                                       where hWin.id = h.id
+                                                                         and hWin.contentstreamlayer in ($allowedLayersForCurrentContentStream)
+                                                                         and hWin.contentstreamlayer > h.contentstreamlayer
+                                                                   )
+                                            where sn.nodetypename = 'Neos.Neos:Sites'
+                                            union
+                                            select cn.relationanchorpoint,
+                                                   cn.nodeaggregateid                                             as node_id,
+                                                   cn.nodetypename                                                as nodetype,
+                                                   h.dimensionspacepointhash                                      as dimensionshash,
+                                                   d.dimensionspacepoint                                          as dimensionvalues,
+                                                   cn.origindimensionspacepointhash                               as origindimensionshash,
+                                                   do.dimensionspacepoint                                         as origindimensionvalues,
+                                                   if(pn.nodetype = 'Neos.Neos:Sites', cn.name, pn.site_nodename) as site_nodename,
+                                                   if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
+                                                      cn.nodeaggregateid,
+                                                      pn.document_id)                                             as document_id,
+                                                   if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
+                                                      json_value(cn.properties, '$.title.value'),
+                                                      pn.document_title)                                          as document_title,
+                                                   if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
+                                                      cn.nodetypename,
+                                                      pn.document_nodetype)                                       as document_nodetype,
+                                                   if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
+                                                      cn.name,
+                                                      pn.document_nodename)                                       as document_nodename,
+                                                   not json_contains_path(h.subtreetags, 'all', '$.disabled')
+                                                                                                                  as is_not_hidden,
+
+                                                    not json_contains_path(h.subtreetags, 'all', '$.removed') as is_not_removed,
+                                                   if(sandstorm_kissearch_neos_is_document_$contentRepositoryId(cn.nodetypename),
+                                                      json_array_append(pn.parent_documents, '$', cn.nodeaggregateid),
+                                                      pn.parent_documents
+                                                   )                                                              as parent_documents
+                                            from nodes_and_their_documents pn
+                                                     left join $tableNameGraphHierarchy h
+                                                               on h.parentnodeanchor = pn.relationanchorpoint
+                                                                   and h.contentstreamlayer in ($allowedLayersForCurrentContentStream)
+                                                                   and not exists (
+                                                                       select 1 from $tableNameGraphHierarchy hWin
+                                                                       where hWin.id = h.id
+                                                                         and hWin.contentstreamlayer in ($allowedLayersForCurrentContentStream)
+                                                                         and hWin.contentstreamlayer > h.contentstreamlayer
+                                                                   )
+                                                     left join $tableNameNode cn
+                                                               on cn.relationanchorpoint = h.childnodeanchor
+                                                     left join $tableNameDimensionSpacePoint d
+                                                               on d.hash = h.dimensionspacepointhash
+                                                     left join $tableNameDimensionSpacePoint do
+                                                               on do.hash = cn.origindimensionspacepointhash)
+                        select nd.relationanchorpoint,
+                               v_content_stream_id as contentstreamid,
+                               v_workspace_name as workspace_name,
+                               nd.node_id,
+                               nd.document_id,
+                               nd.document_title,
+                               nd.document_nodetype,
+                               sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(nd.document_nodetype) as inherited_document_nodetypes,
+                               nd.nodetype,
+                               sandstorm_kissearch_get_super_types_of_nodetype_$contentRepositoryId(nd.nodetype) as inherited_nodetypes,
+                               nd.dimensionshash,
+                               nd.dimensionvalues,
+                               nd.origindimensionshash,
+                               nd.origindimensionvalues,
+                               nd.document_nodename,
+                               nd.site_nodename,
+                               -- content dimension prefixing needs to be customized in rendering the final URL by the integrator
+                               du.uripath as document_uri_path,
+                               nd.parent_documents
+                        from nodes_and_their_documents nd
+                            left join $tableNameDocumentUriPath du
+                                on du.nodeaggregateid = nd.document_id
+                               and du.dimensionspacepointhash = nd.dimensionshash
+                        where nd.site_nodename is not null
+                          and nd.is_not_hidden
+                          and nd.is_not_removed
+                          and (sandstorm_kissearch_neos_is_document_$contentRepositoryId(nd.nodetype)
+                            or sandstorm_kissearch_neos_is_content_$contentRepositoryId(nd.nodetype));
+                end loop;
+                close cur;
+
                 commit;
             end;
         SQL;
