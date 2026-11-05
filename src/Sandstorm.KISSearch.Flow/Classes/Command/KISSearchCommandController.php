@@ -41,7 +41,19 @@ class KISSearchCommandController extends CommandController
     protected EntityManagerInterface $entityManager;
 
     /**
-     * Lists all endpoint identifiers.
+     * Show which search endpoints exist, i.e. what you can query
+     *
+     * A search endpoint is a named query preset from
+     * Sandstorm.KISSearch.query.endpoints. It defines what is searched (search
+     * sources), how results are filtered (result filters), which result types come
+     * back (e.g. "neos-document") and default values for filter parameters.
+     *
+     * Shipped endpoints:
+     *   default       Neos documents of content repository "default", all workspaces
+     *   default-live  like "default", but only the "live" workspace
+     *
+     * Use the identifier with kissearch:printendpoint, kissearch:printsearchquery,
+     * kissearch:query, or in Fusion/PHP when executing a search.
      *
      * @return void
      */
@@ -59,9 +71,20 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Prints out the endpoint configuration by identifier.
+     * Show what an endpoint searches and which parameters and limits a query needs
      *
-     * @param string $endpoint
+     * Prints the endpoint as resolved from Settings.yaml:
+     *   - query options, e.g. the content repository
+     *   - every filter: filter class reference, result type, required search
+     *     sources, default parameters and filter options
+     *   - every type aggregator: aggregator reference and options
+     *
+     * Read it before calling kissearch:query or the PHP/Fusion API:
+     *   - Filter parameters are prefixed with the filter identifier and "__",
+     *     e.g. filter "neos" + parameter "workspace" = "neos__workspace".
+     *   - Every result type listed here needs a limit (--type-limits).
+     *
+     * @param string $endpoint Endpoint identifier, see kissearch:listendpoints (e.g. "default")
      * @return void
      */
     public function printEndpointCommand(string $endpoint): void
@@ -88,7 +111,17 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Lists all endpoint identifiers.
+     * Show which search schemas exist, i.e. which search indexes KISSearch maintains
+     *
+     * A search schema from Sandstorm.KISSearch.schemas is a set of database objects
+     * (tables, full-text indexes, procedures, functions) that KISSearch creates
+     * next to your data, plus a refresher that fills them.
+     *
+     * Shipped schema:
+     *   neos-default-cr  full-text index for the Neos content repository "default"
+     *
+     * Use the identifier with kissearch:printschema or as --schema for
+     * kissearch:refresh and kissearch:printrefresh.
      *
      * @return void
      */
@@ -106,9 +139,20 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Prints out the schema configuration by identifier.
+     * Show which content a search schema indexes (content repository, node type filters)
      *
-     * @param string $schema
+     * Prints the schema class (creates and drops the SQL schema), the refresher
+     * class (fills the index) and the options of the schema.
+     *
+     * Options of the shipped Neos schema "neos-default-cr":
+     *   contentRepository     content repository to index, e.g. "default"
+     *   excludedNodeTypes     node types that are never indexed, e.g. Neos.Neos:Shortcut
+     *   baseDocumentNodeType  only documents of this type (or subtypes) are indexed
+     *   baseContentNodeType   only content of this type (or subtypes) is indexed
+     *
+     * Exits with code 1 if the schema does not exist.
+     *
+     * @param string $schema Schema identifier, see kissearch:listschemas (e.g. "neos-default-cr")
      * @return void
      */
     public function printSchemaCommand(string $schema): void
@@ -126,9 +170,23 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Prints out the SQL CREATE schema for all configured SearchSchemaInterfaces.
+     * Dry run of kissearch:schemainit: print the SQL that creates the search index
      *
-     * @param string|null $database autodetected, if not given
+     * Prints the CREATE statements of all configured schemas between
+     * "-- START SCRIPT" and "-- END SCRIPT", without touching the database.
+     * Use it to review the SQL or to hand it to someone who applies it manually.
+     *
+     * For the Neos schema this creates, per content repository <cr>:
+     *   - sandstorm_kissearch_search_buckets_<cr>: extracted text per node,
+     *     with full-text indexes
+     *   - sandstorm_kissearch_nodes_and_their_documents_<cr>: every node mapped
+     *     to its closest document, per workspace
+     *   - procedures that fill both tables (called by kissearch:refresh)
+     *   - helper functions for node type and dimension checks
+     *
+     * Note: the Neos schema currently generates MariaDB/MySQL SQL only.
+     *
+     * @param string|null $database Database type to generate SQL for: MySQL, MariaDB or PostgreSQL (case-sensitive). Defaults to the setting Sandstorm.KISSearch.databaseType
      * @return void
      */
     public function printSchemaCreateCommand(?string $database = null): void
@@ -143,9 +201,16 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Prints out the SQL DROP schema for all configured SearchSchemaInterfaces.
+     * Dry run of kissearch:schemadrop: print the SQL that removes the search index
      *
-     * @param string|null $database autodetected, if not given
+     * Prints the DROP statements of all configured schemas between
+     * "-- START SCRIPT" and "-- END SCRIPT", without touching the database.
+     *
+     * All statements use "if exists", so the script also runs on a database
+     * without KISSearch schema. It also removes search columns that older
+     * KISSearch versions added to the content repository's node table.
+     *
+     * @param string|null $database Database type to generate SQL for: MySQL, MariaDB or PostgreSQL (case-sensitive). Defaults to the setting Sandstorm.KISSearch.databaseType
      * @return void
      */
     public function printSchemaDropCommand(?string $database = null): void
@@ -160,10 +225,16 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Prints out the SQL REFRESH search dependencies for all configured SearchDependencyRefreshers.
+     * Dry run of kissearch:refresh: print the SQL that rebuilds the search index
      *
-     * @param string|null $schema schema filter, refresh all if not given
-     * @param string|null $database autodetected, if not given
+     * Prints the statements kissearch:refresh would execute between
+     * "-- START SCRIPT" and "-- END SCRIPT", without touching the database.
+     * For the Neos schema these are the calls of the two procedures that
+     * kissearch:schemacreate created; the indexing logic itself is inside them
+     * (see kissearch:printschemacreate).
+     *
+     * @param string|null $schema Only this schema, see kissearch:listschemas (e.g. "neos-default-cr"). Defaults to all schemas
+     * @param string|null $database Database type to generate SQL for: MySQL, MariaDB or PostgreSQL (case-sensitive). Defaults to the setting Sandstorm.KISSearch.databaseType
      * @return void
      */
     public function printRefreshCommand(?string $schema = null, ?string $database = null): void
@@ -198,7 +269,16 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Applies the SQL CREATE schema for all configured SearchSchemaInterfaces.
+     * Create the search tables, indexes and procedures; fails if they already exist
+     *
+     * Executes the CREATE statements of all configured schemas (see
+     * kissearch:printschemacreate) in the database configured for Flow.
+     *
+     * Fails if the schema already exists, because full-text indexes and
+     * procedures cannot be created twice. For deployments use
+     * kissearch:schemacreate, which drops the old schema first.
+     *
+     * The search index is empty afterwards: run kissearch:refresh to fill it.
      *
      * @return void
      */
@@ -217,7 +297,18 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Resets the SQL Schema by applying the DROP and CREATE schema for all configured SearchSchemaInterfaces.
+     * Re-create the search tables and procedures (drop + create); run on every deployment
+     *
+     * Executes the DROP and then the CREATE statements of all configured schemas.
+     * The indexing SQL is generated from your NodeType configuration, so run it
+     *   - after installing KISSearch
+     *   - after NodeType changes: new node types, changed supertypes, or changed
+     *     search settings (properties.*.search.fulltextExtractor)
+     *   - after changing Sandstorm.KISSearch.schemas in Settings.yaml
+     * Running it without changes is safe.
+     *
+     * The search index is empty afterwards and searches find nothing until you
+     * run kissearch:refresh.
      *
      * @return void
      */
@@ -243,7 +334,13 @@ class KISSearchCommandController extends CommandController
 
 
     /**
-     * Applies the SQL DROP schema for all configured SearchSchemaInterfaces.
+     * Remove all KISSearch tables, indexes and procedures from the database
+     *
+     * Executes the DROP statements of all configured schemas (see
+     * kissearch:printschemadrop). Use it to uninstall KISSearch or to clean up
+     * before applying the schema manually. Neos content is not changed.
+     *
+     * Searches fail until you run kissearch:schemacreate and kissearch:refresh.
      *
      * @return void
      */
@@ -262,9 +359,21 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Refreshes the search dependencies.
+     * Rebuild the search index from the current content, so new and changed content is found
      *
-     * @param string|null $schema
+     * Rebuilds the index completely from the content repository; there is no
+     * incremental update. For the Neos schema this
+     *   1. extracts the searchable text of every node into four buckets
+     *      (critical, major, normal, minor) as configured in the NodeTypes
+     *   2. maps every node to its closest document, per workspace, with site,
+     *      dimension values and hidden/removed state
+     *
+     * Content created or changed after the last refresh is not found.
+     * Refresh on publish (Sandstorm.KISSearch.Neos.refresher.autoRefreshEnabled)
+     * is experimental and disabled by default. So run this command after
+     * kissearch:schemacreate and regularly, e.g. as a cron job.
+     *
+     * @param string|null $schema Only this schema, see kissearch:listschemas (e.g. "neos-default-cr"). Defaults to all schemas
      * @return void
      */
     public function refreshCommand(?string $schema = null): void
@@ -308,11 +417,21 @@ class KISSearchCommandController extends CommandController
     }
 
     /**
-     * Prints the SQL for the given endpoint configuration.
+     * Print the SQL that a search on an endpoint runs, to debug it in a database client
      *
-     * @param string $endpoint
-     * @param string|null $options
-     * @param string|null $database
+     * Builds the same SQL as kissearch:query and prints it without executing it.
+     * Inputs stay as named placeholders, so you can run the SQL with your own
+     * values, e.g. with EXPLAIN:
+     *   :search_query        the prepared search term
+     *   :global_limit        maximum number of results in total
+     *   :limit_<type>        limit per result type, e.g. :limit_neos_document
+     *   :<filter>__<param>   filter parameters, e.g. :neos__workspace
+     *
+     * Note: the SQL is currently generated for MariaDB/MySQL only.
+     *
+     * @param string $endpoint Endpoint identifier, see kissearch:listendpoints (e.g. "default")
+     * @param string|null $options JSON object that overrides the endpoint's queryOptions, e.g. '{"contentRepository": "default"}'
+     * @param string|null $database Database type to generate SQL for: MySQL, MariaDB or PostgreSQL (case-sensitive). Defaults to the setting Sandstorm.KISSearch.databaseType
      * @return void
      */
     public function printSearchQueryCommand(string $endpoint, ?string $options = null, ?string $database = null): void
@@ -321,7 +440,7 @@ class KISSearchCommandController extends CommandController
 
         $queryOptionsArray = $this->parseJsonArgToArray(
             $options,
-            'Example usage: --options \'{"contentRepository": "default"}}\''
+            'Example usage: --options \'{"contentRepository": "default"}\''
         );
 
         $this->outputLine("-- Printing KISSearch search query SQL for endpoint '$endpoint'");
@@ -354,14 +473,42 @@ class KISSearchCommandController extends CommandController
     # Search API
 
     /**
-     * Executes the search query for the given endpoint. Prints the results.
-     * @param string $endpoint
-     * @param string $query
-     * @param string|null $typeLimits
-     * @param string|null $params
-     * @param string|null $options
-     * @param int|null $limit
-     * @param bool $showMetaData
+     * Search from the command line to test an endpoint and its ranking
+     *
+     * Runs a search against the database and prints a table with identifier,
+     * type, title, URL, score and match count, sorted by score, plus the query
+     * time. Requires kissearch:schemacreate and kissearch:refresh.
+     *
+     * Search term: lowercased, umlauts converted (ä -> ae), special characters
+     * removed. Every word must match the beginning of a word, so "neo cms"
+     * finds "Neos CMS".
+     *
+     * Limits: every result type of the endpoint needs a limit. Without
+     * --type-limits you are asked for each type (default 10). --limit caps the
+     * total; if it is lower than the sum of the type limits, the results with
+     * the lowest score are dropped.
+     *
+     * Parameters override the endpoint's defaultParameters. For the shipped
+     * endpoints (filter "neos"):
+     *   neos__workspace            workspace name; without it, endpoint "default"
+     *                              searches all workspaces
+     *   neos__dimension_values     e.g. {"language": "en_US"}
+     *   neos__site_node            only these site(s), e.g. "neosdemo"
+     *   neos__exclude_site_node    all sites except these
+     *   neos__root_node            node aggregate id; only documents below it
+     *   neos__document_node_types  only these document node types
+     *   neos__content_node_types   only matches in these content node types
+     *
+     * Example:
+     *   ./flow kissearch:query default-live "hello world" --type-limits '{"neos-document": 10}' --params '{"neos__dimension_values": {"language": "en_US"}}'
+     *
+     * @param string $endpoint Endpoint identifier, see kissearch:listendpoints (e.g. "default")
+     * @param string $query The search term
+     * @param string|null $typeLimits JSON object with the maximum number of results per result type, e.g. '{"neos-document": 20}'
+     * @param string|null $params JSON object with filter parameters, see above, e.g. '{"neos__workspace": "live"}'
+     * @param string|null $options JSON object that overrides the endpoint's queryOptions, e.g. '{"contentRepository": "default"}'
+     * @param int|null $limit Maximum number of results in total. Defaults to the sum of --type-limits
+     * @param bool $showMetaData Add a column with each result's group and aggregate metadata (e.g. matched nodes)
      * @return void
      * @throws \Exception
      */
@@ -396,18 +543,18 @@ class KISSearchCommandController extends CommandController
             // given as JSON string in the command
             $resultLimitsArray = $this->parseJsonArgToArray(
                 $typeLimits,
-                'Example usage: --result-limits \'{"neos-content": 20, "foo": 10}\''
+                'Example usage: --type-limits \'{"neos-document": 20}\''
             );
         }
 
         $paramsArray = $this->parseJsonArgToArray(
             $params,
-            'Example usage: --params \'{"neosContentDimensionValues": {"language": ["en_US"]}, "neosContentSiteNodeName": "neosdemo"}\''
+            'Example usage: --params \'{"neos__workspace": "live", "neos__dimension_values": {"language": "en_US"}, "neos__site_node": "neosdemo"}\''
         );
 
         $queryOptionsArray = $this->parseJsonArgToArray(
             $options,
-            'Example usage: --options \'{"contentRepository": "default"}}\''
+            'Example usage: --options \'{"contentRepository": "default"}\''
         );
 
         // ### 1. detect database type
